@@ -5,27 +5,34 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Hoodie Customizer</title>
     <style>
+        /* BASIC RESET */
+        * { box-sizing: border-box; margin: 0; padding: 0; }
         body { 
-            margin: 0; 
             font-family: 'Arial', sans-serif;
             display: flex;
             height: 100vh;
             overflow: hidden;
+            background-color: red; /* Temporary to test CSS */
         }
         
+        /* SIDEBAR STYLES */
         #sidebar {
             width: 300px;
             background: #f5f5f5;
             padding: 20px;
             box-shadow: 2px 0 10px rgba(0,0,0,0.1);
             overflow-y: auto;
+            display: block !important; /* Force visible */
         }
         
+        /* VIEWER AREA */
         #viewer {
             flex: 1;
             position: relative;
+            background: white;
         }
         
+        /* CONTROL GROUPS */
         .control-group {
             margin-bottom: 20px;
             background: white;
@@ -68,6 +75,7 @@
             background: #45a049;
         }
         
+        /* DEBUG INFO */
         #debug {
             position: absolute;
             top: 10px;
@@ -90,6 +98,7 @@
     </style>
 </head>
 <body>
+    <!-- SIDEBAR CONTROLS -->
     <div id="sidebar">
         <div class="control-group">
             <h3>Design Upload</h3>
@@ -142,10 +151,12 @@
         </div>
     </div>
     
+    <!-- 3D VIEWER -->
     <div id="viewer">
         <div id="debug">Loading...</div>
     </div>
 
+    <!-- THREE.JS SETUP -->
     <script type="importmap">
         {
             "imports": {
@@ -155,9 +166,15 @@
         }
     </script>
     <script type="module">
+        // Debugging helper - log all Three.js components
+        console.log("Three.js version:", THREE.REVISION);
+        
         import * as THREE from 'three';
         import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
         import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+        
+        // Debug UI visibility
+        console.log("Sidebar element:", document.getElementById('sidebar'));
         
         // Scene setup
         const scene = new THREE.Scene();
@@ -183,21 +200,19 @@
         const clock = new THREE.Clock();
         let mixer = null;
         let hoodieModel = null;
-        const textureLoader = new THREE.TextureLoader();
-        const decals = {
-            front: null,
-            back: null,
-            leftSleeve: null,
-            rightSleeve: null
-        };
         
-        // Color mapping for different parts
-        const colorMaps = {
-            body: null,
-            hood: null,
-            sleeves: null,
-            collar: null
-        };
+        // Debug model parts
+        function logModelParts() {
+            if (!hoodieModel) return;
+            
+            console.group("Model Parts");
+            hoodieModel.traverse((child) => {
+                if (child.isMesh) {
+                    console.log("Mesh:", child.name, child.material);
+                }
+            });
+            console.groupEnd();
+        }
         
         // Load model
         const loader = new GLTFLoader();
@@ -207,23 +222,8 @@
                 hoodieModel = gltf.scene;
                 scene.add(hoodieModel);
                 
-                // Initialize color maps
-                hoodieModel.traverse((child) => {
-                    if (child.isMesh) {
-                        if (child.name.includes('Body')) {
-                            colorMaps.body = child.material;
-                        } else if (child.name.includes('Hood')) {
-                            colorMaps.hood = child.material;
-                        } else if (child.name.includes('Sleeve')) {
-                            colorMaps.sleeves = child.material;
-                        } else if (child.name.includes('Collar')) {
-                            colorMaps.collar = child.material;
-                        }
-                    }
-                });
-                
-                // Set initial colors
-                updateColors();
+                // Debug model structure
+                logModelParts();
                 
                 // Center model
                 const box = new THREE.Box3().setFromObject(hoodieModel);
@@ -239,167 +239,52 @@
                         const action = mixer.clipAction(clip);
                         action.play();
                     });
+                    document.getElementById('debug').textContent = `Playing ${gltf.animations.length} animations`;
                 }
+                
+                // Initialize color controls
+                setupColorControls();
             },
             undefined,
-            (error) => console.error(error)
+            (error) => {
+                console.error("Model loading error:", error);
+                document.getElementById('debug').textContent = `Error: ${error.message}`;
+            }
         );
         
-        // Color update function
-        function updateColors() {
-            const bodyColor = document.getElementById('bodyColor').value;
-            const hoodColor = document.getElementById('hoodColor').value;
-            const sleevesColor = document.getElementById('sleevesColor').value;
-            const collarColor = document.getElementById('collarColor').value;
+        // Color control setup
+        function setupColorControls() {
+            const colorControls = document.querySelectorAll('input[type="color"]');
+            colorControls.forEach(control => {
+                const preview = document.getElementById(`${control.id}Preview`);
+                if (preview) {
+                    preview.style.backgroundColor = control.value;
+                }
+                
+                control.addEventListener('input', (e) => {
+                    const preview = document.getElementById(`${e.target.id}Preview`);
+                    if (preview) {
+                        preview.style.backgroundColor = e.target.value;
+                    }
+                    console.log(`Color changed: ${e.target.id} = ${e.target.value}`);
+                });
+            });
             
-            if (colorMaps.body) colorMaps.body.color.set(bodyColor);
-            if (colorMaps.hood) colorMaps.hood.color.set(hoodColor);
-            if (colorMaps.sleeves) colorMaps.sleeves.color.set(sleevesColor);
-            if (colorMaps.collar) colorMaps.collar.color.set(collarColor);
-            
-            // Update color previews
-            document.getElementById('bodyColorPreview').style.backgroundColor = bodyColor;
-            document.getElementById('hoodColorPreview').style.backgroundColor = hoodColor;
-            document.getElementById('sleevesColorPreview').style.backgroundColor = sleevesColor;
-            document.getElementById('collarColorPreview').style.backgroundColor = collarColor;
+            // Test: Change background when color pickers are used
+            document.getElementById('bodyColor').addEventListener('input', (e) => {
+                document.body.style.backgroundColor = e.target.value;
+            });
         }
         
-        // Event listeners
-        document.getElementById('bodyColor').addEventListener('input', updateColors);
-        document.getElementById('hoodColor').addEventListener('input', updateColors);
-        document.getElementById('sleevesColor').addEventListener('input', updateColors);
-        document.getElementById('collarColor').addEventListener('input', updateColors);
-        
-        document.getElementById('bgColor').addEventListener('change', (e) => {
-            scene.background = e.target.value === 'transparent' ? null : new THREE.Color(e.target.value);
-        });
-        
-        document.getElementById('toggleAnimation').addEventListener('change', (e) => {
-            if (mixer) mixer.timeScale = e.target.checked ? 1 : 0;
-        });
-        
-        document.getElementById('resetCamera').addEventListener('click', () => {
-            controls.reset();
-            if (hoodieModel) {
-                const box = new THREE.Box3().setFromObject(hoodieModel);
-                const size = box.getSize(new THREE.Vector3()).length();
-                camera.position.z = size * 1.5;
-                controls.update();
-            }
-        });
-        
+        // Test UI functionality
         document.getElementById('applyDesign').addEventListener('click', () => {
-            const file = document.getElementById('designUpload').files[0];
-            const placement = document.getElementById('placementArea').value;
-            
-            if (!file) return;
-            
-            const reader = new FileReader();
-            reader.onload = (event) => {
-                textureLoader.load(event.target.result, (texture) => {
-                    // Remove existing decal if any
-                    if (decals[placement]) {
-                        hoodieModel.remove(decals[placement]);
-                    }
-                    
-                    // Create decal mesh
-                    const decalGeometry = new THREE.PlaneGeometry(0.5, 0.5);
-                    const decalMaterial = new THREE.MeshBasicMaterial({
-                        map: texture,
-                        transparent: true
-                    });
-                    
-                    const decal = new THREE.Mesh(decalGeometry, decalMaterial);
-                    
-                    // Position based on placement
-                    switch (placement) {
-                        case 'front':
-                            decal.position.set(0, 0.5, 0.3);
-                            break;
-                        case 'back':
-                            decal.position.set(0, 0.5, -0.3);
-                            decal.rotation.y = Math.PI;
-                            break;
-                        case 'leftSleeve':
-                            decal.position.set(-0.4, 0.5, 0);
-                            decal.rotation.y = Math.PI/2;
-                            break;
-                        case 'rightSleeve':
-                            decal.position.set(0.4, 0.5, 0);
-                            decal.rotation.y = -Math.PI/2;
-                            break;
-                    }
-                    
-                    hoodieModel.add(decal);
-                    decals[placement] = decal;
-                });
-            };
-            reader.readAsDataURL(file);
+            alert("Design application would work here");
+            console.log("Apply design clicked");
         });
         
         document.getElementById('exportBtn').addEventListener('click', () => {
-            // Temporarily disable animation for clean screenshot
-            const prevTimeScale = mixer?.timeScale;
-            if (mixer) mixer.timeScale = 0;
-            
-            // Render to canvas
-            renderer.render(scene, camera);
-            const image = renderer.domElement.toDataURL('image/png');
-            
-            // Show download page with ad
-            const downloadPage = `
-                <!DOCTYPE html>
-                <html lang="en">
-                <head>
-                    <meta charset="UTF-8">
-                    <title>Download Page</title>
-                    <style>
-                        body { font-family: Arial; text-align: center; margin-top: 50px; }
-                        button {
-                            padding: 15px 30px;
-                            font-size: 18px;
-                            background-color: #007bff;
-                            color: white;
-                            border: none;
-                            border-radius: 5px;
-                            cursor: pointer;
-                        }
-                        #preview {
-                            max-width: 80%;
-                            margin: 20px auto;
-                            border: 1px solid #ddd;
-                            box-shadow: 0 0 10px rgba(0,0,0,0.1);
-                        }
-                    </style>
-                </head>
-                <body>
-                    <h2>Your Hoodie Design</h2>
-                    <img id="preview" src="${image}" alt="Your Hoodie Design">
-                    <p>Click below to download your design</p>
-                    <p>You will see an ad before your download starts</p>
-                    <button onclick="watchAd()">Download Now</button>
-                    <script>
-                        function watchAd() {
-                            window.open("https://www.profitableratecpm.com/ag04sfrh?key=b6e4ad6e4ce6ae3c4e94a5625fb4813c", "_blank");
-                            setTimeout(function() {
-                                const link = document.createElement('a');
-                                link.href = "${image}";
-                                link.download = 'custom-hoodie.png';
-                                document.body.appendChild(link);
-                                link.click();
-                                document.body.removeChild(link);
-                            }, 10000);
-                        }
-                    </script>
-                </body>
-                </html>
-            `;
-            
-            const win = window.open('', '_blank');
-            win.document.write(downloadPage);
-            
-            // Restore animation
-            if (mixer) mixer.timeScale = prevTimeScale;
+            alert("Export functionality would work here");
+            console.log("Export clicked");
         });
         
         // Animation loop
