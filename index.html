@@ -12,7 +12,7 @@
             display: flex;
             height: 100vh;
             overflow: hidden;
-            flex-direction: row-reverse; /* Sidebar on right */
+            flex-direction: row-reverse;
         }
         
         #sidebar {
@@ -228,12 +228,20 @@
         let hoodieModel = null;
         let isAnimating = true;
         
-        // Model parts
-        const modelParts = {
+        // Material references
+        const materials = {
             body: null,
             hood: null,
             sleeves: null,
             collar: null
+        };
+        
+        // Decal meshes
+        const decals = {
+            front: null,
+            back: null,
+            leftSleeve: null,
+            rightSleeve: null
         };
         
         // Load model
@@ -244,16 +252,32 @@
                 hoodieModel = gltf.scene;
                 scene.add(hoodieModel);
                 
-                // Map model parts
+                // Clone materials for customization
                 hoodieModel.traverse((child) => {
                     if (child.isMesh) {
+                        // Clone material to allow individual changes
+                        child.material = child.material.clone();
+                        
+                        // Map materials based on mesh name
                         const name = child.name.toLowerCase();
-                        if (name.includes('body')) modelParts.body = child;
-                        else if (name.includes('hood')) modelParts.hood = child;
-                        else if (name.includes('sleeve')) modelParts.sleeves = child;
-                        else if (name.includes('collar')) modelParts.collar = child;
+                        if (name.includes('body')) {
+                            materials.body = child.material;
+                            materials.body.color.setHex(0x333333); // Set initial color
+                        } else if (name.includes('hood')) {
+                            materials.hood = child.material;
+                            materials.hood.color.setHex(0x444444);
+                        } else if (name.includes('sleeve')) {
+                            materials.sleeves = child.material;
+                            materials.sleeves.color.setHex(0x555555);
+                        } else if (name.includes('collar')) {
+                            materials.collar = child.material;
+                            materials.collar.color.setHex(0x666666);
+                        }
                     }
                 });
+                
+                // Set initial colors
+                updateColors();
                 
                 // Center model
                 const box = new THREE.Box3().setFromObject(hoodieModel);
@@ -282,23 +306,68 @@
         
         // Color update function
         function updateColors() {
-            const colors = {
-                body: document.getElementById('bodyColor').value,
-                hood: document.getElementById('hoodColor').value,
-                sleeves: document.getElementById('sleevesColor').value,
-                collar: document.getElementById('collarColor').value
-            };
+            const bodyColor = new THREE.Color(document.getElementById('bodyColor').value);
+            const hoodColor = new THREE.Color(document.getElementById('hoodColor').value);
+            const sleevesColor = new THREE.Color(document.getElementById('sleevesColor').value);
+            const collarColor = new THREE.Color(document.getElementById('collarColor').value);
             
-            // Update materials
-            if (modelParts.body) modelParts.body.material.color.set(colors.body);
-            if (modelParts.hood) modelParts.hood.material.color.set(colors.hood);
-            if (modelParts.sleeves) modelParts.sleeves.material.color.set(colors.sleeves);
-            if (modelParts.collar) modelParts.collar.material.color.set(colors.collar);
+            // Update materials if they exist
+            if (materials.body) materials.body.color.copy(bodyColor);
+            if (materials.hood) materials.hood.color.copy(hoodColor);
+            if (materials.sleeves) materials.sleeves.color.copy(sleevesColor);
+            if (materials.collar) materials.collar.color.copy(collarColor);
             
-            // Update previews
-            Object.entries(colors).forEach(([part, color]) => {
-                const preview = document.getElementById(`${part}ColorPreview`);
-                if (preview) preview.style.backgroundColor = color;
+            // Update color previews
+            document.getElementById('bodyColorPreview').style.backgroundColor = bodyColor.getStyle();
+            document.getElementById('hoodColorPreview').style.backgroundColor = hoodColor.getStyle();
+            document.getElementById('sleevesColorPreview').style.backgroundColor = sleevesColor.getStyle();
+            document.getElementById('collarColorPreview').style.backgroundColor = collarColor.getStyle();
+        }
+        
+        // Apply design to model
+        async function applyDesign(imageUrl, placement) {
+            return new Promise((resolve) => {
+                const textureLoader = new THREE.TextureLoader();
+                textureLoader.load(imageUrl, (texture) => {
+                    // Remove existing decal if any
+                    if (decals[placement] && decals[placement].parent) {
+                        decals[placement].parent.remove(decals[placement]);
+                    }
+                    
+                    // Create decal mesh
+                    const decalGeometry = new THREE.PlaneGeometry(0.5, 0.5);
+                    const decalMaterial = new THREE.MeshBasicMaterial({
+                        map: texture,
+                        transparent: true,
+                        side: THREE.DoubleSide
+                    });
+                    
+                    const decal = new THREE.Mesh(decalGeometry, decalMaterial);
+                    
+                    // Position based on placement
+                    switch (placement) {
+                        case 'front':
+                            decal.position.set(0, 0.5, 0.3);
+                            decal.rotation.set(0, 0, 0);
+                            break;
+                        case 'back':
+                            decal.position.set(0, 0.5, -0.3);
+                            decal.rotation.set(0, Math.PI, 0);
+                            break;
+                        case 'leftSleeve':
+                            decal.position.set(-0.4, 0.5, 0);
+                            decal.rotation.set(0, Math.PI/2, 0);
+                            break;
+                        case 'rightSleeve':
+                            decal.position.set(0.4, 0.5, 0);
+                            decal.rotation.set(0, -Math.PI/2, 0);
+                            break;
+                    }
+                    
+                    hoodieModel.add(decal);
+                    decals[placement] = decal;
+                    resolve();
+                });
             });
         }
         
@@ -332,13 +401,19 @@
             }
             
             const placement = document.getElementById('placementArea').value;
-            const imgUrl = await new Promise(resolve => {
+            const imageUrl = await new Promise(resolve => {
                 const reader = new FileReader();
                 reader.onload = (e) => resolve(e.target.result);
                 reader.readAsDataURL(file);
             });
             
-            alert(`Design will be applied to ${placement}`);
+            try {
+                await applyDesign(imageUrl, placement);
+                document.getElementById('debug').textContent = `Design applied to ${placement}`;
+            } catch (error) {
+                console.error('Error applying design:', error);
+                document.getElementById('debug').textContent = 'Error applying design';
+            }
         });
         
         // Export function
