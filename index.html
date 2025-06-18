@@ -47,20 +47,21 @@
     <div id="debug"></div>
   </div>
 
+  <!-- Import Three.js from CDN -->
   <script src="https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/three@0.160.0/examples/js/loaders/GLTFLoader.js"></script>
-  <script>
+  <!-- Import GLTFLoader as a module -->
+  <script type="module">
+    // Import GLTFLoader from CDN
+    import { GLTFLoader } from 'https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/loaders/GLTFLoader.js';
+    
     // Wait for DOM to be fully loaded
     document.addEventListener('DOMContentLoaded', () => {
       try {
         // Get container element
         const container = document.getElementById('viewer-container');
-        if (!container) {
-          throw new Error('Viewer container element not found');
-        }
-        
-        // Debug output
         const debug = document.getElementById('debug');
+        const loading = document.getElementById('loading');
+        
         const log = (message) => {
           debug.textContent += `${message}\n`;
           debug.scrollTop = debug.scrollHeight;
@@ -99,7 +100,9 @@
         log('Loading 3D model...');
         const MODEL_PATH = 'Hoodie_Walking_Animated.glb';
         
-        new THREE.GLTFLoader().load(
+        // Use the imported GLTFLoader
+        const loader = new GLTFLoader();
+        loader.load(
           MODEL_PATH,
           (gltf) => {
             try {
@@ -114,19 +117,20 @@
                 const action = mixer.clipAction(gltf.animations[0]);
                 action.play();
                 log(`Playing animation: ${gltf.animations[0].name}`);
+                
+                // Animation loop
+                const clock = new THREE.Clock();
+                function animate() {
+                  requestAnimationFrame(animate);
+                  mixer.update(clock.getDelta());
+                  renderer.render(scene, camera);
+                }
+                animate();
               }
               
               // Hide loading message
-              document.getElementById('loading').style.display = 'none';
+              loading.style.display = 'none';
               log('🎉 Viewer ready!');
-              
-              // Animation loop
-              const clock = new THREE.Clock();
-              function animate() {
-                requestAnimationFrame(animate);
-                renderer.render(scene, camera);
-              }
-              animate();
               
             } catch (error) {
               log(`❌ Model processing failed: ${error.message}`);
