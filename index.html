@@ -5,7 +5,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>3D Hoodie Customizer</title>
     <style>
-        /* MAIN LAYOUT FIXES */
         body { 
             margin: 0;
             padding: 0;
@@ -37,7 +36,6 @@
             display: block;
         }
         
-        /* CONTROL STYLES */
         .control-group {
             margin-bottom: 25px;
             background: white;
@@ -91,7 +89,6 @@
             background: #2980b9;
         }
         
-        /* DEBUG INFO */
         #debug {
             position: absolute;
             top: 15px;
@@ -115,7 +112,6 @@
             vertical-align: middle;
         }
         
-        /* RESPONSIVE FIXES */
         @media (max-width: 768px) {
             body {
                 flex-direction: column;
@@ -129,7 +125,6 @@
     </style>
 </head>
 <body>
-    <!-- RIGHT SIDEBAR -->
     <div id="sidebar">
         <div class="control-group">
             <h3>Design Upload</h3>
@@ -180,7 +175,6 @@
         </div>
     </div>
     
-    <!-- 3D VIEWER -->
     <div id="viewer-container">
         <div id="debug">Loading 3D viewer...</div>
         <canvas id="viewer"></canvas>
@@ -209,7 +203,7 @@
         const renderer = new THREE.WebGLRenderer({
             antialias: true,
             canvas: document.getElementById('viewer'),
-            preserveDrawingBuffer: true // For exports
+            preserveDrawingBuffer: true
         });
         renderer.setSize(window.innerWidth, window.innerHeight);
         renderer.setPixelRatio(window.devicePixelRatio);
@@ -344,30 +338,126 @@
                 reader.readAsDataURL(file);
             });
             
-            // Implementation for applying design would go here
             alert(`Design will be applied to ${placement}`);
         });
         
+        // Export function
         document.getElementById('exportBtn').addEventListener('click', () => {
+            // Store current animation state
+            const wasAnimating = isAnimating;
+            
+            // Pause animation for clean screenshot
             isAnimating = false;
+            
+            // Force render one final frame
             renderer.render(scene, camera);
             
+            // Get screenshot
             const image = renderer.domElement.toDataURL('image/png');
-            const link = document.createElement('a');
-            link.href = image;
-            link.download = 'custom-hoodie.png';
-            document.body.appendChild(link);
-            link.click();
-            document.body.removeChild(link);
             
-            isAnimating = true;
+            // Create download page with ad
+            const downloadPage = `
+                <!DOCTYPE html>
+                <html>
+                <head>
+                    <title>Download Your Design</title>
+                    <style>
+                        body { 
+                            font-family: Arial, sans-serif;
+                            text-align: center;
+                            padding: 20px;
+                            background: #f5f5f5;
+                        }
+                        #preview { 
+                            max-width: 80%; 
+                            margin: 20px auto; 
+                            border: 1px solid #ddd;
+                            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+                        }
+                        button { 
+                            padding: 12px 24px; 
+                            background: #3498db; 
+                            color: white; 
+                            border: none; 
+                            border-radius: 4px; 
+                            cursor: pointer;
+                            font-size: 16px;
+                            transition: background 0.3s;
+                        }
+                        button:hover {
+                            background: #2980b9;
+                        }
+                        .countdown {
+                            margin-top: 10px;
+                            color: #7f8c8d;
+                        }
+                    </style>
+                </head>
+                <body>
+                    <h2>Your Hoodie Design</h2>
+                    <img id="preview" src="${image}" alt="Hoodie Design Preview">
+                    <p>Click below to download your design</p>
+                    <button onclick="startDownload()">Download Now</button>
+                    <div class="countdown" id="countdown"></div>
+                    
+                    <script>
+                        let seconds = 5;
+                        const countdownEl = document.getElementById('countdown');
+                        countdownEl.textContent = 'Download will start in ' + seconds + ' seconds...';
+                        
+                        const timer = setInterval(() => {
+                            seconds--;
+                            countdownEl.textContent = 'Download will start in ' + seconds + ' seconds...';
+                            if (seconds <= 0) {
+                                clearInterval(timer);
+                            }
+                        }, 1000);
+                        
+                        function startDownload() {
+                            // Show ad in new tab
+                            window.open("https://www.example.com/ad", "_blank");
+                            
+                            // Start countdown
+                            let remaining = 5;
+                            const countdown = setInterval(() => {
+                                if (remaining <= 0) {
+                                    clearInterval(countdown);
+                                    // Trigger download
+                                    const link = document.createElement('a');
+                                    link.href = "${image}";
+                                    link.download = 'custom-hoodie-design.png';
+                                    document.body.appendChild(link);
+                                    link.click();
+                                    document.body.removeChild(link);
+                                }
+                                remaining--;
+                            }, 1000);
+                        }
+                    </script>
+                </body>
+                </html>
+            `;
+            
+            // Open download page
+            const win = window.open('', '_blank');
+            win.document.write(downloadPage);
+            
+            // Resume animation if it was playing
+            isAnimating = wasAnimating;
         });
-        
+
         // Animation loop
         function animate() {
             requestAnimationFrame(animate);
+            
             const delta = clock.getDelta();
-            if (mixer && isAnimating) mixer.update(delta);
+            
+            // Only update animations if enabled
+            if (mixer && isAnimating) {
+                mixer.update(delta);
+            }
+            
+            // Always update controls and render
             controls.update();
             renderer.render(scene, camera);
         }
