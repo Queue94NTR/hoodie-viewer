@@ -46,6 +46,18 @@
       font-weight: bold;
       font-size: 1rem;
     }
+    fieldset {
+      border: 1px solid #444;
+      border-radius: 8px;
+      margin-bottom: 15px;
+    }
+    legend {
+      padding: 0 5px;
+    }
+    .disabled {
+      opacity: 0.5;
+      pointer-events: none;
+    }
   </style>
 </head>
 <body>
@@ -54,39 +66,41 @@
   <h3>Controls</h3>
   <input type="file" id="designUpload" accept="image/png, image/jpeg, image/svg+xml">
 
-  <fieldset disabled>
+  <fieldset id="advancedControls">
     <legend>Advanced Controls</legend>
     <label>Garment Color
-      <select>
-        <option>White</option>
-        <option>Black</option>
-        <option>Red</option>
+      <select id="garmentColor">
+        <option value="#ffffff">White</option>
+        <option value="#000000">Black</option>
+        <option value="#ff0000">Red</option>
+        <option value="#0000ff">Blue</option>
+        <option value="#00ff00">Green</option>
       </select>
     </label>
     <label>Background
-      <select>
-        <option>Dark</option>
-        <option>Studio</option>
-        <option>Outdoor</option>
+      <select id="background">
+        <option value="#1a1a1a">Dark</option>
+        <option value="#f0f0f0">Studio</option>
+        <option value="#87CEEB">Outdoor</option>
       </select>
     </label>
     <label>Animation
-      <select>
-        <option>Static</option>
-        <option selected>Walk</option>
-        <option>Waves</option>
-        <option>Knit</option>
+      <select id="animation">
+        <option value="static">Static</option>
+        <option value="walk" selected>Walk</option>
+        <option value="waves">Waves</option>
+        <option value="knit">Knit</option>
       </select>
     </label>
     <label>Speed
-      <input type="range" min="0" max="2" step="0.1">
+      <input type="range" id="speed" min="0" max="2" step="0.1" value="1">
     </label>
     <label>
-      <input type="checkbox"> Camera Animation
+      <input type="checkbox" id="cameraAnimation"> Camera Animation
     </label>
   </fieldset>
 
-  <button class="export">Export Mockup</button>
+  <button class="export" id="exportBtn">Export Mockup</button>
 </div>
 
 <div id="viewer"></div>
@@ -111,8 +125,12 @@
 
 <script src="https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/three@0.160.0/examples/js/loaders/GLTFLoader.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.160.0/examples/js/controls/OrbitControls.js"></script>
 <script>
   let scene, camera, renderer, mixer, model, clock = new THREE.Clock();
+  let controls, currentAction, cameraAnimationId;
+  const animations = {};
+  const colorMaterials = [];
 
   function initViewer() {
     const container = document.getElementById('viewer');
@@ -127,17 +145,45 @@
     renderer.setSize(container.clientWidth, container.clientHeight);
     container.appendChild(renderer.domElement);
 
-    const light = new THREE.HemisphereLight(0xffffff, 0x444444, 1);
-    scene.add(light);
+    // Add lights
+    const ambientLight = new THREE.AmbientLight(0x404040);
+    scene.add(ambientLight);
+    
+    const directionalLight = new THREE.DirectionalLight(0xffffff, 1);
+    directionalLight.position.set(1, 1, 1);
+    scene.add(directionalLight);
 
+    // Add orbit controls
+    controls = new THREE.OrbitControls(camera, renderer.domElement);
+    controls.enableDamping = true;
+    controls.dampingFactor = 0.25;
+
+    // Load the model
     const loader = new THREE.GLTFLoader();
-    loader.load('Hoodie_Final_Animated.glb', (gltf) => {
+    loader.load('Hoodie_Walking_Animated.glb', (gltf) => {
       model = gltf.scene;
+      
+      // Store all animations
+      gltf.animations.forEach(anim => {
+        animations[anim.name.toLowerCase()] = anim;
+      });
+      
+      // Collect all materials for color changing
+      model.traverse(child => {
+        if (child.isMesh && child.material) {
+          colorMaterials.push(child.material);
+        }
+      });
+      
       scene.add(model);
+      
+      // Initialize mixer and play default animation
       mixer = new THREE.AnimationMixer(model);
-      if (gltf.animations.length) {
-        mixer.clipAction(gltf.animations[0]).play();
-      }
+      playAnimation('walk');
+      
+      // Enable controls after load
+      document.getElementById('advancedControls').disabled = false;
+      document.querySelector('fieldset').classList.remove('disabled');
     });
 
     window.addEventListener('resize', () => {
@@ -147,21 +193,51 @@
     });
   }
 
+  function playAnimation(name) {
+    if (currentAction) {
+      currentAction.stop();
+    }
+    
+    const clip = animations[name] || animations['walk']; // Fallback to walk
+    if (clip) {
+      currentAction = mixer.clipAction(clip);
+      currentAction.play();
+    }
+  }
+
+  function animateCamera() {
+    const time = clock.getElapsedTime();
+    camera.position.x = Math.sin(time * 0.3) * 3;
+    camera.position.z = Math.cos(time * 0.3) * 3;
+    camera.lookAt(0, 1, 0);
+    cameraAnimationId = requestAnimationFrame(animateCamera);
+  }
+
+  function stopCameraAnimation() {
+    if (cameraAnimationId) {
+      cancelAnimationFrame(cameraAnimationId);
+      cameraAnimationId = null;
+    }
+  }
+
   function animate() {
     requestAnimationFrame(animate);
     const delta = clock.getDelta();
     if (mixer) mixer.update(delta);
+    controls.update();
     renderer.render(scene, camera);
   }
 
+  // Event Listeners
   document.getElementById('designUpload').addEventListener('change', (e) => {
     const file = e.target.files[0];
     if (!file || !model) return;
+    
     const reader = new FileReader();
     reader.onload = (event) => {
       const texture = new THREE.TextureLoader().load(event.target.result);
       model.traverse(child => {
-        if (child.isMesh && child.material.map) {
+        if (child.isMesh && child.material) {
           child.material.map = texture;
           child.material.needsUpdate = true;
         }
@@ -169,6 +245,49 @@
     };
     reader.readAsDataURL(file);
   });
+
+  document.getElementById('garmentColor').addEventListener('change', (e) => {
+    const color = new THREE.Color(e.target.value);
+    colorMaterials.forEach(material => {
+      material.color = color;
+      material.needsUpdate = true;
+    });
+  });
+
+  document.getElementById('background').addEventListener('change', (e) => {
+    const color = new THREE.Color(e.target.value);
+    scene.background = color;
+  });
+
+  document.getElementById('animation').addEventListener('change', (e) => {
+    playAnimation(e.target.value);
+  });
+
+  document.getElementById('speed').addEventListener('input', (e) => {
+    if (mixer) {
+      mixer.timeScale = parseFloat(e.target.value);
+    }
+  });
+
+  document.getElementById('cameraAnimation').addEventListener('change', (e) => {
+    if (e.target.checked) {
+      controls.enabled = false;
+      animateCamera();
+    } else {
+      controls.enabled = true;
+      stopCameraAnimation();
+    }
+  });
+
+  document.getElementById('exportBtn').addEventListener('click', () => {
+    alert('Export functionality would save the current view as an image or GLB file');
+    // In a real implementation, you would use:
+    // renderer.domElement.toDataURL() for image
+    // or GLTFExporter for 3D export
+  });
+
+  // Initialize with disabled controls until model loads
+  document.querySelector('fieldset').classList.add('disabled');
 
   initViewer();
   animate();
