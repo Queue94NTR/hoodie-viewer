@@ -49,11 +49,10 @@
 
   <!-- Import Three.js from CDN -->
   <script src="https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.min.js"></script>
-  <!-- Import GLTFLoader as a module -->
-  <script type="module">
-    // Import GLTFLoader from CDN
-    import { GLTFLoader } from 'https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/loaders/GLTFLoader.js';
-    
+  <!-- Import GLTFLoader from the correct path -->
+  <script src="https://cdn.jsdelivr.net/npm/three@0.160.0/examples/js/loaders/GLTFLoader.js"></script>
+  
+  <script>
     // Wait for DOM to be fully loaded
     document.addEventListener('DOMContentLoaded', () => {
       try {
@@ -69,6 +68,16 @@
         };
         
         log('Starting initialization...');
+        
+        // Verify Three.js is loaded
+        if (!window.THREE) {
+          throw new Error('Three.js not loaded');
+        }
+        
+        // Verify GLTFLoader is available
+        if (!window.THREE.GLTFLoader) {
+          throw new Error('GLTFLoader not loaded. Check the import path.');
+        }
         
         // 1. Initialize Three.js scene
         log('Creating Three.js scene...');
@@ -100,8 +109,8 @@
         log('Loading 3D model...');
         const MODEL_PATH = 'Hoodie_Walking_Animated.glb';
         
-        // Use the imported GLTFLoader
-        const loader = new GLTFLoader();
+        // Use the GLTFLoader
+        const loader = new THREE.GLTFLoader();
         loader.load(
           MODEL_PATH,
           (gltf) => {
@@ -152,7 +161,7 @@
       } catch (error) {
         const errorMessage = `❌ Initialization failed: ${error.message}`;
         console.error(errorMessage, error);
-        document.getElementById('loading').innerHTML = `
+        loading.innerHTML = `
           <div style="color: #ff4444">${errorMessage}</div>
           <div>Check console for details</div>
         `;
