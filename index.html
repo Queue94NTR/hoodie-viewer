@@ -26,6 +26,8 @@
       border-radius: 5px;
       font-family: monospace;
       z-index: 100;
+      max-height: 30%;
+      overflow: auto;
     }
     #loading {
       position: absolute;
@@ -48,172 +50,108 @@
   <script src="https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/three@0.160.0/examples/js/loaders/GLTFLoader.js"></script>
   <script>
-    // Configuration
-    const CONFIG = {
-      MODEL_PATH: 'Hoodie_Walking_Animated.glb',
-      DEBUG: true
-    };
-
-    // State
-    const state = {
-      scene: null,
-      camera: null,
-      renderer: null,
-      mixer: null,
-      model: null
-    };
-
-    // DOM Elements
-    const elements = {
-      container: null,
-      debug: null,
-      loading: null
-    };
-
-    // Initialize application
-    function init() {
+    // Wait for DOM to be fully loaded
+    document.addEventListener('DOMContentLoaded', () => {
       try {
-        // Get DOM elements
-        elements.container = document.getElementById('viewer-container');
-        elements.debug = document.getElementById('debug');
-        elements.loading = document.getElementById('loading');
-        
-        if (!elements.container) {
-          throw new Error('Viewer container not found');
+        // Get container element
+        const container = document.getElementById('viewer-container');
+        if (!container) {
+          throw new Error('Viewer container element not found');
         }
-
-        log('Initializing 3D viewer...');
-        initThreeJS();
-        checkModelFile();
         
-      } catch (error) {
-        showError('Initialization failed', error);
-      }
-    }
-
-    // Initialize Three.js components
-    function initThreeJS() {
-      try {
-        // Scene
-        state.scene = new THREE.Scene();
-        state.scene.background = new THREE.Color(0x1a1a1a);
+        // Debug output
+        const debug = document.getElementById('debug');
+        const log = (message) => {
+          debug.textContent += `${message}\n`;
+          debug.scrollTop = debug.scrollHeight;
+          console.log(message);
+        };
         
-        // Camera
-        const aspect = elements.container.clientWidth / elements.container.clientHeight;
-        state.camera = new THREE.PerspectiveCamera(75, aspect, 0.1, 1000);
-        state.camera.position.set(0, 1.6, 3);
+        log('Starting initialization...');
         
-        // Renderer
-        state.renderer = new THREE.WebGLRenderer({ antialias: true });
-        state.renderer.setSize(elements.container.clientWidth, elements.container.clientHeight);
-        elements.container.appendChild(state.renderer.domElement);
+        // 1. Initialize Three.js scene
+        log('Creating Three.js scene...');
+        const scene = new THREE.Scene();
+        scene.background = new THREE.Color(0x1a1a1a);
         
-        // Lights
+        // 2. Setup camera with container dimensions
+        log('Setting up camera...');
+        const camera = new THREE.PerspectiveCamera(
+          75, 
+          container.clientWidth / container.clientHeight, 
+          0.1, 
+          1000
+        );
+        camera.position.set(0, 1.6, 3);
+        
+        // 3. Create renderer
+        log('Creating renderer...');
+        const renderer = new THREE.WebGLRenderer({ antialias: true });
+        renderer.setSize(container.clientWidth, container.clientHeight);
+        container.appendChild(renderer.domElement);
+        
+        // 4. Add lights
+        log('Adding lights...');
         const light = new THREE.HemisphereLight(0xffffff, 0x444444, 1);
-        state.scene.add(light);
+        scene.add(light);
         
-        log('Three.js initialized successfully');
+        // 5. Load model
+        log('Loading 3D model...');
+        const MODEL_PATH = 'Hoodie_Walking_Animated.glb';
+        
+        new THREE.GLTFLoader().load(
+          MODEL_PATH,
+          (gltf) => {
+            try {
+              log('Model loaded, processing...');
+              
+              // Add model to scene
+              scene.add(gltf.scene);
+              
+              // Handle animations
+              if (gltf.animations && gltf.animations.length) {
+                const mixer = new THREE.AnimationMixer(gltf.scene);
+                const action = mixer.clipAction(gltf.animations[0]);
+                action.play();
+                log(`Playing animation: ${gltf.animations[0].name}`);
+              }
+              
+              // Hide loading message
+              document.getElementById('loading').style.display = 'none';
+              log('🎉 Viewer ready!');
+              
+              // Animation loop
+              const clock = new THREE.Clock();
+              function animate() {
+                requestAnimationFrame(animate);
+                renderer.render(scene, camera);
+              }
+              animate();
+              
+            } catch (error) {
+              log(`❌ Model processing failed: ${error.message}`);
+            }
+          },
+          undefined,
+          (error) => {
+            log(`❌ Failed to load model: ${error.message}`);
+          }
+        );
+        
+        // Handle window resize
+        window.addEventListener('resize', () => {
+          camera.aspect = container.clientWidth / container.clientHeight;
+          camera.updateProjectionMatrix();
+          renderer.setSize(container.clientWidth, container.clientHeight);
+        });
         
       } catch (error) {
-        throw new Error(`ThreeJS init failed: ${error.message}`);
-      }
-    }
-
-    // Check if model file exists
-    function checkModelFile() {
-      log(`Checking for model file: ${CONFIG.MODEL_PATH}`);
-      
-      fetch(CONFIG.MODEL_PATH, { method: 'HEAD' })
-        .then(res => {
-          if (!res.ok) throw new Error('File not found');
-          log('Model file found. Loading...');
-          loadModel();
-        })
-        .catch(error => {
-          showError('Model file check failed', error);
-        });
-    }
-
-    // Load 3D model
-    function loadModel() {
-      new THREE.GLTFLoader().load(
-        CONFIG.MODEL_PATH,
-        (gltf) => {
-          try {
-            // Clear loading message
-            elements.loading.style.display = 'none';
-            
-            // Add model to scene
-            state.model = gltf.scene;
-            state.scene.add(state.model);
-            
-            // Set up animations
-            if (gltf.animations && gltf.animations.length) {
-              state.mixer = new THREE.AnimationMixer(state.model);
-              const action = state.mixer.clipAction(gltf.animations[0]);
-              action.play();
-              log(`Playing animation: ${gltf.animations[0].name}`);
-            }
-            
-            // Start animation loop
-            animate();
-            
-            log('🎉 Model loaded successfully!');
-            
-          } catch (error) {
-            showError('Model processing failed', error);
-          }
-        },
-        undefined,
-        (error) => {
-          showError('Model load failed', error);
-        }
-      );
-    }
-
-    // Animation loop
-    function animate() {
-      requestAnimationFrame(animate);
-      
-      // Update animations
-      if (state.mixer) {
-        state.mixer.update(clock.getDelta());
-      }
-      
-      // Render scene
-      if (state.renderer && state.scene && state.camera) {
-        state.renderer.render(state.scene, state.camera);
-      }
-    }
-
-    // Helper functions
-    function log(message) {
-      if (CONFIG.DEBUG) {
-        console.log(message);
-        elements.debug.textContent += `${message}\n`;
-        elements.debug.scrollTop = elements.debug.scrollHeight;
-      }
-    }
-
-    function showError(context, error) {
-      const message = `❌ ${context}: ${error.message}`;
-      console.error(message, error);
-      elements.loading.innerHTML = `<span style="color: #ff4444">${message}</span>`;
-      elements.debug.textContent += `${message}\n`;
-    }
-
-    // Clock for animations
-    const clock = new THREE.Clock();
-
-    // Start the application when DOM is ready
-    document.addEventListener('DOMContentLoaded', init);
-
-    // Handle window resize
-    window.addEventListener('resize', () => {
-      if (state.camera && state.renderer && elements.container) {
-        state.camera.aspect = elements.container.clientWidth / elements.container.clientHeight;
-        state.camera.updateProjectionMatrix();
-        state.renderer.setSize(elements.container.clientWidth, elements.container.clientHeight);
+        const errorMessage = `❌ Initialization failed: ${error.message}`;
+        console.error(errorMessage, error);
+        document.getElementById('loading').innerHTML = `
+          <div style="color: #ff4444">${errorMessage}</div>
+          <div>Check console for details</div>
+        `;
       }
     });
   </script>
