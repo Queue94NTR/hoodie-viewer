@@ -40,6 +40,9 @@
       border-radius: 5px;
       font-family: monospace;
     }
+    .error {
+      color: #ff4444;
+    }
   </style>
 </head>
 <body>
@@ -48,7 +51,7 @@
   <h3>Controls</h3>
   <input type="file" id="designUpload" accept="image/png, image/jpeg, image/svg+xml">
   
-  <fieldset id="controls">
+  <fieldset id="controls" disabled>
     <legend>Advanced Controls</legend>
     <label>Garment Color
       <select id="colorSelect">
@@ -69,31 +72,68 @@
 </div>
 
 <div id="viewer">
-  <div id="status">Loading viewer...</div>
+  <div id="status">Initializing viewer...</div>
 </div>
 
-<!-- Load Three.js from CDN -->
+<!-- Primary CDN for Three.js -->
 <script src="https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.min.js"></script>
-<!-- Load GLTFLoader from CDN -->
+<!-- Primary CDN for GLTFLoader -->
 <script src="https://cdn.jsdelivr.net/npm/three@0.160.0/examples/js/loaders/GLTFLoader.js"></script>
 
+<!-- Fallback if primary CDN fails -->
 <script>
-  // Wait for DOM and all scripts to load
-  window.addEventListener('DOMContentLoaded', () => {
-    const status = document.getElementById('status');
-    const controls = document.getElementById('controls');
-    
-    // Verify Three.js and GLTFLoader are loaded
+  // Wait 2 seconds to check if libraries loaded
+  setTimeout(function() {
     if (!window.THREE || !window.THREE.GLTFLoader) {
-      status.innerHTML = 'Error: Failed to load required libraries';
-      return;
+      document.getElementById('status').innerHTML = 
+        'Loading fallback libraries...';
+      
+      // Create new script elements for fallback
+      const threeScript = document.createElement('script');
+      threeScript.src = 'https://unpkg.com/three@0.160.0/build/three.min.js';
+      
+      const gltfLoaderScript = document.createElement('script');
+      gltfLoaderScript.src = 'https://unpkg.com/three@0.160.0/examples/js/loaders/GLTFLoader.js';
+      
+      // Load fallback scripts
+      document.head.appendChild(threeScript);
+      document.head.appendChild(gltfLoaderScript);
+      
+      // Check again after fallback loads
+      threeScript.onload = gltfLoaderScript.onload = function() {
+        if (!window.THREE || !window.THREE.GLTFLoader) {
+          document.getElementById('status').innerHTML = 
+            '<span class="error">Error: Could not load required 3D libraries</span>';
+        } else {
+          initViewer();
+        }
+      };
+    } else {
+      initViewer();
     }
+  }, 2000);
 
+  function initViewer() {
+    const status = document.getElementById('status');
     try {
+      status.textContent = 'Setting up 3D viewer...';
+      
+      // Verify Three.js and GLTFLoader are available
+      if (!window.THREE || !window.THREE.GLTFLoader) {
+        throw new Error('Required libraries not loaded');
+      }
+      
       // Initialize Three.js
       const container = document.getElementById('viewer');
       const scene = new THREE.Scene();
-      const camera = new THREE.PerspectiveCamera(75, container.clientWidth / container.clientHeight, 0.1, 1000);
+      scene.background = new THREE.Color('#1a1a1a');
+      
+      const camera = new THREE.PerspectiveCamera(
+        75, 
+        container.clientWidth / container.clientHeight, 
+        0.1, 
+        1000
+      );
       camera.position.set(0, 1.6, 3);
       
       const renderer = new THREE.WebGLRenderer({ antialias: true });
@@ -103,7 +143,7 @@
       // Add lights
       const light = new THREE.HemisphereLight(0xffffff, 0x444444, 1);
       scene.add(light);
-
+      
       // Try multiple possible model filenames
       const MODEL_PATHS = [
         'Hoodie_Walking_Animated.glb',
@@ -113,21 +153,22 @@
       
       let modelLoaded = false;
       
-      // Try each possible model path
       MODEL_PATHS.forEach(modelPath => {
         if (modelLoaded) return;
+        
+        status.textContent = `Loading model: ${modelPath}...`;
         
         new THREE.GLTFLoader().load(
           modelPath,
           (gltf) => {
             modelLoaded = true;
-            status.textContent = 'Model loaded!';
-            controls.disabled = false;
+            status.textContent = 'Model loaded successfully!';
+            document.getElementById('controls').disabled = false;
             
             const model = gltf.scene;
             scene.add(model);
             
-            // Set up controls
+            // Setup controls
             document.getElementById('colorSelect').addEventListener('change', (e) => {
               model.traverse(child => {
                 if (child.isMesh) {
@@ -150,18 +191,17 @@
           undefined,
           (error) => {
             if (!modelLoaded && MODEL_PATHS.indexOf(modelPath) === MODEL_PATHS.length - 1) {
-              status.innerHTML = `Error: Could not load model<br>
-                Tried: ${MODEL_PATHS.join(', ')}<br>
-                ${error.message}`;
+              status.innerHTML = `<span class="error">Error loading model. Tried: ${MODEL_PATHS.join(', ')}</span>`;
             }
           }
         );
       });
       
     } catch (error) {
-      status.innerHTML = `Initialization error: ${error.message}`;
+      status.innerHTML = `<span class="error">Error: ${error.message}</span>`;
+      console.error(error);
     }
-  });
+  }
 </script>
 </body>
 </html>
