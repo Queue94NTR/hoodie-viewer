@@ -79,6 +79,11 @@
   <div id="status">Initializing viewer...</div>
 </div>
 
+<!-- Load Three.js from CDN -->
+<script src="https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.min.js"></script>
+<!-- Load GLTFLoader from correct path -->
+<script src="https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/loaders/GLTFLoader.js"></script>
+
 <script>
   // Configuration
   const CONFIG = {
@@ -87,89 +92,28 @@
       'Hoodie_Walking_Animated.glb',
       'hoodie-viewer/Hoodie_Final_Animated.glb',
       'hoodie.glb'
-    ],
-    THREE_JS_CDN: 'https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.min.js',
-    GLTF_LOADER_CDN: 'https://cdn.jsdelivr.net/npm/three@0.160.0/examples/js/loaders/GLTFLoader.js',
-    LOCAL_THREE_JS: 'js/three.min.js',
-    LOCAL_GLTF_LOADER: 'js/GLTFLoader.js'
+    ]
   };
-
-  // Load scripts with fallbacks
-  function loadScript(src, callback) {
-    const script = document.createElement('script');
-    script.src = src;
-    script.onload = callback;
-    script.onerror = function() {
-      document.getElementById('status').innerHTML += 
-        `<div class="error">Failed to load: ${src}</div>`;
-    };
-    document.head.appendChild(script);
-  }
-
-  // Try loading Three.js with multiple fallbacks
-  function loadThreeJS(callback) {
-    const status = document.getElementById('status');
-    
-    function tryLoad(sources, index = 0) {
-      if (index >= sources.length) {
-        status.innerHTML += '<div class="error">All Three.js sources failed</div>';
-        return;
-      }
-      
-      status.innerHTML += `<div>Loading Three.js from: ${sources[index]}</div>`;
-      
-      loadScript(sources[index], function() {
-        if (window.THREE) {
-          status.innerHTML += '<div class="success">Three.js loaded successfully</div>';
-          callback();
-        } else {
-          tryLoad(sources, index + 1);
-        }
-      });
-    }
-    
-    tryLoad([
-      CONFIG.THREE_JS_CDN,
-      CONFIG.LOCAL_THREE_JS,
-      'https://unpkg.com/three@0.160.0/build/three.min.js'
-    ]);
-  }
-
-  // Try loading GLTFLoader with multiple fallbacks
-  function loadGLTFLoader(callback) {
-    const status = document.getElementById('status');
-    
-    function tryLoad(sources, index = 0) {
-      if (index >= sources.length) {
-        status.innerHTML += '<div class="error">All GLTFLoader sources failed</div>';
-        return;
-      }
-      
-      status.innerHTML += `<div>Loading GLTFLoader from: ${sources[index]}</div>`;
-      
-      loadScript(sources[index], function() {
-        if (window.THREE && window.THREE.GLTFLoader) {
-          status.innerHTML += '<div class="success">GLTFLoader loaded successfully</div>';
-          callback();
-        } else {
-          tryLoad(sources, index + 1);
-        }
-      });
-    }
-    
-    tryLoad([
-      CONFIG.GLTF_LOADER_CDN,
-      CONFIG.LOCAL_GLTF_LOADER,
-      'https://unpkg.com/three@0.160.0/examples/js/loaders/GLTFLoader.js'
-    ]);
-  }
 
   // Main initialization function
   function initViewer() {
     const status = document.getElementById('status');
-    status.innerHTML += '<div>Initializing 3D viewer...</div>';
+    const log = (message, isError = false) => {
+      status.innerHTML += `<div class="${isError ? 'error' : ''}">${message}</div>`;
+      console.log(message);
+    };
 
     try {
+      // Verify Three.js and GLTFLoader are loaded
+      if (!window.THREE) {
+        throw new Error('Three.js library not loaded');
+      }
+      if (!window.THREE.GLTFLoader) {
+        throw new Error('GLTFLoader not available. Check the import path.');
+      }
+
+      log('Three.js and GLTFLoader loaded successfully');
+
       // Create Three.js scene
       const container = document.getElementById('viewer');
       const scene = new THREE.Scene();
@@ -194,18 +138,17 @@
       // Try loading model from multiple paths
       const tryLoadModel = (paths, index = 0) => {
         if (index >= paths.length) {
-          status.innerHTML += `<div class="error">Failed to load model from all paths: ${paths.join(', ')}</div>`;
-          return;
+          throw new Error(`Failed to load model from all paths: ${paths.join(', ')}`);
         }
 
         const currentPath = paths[index];
-        status.innerHTML += `<div>Attempting to load: ${currentPath}</div>`;
+        log(`Attempting to load: ${currentPath}`);
 
         new THREE.GLTFLoader().load(
           currentPath,
           (gltf) => {
             // Success callback
-            status.innerHTML += `<div class="success">Successfully loaded model from: ${currentPath}</div>`;
+            log(`Successfully loaded model from: ${currentPath}`, true);
             document.getElementById('controls').disabled = false;
 
             const model = gltf.scene;
@@ -234,7 +177,7 @@
           undefined,
           (error) => {
             // Error callback - try next path
-            status.innerHTML += `<div class="error">Failed to load ${currentPath}: ${error.message}</div>`;
+            log(`Failed to load ${currentPath}: ${error.message}`, true);
             tryLoadModel(paths, index + 1);
           }
         );
@@ -244,18 +187,31 @@
       tryLoadModel([CONFIG.MODEL_PATH, ...CONFIG.FALLBACK_PATHS]);
 
     } catch (error) {
-      status.innerHTML += `<div class="error">Initialization failed: ${error.message}</div>`;
+      log(`Initialization failed: ${error.message}`, true);
       console.error(error);
     }
   }
 
-  // Start loading process
-  document.addEventListener('DOMContentLoaded', function() {
-    loadThreeJS(function() {
-      loadGLTFLoader(function() {
-        initViewer();
-      });
-    });
+  // Wait for DOM and scripts to load
+  window.addEventListener('DOMContentLoaded', () => {
+    // First check if libraries loaded immediately
+    if (window.THREE && window.THREE.GLTFLoader) {
+      initViewer();
+    } else {
+      // If not, wait a bit and check again
+      setTimeout(() => {
+        if (window.THREE && window.THREE.GLTFLoader) {
+          initViewer();
+        } else {
+          document.getElementById('status').innerHTML = 
+            '<div class="error">Error: Could not load required 3D libraries</div>' +
+            '<div>Possible solutions:</div>' +
+            '<div>1. Check your internet connection</div>' +
+            '<div>2. Try refreshing the page</div>' +
+            '<div>3. Verify Three.js v0.160.0 is available at CDN</div>';
+        }
+      }, 2000);
+    }
   });
 </script>
 </body>
