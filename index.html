@@ -5,70 +5,50 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>3D Hoodie Viewer</title>
   <style>
-    /* ... (keep your existing styles) ... */
+    body { margin: 0; font-family: Arial, sans-serif; }
+    #viewer { width: 100%; height: 100vh; }
+    #status { position: absolute; top: 10px; left: 10px; background: rgba(0,0,0,0.7); color: white; padding: 10px; }
+    .success { color: #4CAF50; }
+    .error { color: #F44336; }
+    #controls { position: absolute; bottom: 20px; left: 50%; transform: translateX(-50%); }
   </style>
 </head>
 <body>
-  <!-- ... (keep your existing HTML structure) ... -->
+  <div id="viewer"></div>
+  <div id="status">Loading...</div>
+  <div id="controls" disabled>
+    <select id="colorSelect">
+      <option value="#000000">Black</option>
+      <option value="#FF0000">Red</option>
+      <option value="#00FF00">Green</option>
+      <option value="#0000FF">Blue</option>
+    </select>
+  </div>
 
   <!-- Load Three.js from CDN -->
   <script src="https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.min.js"></script>
-  
-  <!-- Try multiple GLTFLoader sources -->
-  <script>
-    // List of possible GLTFLoader sources
-    const GLTF_SOURCES = [
-      'https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/loaders/GLTFLoader.js', // Correct path
-      'https://unpkg.com/three@0.160.0/examples/jsm/loaders/GLTFLoader.js', // Alternative CDN
-      'js/GLTFLoader.js' // Local fallback
-    ];
+  <script src="https://cdn.jsdelivr.net/npm/three@0.160.0/examples/js/loaders/GLTFLoader.js"></script>
 
-    function loadGLTFLoader() {
+  <script>
+    document.addEventListener('DOMContentLoaded', function() {
       const status = document.getElementById('status');
       
-      function tryLoad(index) {
-        if (index >= GLTF_SOURCES.length) {
-          status.innerHTML += '<div class="error">All GLTFLoader sources failed</div>';
-          return;
-        }
-
-        const src = GLTF_SOURCES[index];
-        status.innerHTML += `<div>Loading GLTFLoader from: ${src}</div>`;
-        
-        const script = document.createElement('script');
-        script.src = src;
-        script.onload = function() {
-          if (window.THREE && window.THREE.GLTFLoader) {
-            status.innerHTML += '<div class="success">GLTFLoader loaded successfully</div>';
-            initViewer();
-          } else {
-            tryLoad(index + 1);
-          }
-        };
-        script.onerror = function() {
-          tryLoad(index + 1);
-        };
-        document.head.appendChild(script);
+      if (!window.THREE) {
+        status.innerHTML = '<div class="error">Three.js failed to load</div>';
+        return;
       }
 
-      tryLoad(0);
-    }
-
-    // Start loading process
-    document.addEventListener('DOMContentLoaded', function() {
-      if (window.THREE) {
-        loadGLTFLoader();
-      } else {
-        document.getElementById('status').innerHTML = 
-          '<div class="error">Three.js failed to load</div>';
+      if (!window.THREE.GLTFLoader) {
+        status.innerHTML = '<div class="error">GLTFLoader failed to load</div>';
+        return;
       }
+
+      initViewer();
     });
-  </script>
 
-  <script>
     function initViewer() {
       const status = document.getElementById('status');
-      status.innerHTML += '<div>Initializing 3D viewer...</div>';
+      status.innerHTML = '<div>Initializing 3D viewer...</div>';
 
       try {
         // Create Three.js scene
@@ -92,8 +72,8 @@
         const light = new THREE.HemisphereLight(0xffffff, 0x444444, 1);
         scene.add(light);
 
-        // Try loading model
-        const MODEL_PATH = 'hoodie-viewer/Hoodie_Walking_Animated.glb';
+        // Try loading model - CHANGED PATH TO MATCH YOUR SCREENSHOT
+        const MODEL_PATH = 'Hoodie_Walking_Animated.glb';
         status.innerHTML += `<div>Loading model: ${MODEL_PATH}</div>`;
 
         new THREE.GLTFLoader().load(
