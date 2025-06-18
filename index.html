@@ -276,6 +276,9 @@
                     }
                 });
                 
+                // Set initial colors
+                updateColors();
+                
                 // Center model
                 const box = new THREE.Box3().setFromObject(hoodieModel);
                 const center = box.getCenter(new THREE.Vector3());
