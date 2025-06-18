@@ -3,9 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>3D Hoodie Viewer</title>
+    <title>Interactive 3D Hoodie</title>
     <style>
-        body { margin: 0; }
+        body { margin: 0; overflow: hidden; }
         #viewer { width: 100vw; height: 100vh; }
     </style>
 </head>
@@ -23,40 +23,75 @@
     <script type="module">
         import * as THREE from 'three';
         import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+        import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
         
         // Scene setup
         const scene = new THREE.Scene();
+        scene.background = new THREE.Color(0xf0f0f0);
         const camera = new THREE.PerspectiveCamera(75, window.innerWidth/window.innerHeight, 0.1, 1000);
         const renderer = new THREE.WebGLRenderer({ antialias: true });
         renderer.setSize(window.innerWidth, window.innerHeight);
         document.getElementById('viewer').appendChild(renderer.domElement);
         
         // Lighting
-        const light = new THREE.AmbientLight(0xffffff, 1);
-        scene.add(light);
+        const ambientLight = new THREE.AmbientLight(0xffffff, 0.5);
+        scene.add(ambientLight);
+        const directionalLight = new THREE.DirectionalLight(0xffffff, 1);
+        directionalLight.position.set(1, 1, 1);
+        scene.add(directionalLight);
         
-        // Load model
+        // Controls
+        const controls = new OrbitControls(camera, renderer.domElement);
+        controls.enableDamping = true;
+        controls.dampingFactor = 0.05;
+        
+        // Model loading
         const loader = new GLTFLoader();
+        let mixer; // For animations
+        
         loader.load(
-            'Hoodie_Walking_Animated.glb', // Verify this path is correct
+            'Hoodie_Walking_Animated.glb',
             (gltf) => {
-                console.log("Model loaded successfully!");
-                scene.add(gltf.scene);
-                camera.position.z = 5;
+                const model = gltf.scene;
+                scene.add(model);
+                
+                // Center and scale model
+                const box = new THREE.Box3().setFromObject(model);
+                const center = box.getCenter(new THREE.Vector3());
+                model.position.sub(center);
+                
+                // Set camera position
+                camera.position.z = box.getSize(new THREE.Vector3()).length() * 1.5;
+                controls.update();
+                
+                // Handle animations
+                if (gltf.animations && gltf.animations.length) {
+                    mixer = new THREE.AnimationMixer(model);
+                    const action = mixer.clipAction(gltf.animations[0]);
+                    action.play();
+                }
             },
             undefined,
-            (error) => {
-                console.error("Error loading model:", error);
-                alert("Failed to load model. Check console for details.");
-            }
+            (error) => console.error(error)
         );
         
         // Animation loop
+        const clock = new THREE.Clock();
         function animate() {
             requestAnimationFrame(animate);
+            const delta = clock.getDelta();
+            if (mixer) mixer.update(delta);
+            controls.update();
             renderer.render(scene, camera);
         }
         animate();
+        
+        // Handle window resize
+        window.addEventListener('resize', () => {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        });
     </script>
 </body>
 </html>
