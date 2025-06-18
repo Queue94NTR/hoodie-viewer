@@ -3,36 +3,31 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Hoodie Customizer</title>
+    <title>3D Hoodie Customizer</title>
     <style>
-        /* BASIC RESET */
-        * { box-sizing: border-box; margin: 0; padding: 0; }
         body { 
+            margin: 0; 
             font-family: 'Arial', sans-serif;
             display: flex;
             height: 100vh;
             overflow: hidden;
-            background-color: red; /* Temporary to test CSS */
         }
         
-        /* SIDEBAR STYLES */
         #sidebar {
             width: 300px;
             background: #f5f5f5;
             padding: 20px;
             box-shadow: 2px 0 10px rgba(0,0,0,0.1);
             overflow-y: auto;
-            display: block !important; /* Force visible */
+            z-index: 2;
         }
         
-        /* VIEWER AREA */
         #viewer {
             flex: 1;
             position: relative;
-            background: white;
+            z-index: 1;
         }
         
-        /* CONTROL GROUPS */
         .control-group {
             margin-bottom: 20px;
             background: white;
@@ -75,7 +70,6 @@
             background: #45a049;
         }
         
-        /* DEBUG INFO */
         #debug {
             position: absolute;
             top: 10px;
@@ -98,7 +92,6 @@
     </style>
 </head>
 <body>
-    <!-- SIDEBAR CONTROLS -->
     <div id="sidebar">
         <div class="control-group">
             <h3>Design Upload</h3>
@@ -151,12 +144,10 @@
         </div>
     </div>
     
-    <!-- 3D VIEWER -->
     <div id="viewer">
         <div id="debug">Loading...</div>
     </div>
 
-    <!-- THREE.JS SETUP -->
     <script type="importmap">
         {
             "imports": {
@@ -166,27 +157,29 @@
         }
     </script>
     <script type="module">
-        // Debugging helper - log all Three.js components
-        console.log("Three.js version:", THREE.REVISION);
-        
         import * as THREE from 'three';
         import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
         import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
         
-        // Debug UI visibility
-        console.log("Sidebar element:", document.getElementById('sidebar'));
-        
         // Scene setup
         const scene = new THREE.Scene();
         scene.background = new THREE.Color(0xf0f0f0);
+        
         const camera = new THREE.PerspectiveCamera(75, window.innerWidth/window.innerHeight, 0.1, 1000);
-        const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+        camera.position.set(0, 1.6, 3);
+        
+        const renderer = new THREE.WebGLRenderer({ 
+            antialias: true,
+            preserveDrawingBuffer: true // Required for screenshot capture
+        });
         renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.setPixelRatio(window.devicePixelRatio);
         document.getElementById('viewer').appendChild(renderer.domElement);
         
         // Lighting
         const ambientLight = new THREE.AmbientLight(0xffffff, 0.5);
         scene.add(ambientLight);
+        
         const directionalLight = new THREE.DirectionalLight(0xffffff, 1);
         directionalLight.position.set(1, 1, 1);
         scene.add(directionalLight);
@@ -200,19 +193,23 @@
         const clock = new THREE.Clock();
         let mixer = null;
         let hoodieModel = null;
+        let isAnimating = true;
         
-        // Debug model parts
-        function logModelParts() {
-            if (!hoodieModel) return;
-            
-            console.group("Model Parts");
-            hoodieModel.traverse((child) => {
-                if (child.isMesh) {
-                    console.log("Mesh:", child.name, child.material);
-                }
-            });
-            console.groupEnd();
-        }
+        // Model parts mapping
+        const modelParts = {
+            body: null,
+            hood: null,
+            sleeves: null,
+            collar: null
+        };
+        
+        // Decals
+        const decals = {
+            front: null,
+            back: null,
+            leftSleeve: null,
+            rightSleeve: null
+        };
         
         // Load model
         const loader = new GLTFLoader();
@@ -222,8 +219,23 @@
                 hoodieModel = gltf.scene;
                 scene.add(hoodieModel);
                 
-                // Debug model structure
-                logModelParts();
+                // Map model parts
+                hoodieModel.traverse((child) => {
+                    if (child.isMesh) {
+                        if (child.name.toLowerCase().includes('body')) {
+                            modelParts.body = child;
+                        } else if (child.name.toLowerCase().includes('hood')) {
+                            modelParts.hood = child;
+                        } else if (child.name.toLowerCase().includes('sleeve')) {
+                            modelParts.sleeves = child;
+                        } else if (child.name.toLowerCase().includes('collar')) {
+                            modelParts.collar = child;
+                        }
+                    }
+                });
+                
+                // Set initial colors
+                updateColors();
                 
                 // Center model
                 const box = new THREE.Box3().setFromObject(hoodieModel);
@@ -241,57 +253,178 @@
                     });
                     document.getElementById('debug').textContent = `Playing ${gltf.animations.length} animations`;
                 }
-                
-                // Initialize color controls
-                setupColorControls();
             },
             undefined,
             (error) => {
-                console.error("Model loading error:", error);
-                document.getElementById('debug').textContent = `Error: ${error.message}`;
+                console.error(error);
+                document.getElementById('debug').innerHTML = `Error loading model: ${error.message}`;
             }
         );
         
-        // Color control setup
-        function setupColorControls() {
-            const colorControls = document.querySelectorAll('input[type="color"]');
-            colorControls.forEach(control => {
-                const preview = document.getElementById(`${control.id}Preview`);
-                if (preview) {
-                    preview.style.backgroundColor = control.value;
-                }
-                
-                control.addEventListener('input', (e) => {
-                    const preview = document.getElementById(`${e.target.id}Preview`);
-                    if (preview) {
-                        preview.style.backgroundColor = e.target.value;
-                    }
-                    console.log(`Color changed: ${e.target.id} = ${e.target.value}`);
-                });
-            });
+        // Update colors function
+        function updateColors() {
+            const bodyColor = document.getElementById('bodyColor').value;
+            const hoodColor = document.getElementById('hoodColor').value;
+            const sleevesColor = document.getElementById('sleevesColor').value;
+            const collarColor = document.getElementById('collarColor').value;
             
-            // Test: Change background when color pickers are used
-            document.getElementById('bodyColor').addEventListener('input', (e) => {
-                document.body.style.backgroundColor = e.target.value;
-            });
+            if (modelParts.body) modelParts.body.material.color.set(bodyColor);
+            if (modelParts.hood) modelParts.hood.material.color.set(hoodColor);
+            if (modelParts.sleeves) modelParts.sleeves.material.color.set(sleevesColor);
+            if (modelParts.collar) modelParts.collar.material.color.set(collarColor);
+            
+            // Update color previews
+            document.getElementById('bodyColorPreview').style.backgroundColor = bodyColor;
+            document.getElementById('hoodColorPreview').style.backgroundColor = hoodColor;
+            document.getElementById('sleevesColorPreview').style.backgroundColor = sleevesColor;
+            document.getElementById('collarColorPreview').style.backgroundColor = collarColor;
         }
         
-        // Test UI functionality
-        document.getElementById('applyDesign').addEventListener('click', () => {
-            alert("Design application would work here");
-            console.log("Apply design clicked");
+        // Event listeners
+        document.getElementById('bodyColor').addEventListener('input', updateColors);
+        document.getElementById('hoodColor').addEventListener('input', updateColors);
+        document.getElementById('sleevesColor').addEventListener('input', updateColors);
+        document.getElementById('collarColor').addEventListener('input', updateColors);
+        
+        document.getElementById('bgColor').addEventListener('change', (e) => {
+            scene.background = e.target.value === 'transparent' ? null : new THREE.Color(e.target.value);
         });
         
+        document.getElementById('toggleAnimation').addEventListener('change', (e) => {
+            isAnimating = e.target.checked;
+        });
+        
+        document.getElementById('resetCamera').addEventListener('click', () => {
+            controls.reset();
+            if (hoodieModel) {
+                const box = new THREE.Box3().setFromObject(hoodieModel);
+                camera.position.z = box.getSize(new THREE.Vector3()).length() * 1.5;
+                controls.update();
+            }
+        });
+        
+        document.getElementById('applyDesign').addEventListener('click', () => {
+            const file = document.getElementById('designUpload').files[0];
+            const placement = document.getElementById('placementArea').value;
+            
+            if (!file) {
+                alert('Please select an image file first');
+                return;
+            }
+            
+            const reader = new FileReader();
+            reader.onload = (event) => {
+                const texture = new THREE.TextureLoader().load(event.target.result, (tex) => {
+                    // Remove existing decal if any
+                    if (decals[placement]) {
+                        hoodieModel.remove(decals[placement]);
+                    }
+                    
+                    // Create decal mesh
+                    const decalGeometry = new THREE.PlaneGeometry(0.5, 0.5);
+                    const decalMaterial = new THREE.MeshBasicMaterial({
+                        map: tex,
+                        transparent: true,
+                        side: THREE.DoubleSide
+                    });
+                    
+                    const decal = new THREE.Mesh(decalGeometry, decalMaterial);
+                    
+                    // Position based on placement
+                    switch (placement) {
+                        case 'front':
+                            decal.position.set(0, 0.5, 0.3);
+                            break;
+                        case 'back':
+                            decal.position.set(0, 0.5, -0.3);
+                            decal.rotation.y = Math.PI;
+                            break;
+                        case 'leftSleeve':
+                            decal.position.set(-0.4, 0.5, 0);
+                            decal.rotation.y = Math.PI/2;
+                            break;
+                        case 'rightSleeve':
+                            decal.position.set(0.4, 0.5, 0);
+                            decal.rotation.y = -Math.PI/2;
+                            break;
+                    }
+                    
+                    hoodieModel.add(decal);
+                    decals[placement] = decal;
+                });
+            };
+            reader.readAsDataURL(file);
+        });
+        
+        // Export function
         document.getElementById('exportBtn').addEventListener('click', () => {
-            alert("Export functionality would work here");
-            console.log("Export clicked");
+            // Pause animation
+            isAnimating = false;
+            
+            // Render final frame
+            renderer.render(scene, camera);
+            
+            // Get screenshot
+            const image = renderer.domElement.toDataURL('image/png');
+            
+            // Create download page
+            const downloadPage = `
+                <!DOCTYPE html>
+                <html>
+                <head>
+                    <title>Download Your Design</title>
+                    <style>
+                        body { font-family: Arial; text-align: center; padding: 20px; }
+                        #preview { max-width: 80%; margin: 20px auto; border: 1px solid #ddd; }
+                        button { 
+                            padding: 12px 24px; 
+                            background: #4CAF50; 
+                            color: white; 
+                            border: none; 
+                            border-radius: 4px; 
+                            cursor: pointer;
+                            font-size: 16px;
+                        }
+                    </style>
+                </head>
+                <body>
+                    <h2>Your Hoodie Design</h2>
+                    <img id="preview" src="${image}" alt="Hoodie Design Preview">
+                    <p>Click below to download your design</p>
+                    <button onclick="startDownload()">Download Now</button>
+                    <script>
+                        function startDownload() {
+                            // Show ad
+                            window.open("https://www.profitableratecpm.com/ag04sfrh?key=b6e4ad6e4ce6ae3c4e94a5625fb4813c", "_blank");
+                            
+                            // Start download after delay
+                            setTimeout(() => {
+                                const link = document.createElement('a');
+                                link.href = "${image}";
+                                link.download = 'custom-hoodie.png';
+                                document.body.appendChild(link);
+                                link.click();
+                                document.body.removeChild(link);
+                            }, 5000); // 5 second delay
+                        }
+                    </script>
+                </body>
+                </html>
+            `;
+            
+            // Open download page
+            const win = window.open('', '_blank');
+            win.document.write(downloadPage);
+            
+            // Resume animation
+            isAnimating = true;
         });
         
         // Animation loop
         function animate() {
             requestAnimationFrame(animate);
             const delta = clock.getDelta();
-            if (mixer) mixer.update(delta);
+            if (mixer && isAnimating) mixer.update(delta);
             controls.update();
             renderer.render(scene, camera);
         }
