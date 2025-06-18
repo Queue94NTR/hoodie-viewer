@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>3D Apparel Mockup Viewer</title>
+  <style>
+    body {
+      margin: 0;
+      display: flex;
+      height: 100vh;
+      font-family: sans-serif;
+      background: #1a1a1a;
+      color: white;
+    }
+    #sidebar, #layoutTools {
+      width: 250px;
+      background: #2b2b2b;
+      padding: 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      border-right: 2px solid #333;
+    }
+    #layoutTools {
+      display: none; /* Toggle ON for layout */
+    }
+    #viewer {
+      flex-grow: 1;
+      position: relative;
+    }
+    canvas {
+      width: 100%;
+      height: 100%;
+      display: block;
+    }
+    button, select, input[type=range] {
+      padding: 8px;
+      border-radius: 8px;
+      border: none;
+      background: #444;
+      color: white;
+    }
+    button.export {
+      background: purple;
+      font-weight: bold;
+      font-size: 1rem;
+    }
+  </style>
+</head>
+<body>
+
+<div id="sidebar">
+  <h3>Controls</h3>
+  <input type="file" id="designUpload" accept="image/png, image/jpeg, image/svg+xml">
+
+  <fieldset disabled>
+    <legend>Advanced Controls</legend>
+    <label>Garment Color
+      <select>
+        <option>White</option>
+        <option>Black</option>
+        <option>Red</option>
+      </select>
+    </label>
+    <label>Background
+      <select>
+        <option>Dark</option>
+        <option>Studio</option>
+        <option>Outdoor</option>
+      </select>
+    </label>
+    <label>Animation
+      <select>
+        <option>Static</option>
+        <option selected>Walk</option>
+        <option>Waves</option>
+        <option>Knit</option>
+      </select>
+    </label>
+    <label>Speed
+      <input type="range" min="0" max="2" step="0.1">
+    </label>
+    <label>
+      <input type="checkbox"> Camera Animation
+    </label>
+  </fieldset>
+
+  <button class="export">Export Mockup</button>
+</div>
+
+<div id="viewer"></div>
+
+<div id="layoutTools">
+  <h3>Design Tools</h3>
+  <button>Add Text</button>
+  <label>Font
+    <select>
+      <option>Arial</option>
+      <option>Roboto</option>
+    </select>
+  </label>
+  <label>Size <input type="range" min="10" max="100"></label>
+  <label>Color <input type="color"></label>
+  <h4>Layout</h4>
+  <button>Front</button>
+  <button>Back</button>
+  <button>Left Sleeve</button>
+  <button>Right Sleeve</button>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.160.0/examples/js/loaders/GLTFLoader.js"></script>
+<script>
+  let scene, camera, renderer, mixer, model, clock = new THREE.Clock();
+
+  function initViewer() {
+    const container = document.getElementById('viewer');
+
+    scene = new THREE.Scene();
+    scene.background = new THREE.Color('#1a1a1a');
+
+    camera = new THREE.PerspectiveCamera(45, container.clientWidth / container.clientHeight, 0.1, 1000);
+    camera.position.set(0, 1.6, 3);
+
+    renderer = new THREE.WebGLRenderer({ antialias: true });
+    renderer.setSize(container.clientWidth, container.clientHeight);
+    container.appendChild(renderer.domElement);
+
+    const light = new THREE.HemisphereLight(0xffffff, 0x444444, 1);
+    scene.add(light);
+
+    const loader = new THREE.GLTFLoader();
+    loader.load('Hoodie_Final_Animated.glb', (gltf) => {
+      model = gltf.scene;
+      scene.add(model);
+      mixer = new THREE.AnimationMixer(model);
+      if (gltf.animations.length) {
+        mixer.clipAction(gltf.animations[0]).play();
+      }
+    });
+
+    window.addEventListener('resize', () => {
+      camera.aspect = container.clientWidth / container.clientHeight;
+      camera.updateProjectionMatrix();
+      renderer.setSize(container.clientWidth, container.clientHeight);
+    });
+  }
+
+  function animate() {
+    requestAnimationFrame(animate);
+    const delta = clock.getDelta();
+    if (mixer) mixer.update(delta);
+    renderer.render(scene, camera);
+  }
+
+  document.getElementById('designUpload').addEventListener('change', (e) => {
+    const file = e.target.files[0];
+    if (!file || !model) return;
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const texture = new THREE.TextureLoader().load(event.target.result);
+      model.traverse(child => {
+        if (child.isMesh && child.material.map) {
+          child.material.map = texture;
+          child.material.needsUpdate = true;
+        }
+      });
+    };
+    reader.readAsDataURL(file);
+  });
+
+  initViewer();
+  animate();
+</script>
+</body>
+</html>
