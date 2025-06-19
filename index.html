@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>3D Hoodie Viewer</title>
+    <title>3D Hoodie Designer</title>
     <style>
         body { 
             margin: 0;
@@ -11,9 +11,10 @@
             height: 100vh;
             overflow: hidden;
             flex-direction: row-reverse;
+            font-family: Arial, sans-serif;
         }
         #sidebar {
-            width: 250px;
+            width: 300px;
             background: #f8f9fa;
             padding: 15px;
             overflow-y: auto;
@@ -59,7 +60,7 @@
             width: 100%;
             margin-bottom: 10px;
         }
-        #applyDesign {
+        button {
             width: 100%;
             padding: 8px;
             background: #007bff;
@@ -67,8 +68,9 @@
             border: none;
             border-radius: 4px;
             cursor: pointer;
+            margin-bottom: 10px;
         }
-        #applyDesign:hover {
+        button:hover {
             background: #0069d9;
         }
         .placement-control {
@@ -81,6 +83,39 @@
         .placement-control select {
             width: 100%;
             padding: 5px;
+            margin-bottom: 10px;
+        }
+        .transform-control {
+            margin-bottom: 15px;
+        }
+        .transform-control label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: 500;
+        }
+        .transform-control input[type="range"] {
+            width: 100%;
+        }
+        .transform-value {
+            display: inline-block;
+            width: 40px;
+            text-align: right;
+            margin-left: 10px;
+        }
+        .transform-row {
+            display: flex;
+            align-items: center;
+            margin-bottom: 5px;
+        }
+        .transform-row input[type="number"] {
+            width: 60px;
+            padding: 5px;
+        }
+        #resetTransforms {
+            background: #dc3545;
+        }
+        #resetTransforms:hover {
+            background: #c82333;
         }
     </style>
 </head>
@@ -113,6 +148,44 @@
             </div>
             <button id="applyDesign">Apply Design</button>
         </div>
+        
+        <div class="control-group" id="transformControls" style="display: none;">
+            <h3>Design Transformations</h3>
+            
+            <div class="transform-control">
+                <label>Position</label>
+                <div class="transform-row">
+                    <span>X:</span>
+                    <input type="range" id="positionX" min="-1" max="1" step="0.01" value="0">
+                    <span class="transform-value" id="positionXValue">0</span>
+                </div>
+                <div class="transform-row">
+                    <span>Y:</span>
+                    <input type="range" id="positionY" min="-1" max="1" step="0.01" value="0">
+                    <span class="transform-value" id="positionYValue">0</span>
+                </div>
+            </div>
+            
+            <div class="transform-control">
+                <label>Scale</label>
+                <div class="transform-row">
+                    <span>Size:</span>
+                    <input type="range" id="scale" min="0.1" max="3" step="0.1" value="1">
+                    <span class="transform-value" id="scaleValue">1</span>
+                </div>
+            </div>
+            
+            <div class="transform-control">
+                <label>Rotation</label>
+                <div class="transform-row">
+                    <span>Angle:</span>
+                    <input type="range" id="rotation" min="-180" max="180" step="1" value="0">
+                    <span class="transform-value" id="rotationValue">0°</span>
+                </div>
+            </div>
+            
+            <button id="resetTransforms">Reset Transformations</button>
+        </div>
     </div>
     
     <div id="viewer-container">
@@ -138,7 +211,7 @@
         scene.background = new THREE.Color(0xf0f0f0);
         const camera = new THREE.PerspectiveCamera(75, window.innerWidth/window.innerHeight, 0.1, 1000);
         const renderer = new THREE.WebGLRenderer({ antialias: true });
-        renderer.setSize(window.innerWidth - 250, window.innerHeight);
+        renderer.setSize(window.innerWidth - 300, window.innerHeight);
         document.getElementById('viewer').appendChild(renderer.domElement);
         
         // Lighting
@@ -160,13 +233,24 @@
         let hoodieMesh; // Reference to the main hoodie mesh
         
         // Define UV regions for different parts of the hoodie
-        // These would ideally come from your 3D model's UV mapping
         const uvRegions = {
-            front: { min: new THREE.Vector2(0.2, 0.5), max: new THREE.Vector2(0.8, 0.9) },
-            back: { min: new THREE.Vector2(0.2, 0.1), max: new THREE.Vector2(0.8, 0.5) },
-            leftSleeve: { min: new THREE.Vector2(0.0, 0.2), max: new THREE.Vector2(0.2, 0.8) },
-            rightSleeve: { min: new THREE.Vector2(0.8, 0.2), max: new THREE.Vector2(1.0, 0.8) },
-            hood: { min: new THREE.Vector2(0.3, 0.9), max: new THREE.Vector2(0.7, 1.0) }
+            front: { min: new THREE.Vector2(0.2, 0.5), max: new THREE.Vector2(0.8, 0.9), center: new THREE.Vector2(0.5, 0.7) },
+            back: { min: new THREE.Vector2(0.2, 0.1), max: new THREE.Vector2(0.8, 0.5), center: new THREE.Vector2(0.5, 0.3) },
+            leftSleeve: { min: new THREE.Vector2(0.0, 0.2), max: new THREE.Vector2(0.2, 0.8), center: new THREE.Vector2(0.1, 0.5) },
+            rightSleeve: { min: new THREE.Vector2(0.8, 0.2), max: new THREE.Vector2(1.0, 0.8), center: new THREE.Vector2(0.9, 0.5) },
+            hood: { min: new THREE.Vector2(0.3, 0.9), max: new THREE.Vector2(0.7, 1.0), center: new THREE.Vector2(0.5, 0.95) }
+        };
+        
+        // Current design properties
+        let currentDesign = {
+            texture: null,
+            placement: 'front',
+            transform: {
+                positionX: 0,
+                positionY: 0,
+                scale: 1,
+                rotation: 0
+            }
         };
         
         loader.load(
@@ -181,6 +265,8 @@
                         // Store reference to the main hoodie mesh
                         if (child.name.toLowerCase().includes('body') || !hoodieMesh) {
                             hoodieMesh = child;
+                            // Store original material for reset
+                            hoodieMesh.userData.originalMaterial = child.material.clone();
                         }
                         
                         // Clone materials for customization
@@ -228,24 +314,99 @@
             if (materials.hood) materials.hood.color.setStyle(e.target.value);
         });
         
-        // Design upload functionality - now with UV mapping
+        // Design upload functionality
         document.getElementById('applyDesign').addEventListener('click', async () => {
             const file = document.getElementById('designUpload').files[0];
             if (!file || !hoodieMesh) return;
             
-            const placementArea = document.getElementById('placementArea').value;
-            const uvRegion = uvRegions[placementArea];
+            currentDesign.placement = document.getElementById('placementArea').value;
+            currentDesign.texture = await new THREE.TextureLoader().loadAsync(URL.createObjectURL(file));
             
-            const texture = await new THREE.TextureLoader().loadAsync(URL.createObjectURL(file));
+            // Show transform controls
+            document.getElementById('transformControls').style.display = 'block';
+            
+            // Reset transformations
+            currentDesign.transform = {
+                positionX: 0,
+                positionY: 0,
+                scale: 1,
+                rotation: 0
+            };
+            
+            // Update UI sliders
+            document.getElementById('positionX').value = 0;
+            document.getElementById('positionY').value = 0;
+            document.getElementById('scale').value = 1;
+            document.getElementById('rotation').value = 0;
+            document.getElementById('positionXValue').textContent = '0';
+            document.getElementById('positionYValue').textContent = '0';
+            document.getElementById('scaleValue').textContent = '1';
+            document.getElementById('rotationValue').textContent = '0°';
+            
+            // Apply design
+            updateDesignMaterial();
+            
+            document.getElementById('debug').textContent = `Design applied to ${currentDesign.placement}`;
+        });
+        
+        // Transformation controls
+        function setupTransformControl(id, property, formatFn = (v) => v) {
+            const slider = document.getElementById(id);
+            const valueDisplay = document.getElementById(`${id}Value`);
+            
+            slider.addEventListener('input', (e) => {
+                const value = parseFloat(e.target.value);
+                currentDesign.transform[property] = value;
+                valueDisplay.textContent = formatFn(value);
+                updateDesignMaterial();
+            });
+        }
+        
+        setupTransformControl('positionX', 'positionX');
+        setupTransformControl('positionY', 'positionY');
+        setupTransformControl('scale', 'scale');
+        setupTransformControl('rotation', 'rotation', (v) => `${v}°`);
+        
+        // Reset transformations
+        document.getElementById('resetTransforms').addEventListener('click', () => {
+            currentDesign.transform = {
+                positionX: 0,
+                positionY: 0,
+                scale: 1,
+                rotation: 0
+            };
+            
+            document.getElementById('positionX').value = 0;
+            document.getElementById('positionY').value = 0;
+            document.getElementById('scale').value = 1;
+            document.getElementById('rotation').value = 0;
+            document.getElementById('positionXValue').textContent = '0';
+            document.getElementById('positionYValue').textContent = '0';
+            document.getElementById('scaleValue').textContent = '1';
+            document.getElementById('rotationValue').textContent = '0°';
+            
+            updateDesignMaterial();
+        });
+        
+        // Update the hoodie material with current design and transformations
+        function updateDesignMaterial() {
+            if (!currentDesign.texture || !hoodieMesh) return;
+            
+            const uvRegion = uvRegions[currentDesign.placement];
+            const transform = currentDesign.transform;
             
             // Create a custom shader material that combines the base texture with the decal
-            const decalMaterial = new THREE.ShaderMaterial({
+            hoodieMesh.material = new THREE.ShaderMaterial({
                 uniforms: {
-                    baseTexture: { value: hoodieMesh.material.map || new THREE.Texture() },
-                    baseColor: { value: hoodieMesh.material.color },
-                    decalTexture: { value: texture },
+                    baseTexture: { value: hoodieMesh.userData.originalMaterial.map || new THREE.Texture() },
+                    baseColor: { value: hoodieMesh.userData.originalMaterial.color },
+                    decalTexture: { value: currentDesign.texture },
                     uvMin: { value: uvRegion.min },
-                    uvMax: { value: uvRegion.max }
+                    uvMax: { value: uvRegion.max },
+                    uvCenter: { value: uvRegion.center },
+                    decalPosition: { value: new THREE.Vector2(transform.positionX, transform.positionY) },
+                    decalScale: { value: transform.scale },
+                    decalRotation: { value: THREE.MathUtils.degToRad(transform.rotation) }
                 },
                 vertexShader: `
                     varying vec2 vUv;
@@ -260,6 +421,10 @@
                     uniform vec3 baseColor;
                     uniform vec2 uvMin;
                     uniform vec2 uvMax;
+                    uniform vec2 uvCenter;
+                    uniform vec2 decalPosition;
+                    uniform float decalScale;
+                    uniform float decalRotation;
                     varying vec2 vUv;
                     
                     void main() {
@@ -268,30 +433,50 @@
                         // Check if current UV is within the decal region
                         if (vUv.x >= uvMin.x && vUv.x <= uvMax.x && 
                             vUv.y >= uvMin.y && vUv.y <= uvMax.y) {
-                            // Calculate normalized UVs within the decal region
-                            vec2 decalUV = (vUv - uvMin) / (uvMax - uvMin);
-                            vec4 decal = texture2D(decalTexture, decalUV);
                             
-                            // Blend the decal with the base texture
-                            if (decal.a > 0.1) {
-                                gl_FragColor = mix(base, decal, decal.a);
-                            } else {
-                                gl_FragColor = base;
+                            // Calculate normalized UVs within the decal region (0-1)
+                            vec2 decalUV = (vUv - uvMin) / (uvMax - uvMin);
+                            
+                            // Transform coordinates for rotation and scale
+                            // Move origin to center
+                            decalUV -= 0.5;
+                            
+                            // Apply rotation
+                            float cosAngle = cos(decalRotation);
+                            float sinAngle = sin(decalRotation);
+                            decalUV = vec2(
+                                decalUV.x * cosAngle - decalUV.y * sinAngle,
+                                decalUV.x * sinAngle + decalUV.y * cosAngle
+                            );
+                            
+                            // Apply scale
+                            decalUV /= decalScale;
+                            
+                            // Apply position offset
+                            decalUV -= decalPosition;
+                            
+                            // Move origin back
+                            decalUV += 0.5;
+                            
+                            // Only render if within the 0-1 UV space after transformations
+                            if (decalUV.x >= 0.0 && decalUV.x <= 1.0 && 
+                                decalUV.y >= 0.0 && decalUV.y <= 1.0) {
+                                vec4 decal = texture2D(decalTexture, decalUV);
+                                
+                                // Blend the decal with the base texture
+                                if (decal.a > 0.1) {
+                                    gl_FragColor = mix(base, decal, decal.a);
+                                    return;
+                                }
                             }
-                        } else {
-                            gl_FragColor = base;
                         }
+                        
+                        gl_FragColor = base;
                     }
                 `,
                 transparent: true
             });
-            
-            // Apply the new material to the hoodie
-            hoodieMesh.material = decalMaterial;
-            
-            // Update debug message
-            document.getElementById('debug').textContent = `Custom design applied to ${placementArea}`;
-        });
+        }
         
         // Animation loop
         const clock = new THREE.Clock();
@@ -305,9 +490,9 @@
         animate();
         
         window.addEventListener('resize', () => {
-            camera.aspect = (window.innerWidth - 250) / window.innerHeight;
+            camera.aspect = (window.innerWidth - 300) / window.innerHeight;
             camera.updateProjectionMatrix();
-            renderer.setSize(window.innerWidth - 250, window.innerHeight);
+            renderer.setSize(window.innerWidth - 300, window.innerHeight);
         });
     </script>
 </body>
