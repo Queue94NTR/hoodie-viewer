@@ -34,6 +34,15 @@
             font-size: 0.9em;
             z-index: 100;
         }
+        .control-group {
+            margin-bottom: 20px;
+            padding-bottom: 15px;
+            border-bottom: 1px solid #dee2e6;
+        }
+        .control-group h3 {
+            margin-top: 0;
+            margin-bottom: 15px;
+        }
         .color-control {
             margin-bottom: 15px;
         }
@@ -46,23 +55,42 @@
             width: 100%;
             height: 30px;
         }
-        h3 {
-            margin-top: 0;
-            padding-bottom: 10px;
-            border-bottom: 1px solid #dee2e6;
+        #designUpload {
+            width: 100%;
+            margin-bottom: 10px;
+        }
+        #applyDesign {
+            width: 100%;
+            padding: 8px;
+            background: #007bff;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        #applyDesign:hover {
+            background: #0069d9;
         }
     </style>
 </head>
 <body>
     <div id="sidebar">
-        <h3>Color Customization</h3>
-        <div class="color-control">
-            <label for="bodyColor">Body Color</label>
-            <input type="color" id="bodyColor" value="#333333">
+        <div class="control-group">
+            <h3>Color Customization</h3>
+            <div class="color-control">
+                <label for="bodyColor">Body Color</label>
+                <input type="color" id="bodyColor" value="#333333">
+            </div>
+            <div class="color-control">
+                <label for="hoodColor">Hood Color</label>
+                <input type="color" id="hoodColor" value="#222222">
+            </div>
         </div>
-        <div class="color-control">
-            <label for="hoodColor">Hood Color</label>
-            <input type="color" id="hoodColor" value="#222222">
+        
+        <div class="control-group">
+            <h3>Design Upload</h3>
+            <input type="file" id="designUpload" accept="image/*">
+            <button id="applyDesign">Apply Design</button>
         </div>
     </div>
     
@@ -122,7 +150,6 @@
                         const name = child.name.toLowerCase();
                         if (name.includes('body')) materials.body = child.material;
                         else if (name.includes('hood')) materials.hood = child.material;
-                        // Add other parts as needed
                     }
                 });
                 
@@ -161,6 +188,27 @@
         
         document.getElementById('hoodColor').addEventListener('input', (e) => {
             if (materials.hood) materials.hood.color.setStyle(e.target.value);
+        });
+        
+        // Design upload functionality
+        document.getElementById('applyDesign').addEventListener('click', async () => {
+            const file = document.getElementById('designUpload').files[0];
+            if (!file) return;
+            
+            const texture = await new THREE.TextureLoader().loadAsync(URL.createObjectURL(file));
+            const decal = new THREE.Mesh(
+                new THREE.PlaneGeometry(0.5, 0.5),
+                new THREE.MeshBasicMaterial({ 
+                    map: texture, 
+                    transparent: true,
+                    side: THREE.DoubleSide
+                })
+            );
+            decal.position.set(0, 0.5, 0.3); // Front position
+            scene.add(decal);
+            
+            // Update debug message
+            document.getElementById('debug').textContent = 'Custom design applied';
         });
         
         // Animation loop
