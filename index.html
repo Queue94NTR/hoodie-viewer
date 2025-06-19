@@ -3,14 +3,182 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Interactive 3D Hoodie</title>
+    <title>3D Hoodie Customizer</title>
     <style>
-        body { margin: 0; overflow: hidden; }
-        #viewer { width: 100vw; height: 100vh; }
+        body { 
+            margin: 0;
+            padding: 0;
+            font-family: 'Arial', sans-serif;
+            display: flex;
+            height: 100vh;
+            overflow: hidden;
+            flex-direction: row-reverse;
+        }
+        
+        #sidebar {
+            width: 300px;
+            background: #f8f9fa;
+            padding: 20px;
+            box-shadow: -2px 0 10px rgba(0,0,0,0.1);
+            overflow-y: auto;
+            z-index: 10;
+        }
+        
+        #viewer-container {
+            flex: 1;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        #viewer {
+            width: 100%;
+            height: 100%;
+            display: block;
+        }
+        
+        .control-group {
+            margin-bottom: 25px;
+            background: white;
+            padding: 15px;
+            border-radius: 8px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+        
+        h3 {
+            margin: 0 0 15px 0;
+            color: #2c3e50;
+            font-size: 1.1em;
+            padding-bottom: 8px;
+            border-bottom: 1px solid #ecf0f1;
+        }
+        
+        label {
+            display: block;
+            margin: 12px 0 6px;
+            color: #7f8c8d;
+            font-size: 0.9em;
+        }
+        
+        input[type="color"] {
+            width: 100%;
+            height: 40px;
+            padding: 2px;
+            cursor: pointer;
+        }
+        
+        select, button {
+            width: 100%;
+            padding: 10px;
+            margin-bottom: 12px;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            font-size: 0.9em;
+        }
+        
+        button {
+            background: #3498db;
+            color: white;
+            border: none;
+            padding: 12px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+        
+        button:hover {
+            background: #2980b9;
+        }
+        
+        #debug {
+            position: absolute;
+            top: 15px;
+            left: 15px;
+            background: rgba(0,0,0,0.7);
+            color: white;
+            padding: 10px 15px;
+            border-radius: 5px;
+            font-size: 0.9em;
+            z-index: 100;
+            max-width: 80%;
+        }
+        
+        .color-preview {
+            width: 25px;
+            height: 25px;
+            display: inline-block;
+            margin-left: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            vertical-align: middle;
+        }
+        
+        @media (max-width: 768px) {
+            body {
+                flex-direction: column;
+            }
+            #sidebar {
+                width: 100%;
+                height: auto;
+                max-height: 40vh;
+            }
+        }
     </style>
 </head>
 <body>
-    <div id="viewer"></div>
+    <div id="sidebar">
+        <div class="control-group">
+            <h3>Design Upload</h3>
+            <input type="file" id="designUpload" accept="image/png, image/jpeg">
+            <select id="placementArea">
+                <option value="front">Front Chest</option>
+                <option value="back">Back</option>
+                <option value="leftSleeve">Left Sleeve</option>
+                <option value="rightSleeve">Right Sleeve</option>
+            </select>
+            <button id="applyDesign">Apply Design</button>
+        </div>
+        
+        <div class="control-group">
+            <h3>Color Customization</h3>
+            <label>Body Color <span class="color-preview" id="bodyColorPreview" style="background-color: #333333"></span></label>
+            <input type="color" id="bodyColor" value="#333333">
+            
+            <label>Hood Color <span class="color-preview" id="hoodColorPreview" style="background-color: #444444"></span></label>
+            <input type="color" id="hoodColor" value="#444444">
+            
+            <label>Sleeves Color <span class="color-preview" id="sleevesColorPreview" style="background-color: #555555"></span></label>
+            <input type="color" id="sleevesColor" value="#555555">
+            
+            <label>Collar Color <span class="color-preview" id="collarColorPreview" style="background-color: #666666"></span></label>
+            <input type="color" id="collarColor" value="#666666">
+        </div>
+        
+        <div class="control-group">
+            <h3>View Options</h3>
+            <label>Background</label>
+            <select id="bgColor">
+                <option value="#f0f0f0">Light Gray</option>
+                <option value="#ffffff">White</option>
+                <option value="#333333">Dark Gray</option>
+                <option value="transparent">Transparent</option>
+            </select>
+            
+            <label>
+                <input type="checkbox" id="toggleAnimation" checked> Enable Animation
+            </label>
+            <button id="resetCamera">Reset View</button>
+        </div>
+        
+        <div class="control-group">
+            <h3>Export Design</h3>
+            <button id="exportBtn">Save as Image</button>
+        </div>
+    </div>
+    
+    <div id="viewer-container">
+        <div id="debug">Loading 3D viewer...</div>
+        <canvas id="viewer"></canvas>
+    </div>
 
     <script type="importmap">
         {
@@ -25,62 +193,346 @@
         import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
         import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
         
-        // Scene setup
+        // Initialize Three.js
         const scene = new THREE.Scene();
         scene.background = new THREE.Color(0xf0f0f0);
+        
         const camera = new THREE.PerspectiveCamera(75, window.innerWidth/window.innerHeight, 0.1, 1000);
-        const renderer = new THREE.WebGLRenderer({ antialias: true });
+        camera.position.set(0, 1.6, 3);
+        
+        const renderer = new THREE.WebGLRenderer({
+            antialias: true,
+            canvas: document.getElementById('viewer'),
+            preserveDrawingBuffer: true
+        });
         renderer.setSize(window.innerWidth, window.innerHeight);
-        document.getElementById('viewer').appendChild(renderer.domElement);
+        renderer.setPixelRatio(window.devicePixelRatio);
         
         // Lighting
-        const ambientLight = new THREE.AmbientLight(0xffffff, 0.5);
+        const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
         scene.add(ambientLight);
-        const directionalLight = new THREE.DirectionalLight(0xffffff, 1);
-        directionalLight.position.set(1, 1, 1);
+        
+        const directionalLight = new THREE.DirectionalLight(0xffffff, 0.8);
+        directionalLight.position.set(1, 1, 1).normalize();
         scene.add(directionalLight);
         
         // Controls
         const controls = new OrbitControls(camera, renderer.domElement);
         controls.enableDamping = true;
         controls.dampingFactor = 0.05;
+        controls.screenSpacePanning = true;
         
-        // Model loading
+        // Animation system
+        const clock = new THREE.Clock();
+        let mixer = null;
+        let hoodieModel = null;
+        let isAnimating = true;
+        
+        // Material references
+        const materials = {
+            body: null,
+            hood: null,
+            sleeves: null,
+            collar: null
+        };
+        
+        // Decal meshes
+        const decals = {
+            front: null,
+            back: null,
+            leftSleeve: null,
+            rightSleeve: null
+        };
+        
+        // Load model
         const loader = new GLTFLoader();
-        let mixer; // For animations
-        
         loader.load(
             'Hoodie_Walking_Animated.glb',
             (gltf) => {
-                const model = gltf.scene;
-                scene.add(model);
+                hoodieModel = gltf.scene;
+                scene.add(hoodieModel);
                 
-                // Center and scale model
-                const box = new THREE.Box3().setFromObject(model);
+                // Clone materials for customization
+                hoodieModel.traverse((child) => {
+                    if (child.isMesh) {
+                        // Clone material to allow individual changes
+                        child.material = child.material.clone();
+                        
+                        // Map materials based on mesh name
+                        const name = child.name.toLowerCase();
+                        if (name.includes('body')) {
+                            materials.body = child.material;
+                            materials.body.color.setHex(0x333333); // Set initial color
+                        } else if (name.includes('hood')) {
+                            materials.hood = child.material;
+                            materials.hood.color.setHex(0x444444);
+                        } else if (name.includes('sleeve')) {
+                            materials.sleeves = child.material;
+                            materials.sleeves.color.setHex(0x555555);
+                        } else if (name.includes('collar')) {
+                            materials.collar = child.material;
+                            materials.collar.color.setHex(0x666666);
+                        }
+                    }
+                });
+                
+                // Set initial colors
+                updateColors();
+                
+                // Center model
+                const box = new THREE.Box3().setFromObject(hoodieModel);
                 const center = box.getCenter(new THREE.Vector3());
-                model.position.sub(center);
-                
-                // Set camera position
+                hoodieModel.position.sub(center);
                 camera.position.z = box.getSize(new THREE.Vector3()).length() * 1.5;
                 controls.update();
                 
                 // Handle animations
-                if (gltf.animations && gltf.animations.length) {
-                    mixer = new THREE.AnimationMixer(model);
-                    const action = mixer.clipAction(gltf.animations[0]);
-                    action.play();
+                if (gltf.animations?.length) {
+                    mixer = new THREE.AnimationMixer(hoodieModel);
+                    gltf.animations.forEach(clip => {
+                        mixer.clipAction(clip).play();
+                    });
+                    document.getElementById('debug').textContent = `Model loaded with ${gltf.animations.length} animations`;
+                } else {
+                    document.getElementById('debug').textContent = 'Model loaded (no animations)';
                 }
             },
             undefined,
-            (error) => console.error(error)
+            (error) => {
+                console.error(error);
+                document.getElementById('debug').textContent = `Error: ${error.message}`;
+            }
         );
         
+        // Color update function
+        function updateColors() {
+            const bodyColor = new THREE.Color(document.getElementById('bodyColor').value);
+            const hoodColor = new THREE.Color(document.getElementById('hoodColor').value);
+            const sleevesColor = new THREE.Color(document.getElementById('sleevesColor').value);
+            const collarColor = new THREE.Color(document.getElementById('collarColor').value);
+            
+            // Update materials if they exist
+            if (materials.body) materials.body.color.copy(bodyColor);
+            if (materials.hood) materials.hood.color.copy(hoodColor);
+            if (materials.sleeves) materials.sleeves.color.copy(sleevesColor);
+            if (materials.collar) materials.collar.color.copy(collarColor);
+            
+            // Update color previews
+            document.getElementById('bodyColorPreview').style.backgroundColor = bodyColor.getStyle();
+            document.getElementById('hoodColorPreview').style.backgroundColor = hoodColor.getStyle();
+            document.getElementById('sleevesColorPreview').style.backgroundColor = sleevesColor.getStyle();
+            document.getElementById('collarColorPreview').style.backgroundColor = collarColor.getStyle();
+        }
+        
+        // Apply design to model
+        async function applyDesign(imageUrl, placement) {
+            return new Promise((resolve) => {
+                const textureLoader = new THREE.TextureLoader();
+                textureLoader.load(imageUrl, (texture) => {
+                    // Remove existing decal if any
+                    if (decals[placement] && decals[placement].parent) {
+                        decals[placement].parent.remove(decals[placement]);
+                    }
+                    
+                    // Create decal mesh
+                    const decalGeometry = new THREE.PlaneGeometry(0.5, 0.5);
+                    const decalMaterial = new THREE.MeshBasicMaterial({
+                        map: texture,
+                        transparent: true,
+                        side: THREE.DoubleSide
+                    });
+                    
+                    const decal = new THREE.Mesh(decalGeometry, decalMaterial);
+                    
+                    // Position based on placement
+                    switch (placement) {
+                        case 'front':
+                            decal.position.set(0, 0.5, 0.3);
+                            decal.rotation.set(0, 0, 0);
+                            break;
+                        case 'back':
+                            decal.position.set(0, 0.5, -0.3);
+                            decal.rotation.set(0, Math.PI, 0);
+                            break;
+                        case 'leftSleeve':
+                            decal.position.set(-0.4, 0.5, 0);
+                            decal.rotation.set(0, Math.PI/2, 0);
+                            break;
+                        case 'rightSleeve':
+                            decal.position.set(0.4, 0.5, 0);
+                            decal.rotation.set(0, -Math.PI/2, 0);
+                            break;
+                    }
+                    
+                    hoodieModel.add(decal);
+                    decals[placement] = decal;
+                    resolve();
+                });
+            });
+        }
+        
+        // Event listeners
+        document.querySelectorAll('input[type="color"]').forEach(input => {
+            input.addEventListener('input', updateColors);
+        });
+        
+        document.getElementById('bgColor').addEventListener('change', (e) => {
+            scene.background = e.target.value === 'transparent' ? null : new THREE.Color(e.target.value);
+        });
+        
+        document.getElementById('toggleAnimation').addEventListener('change', (e) => {
+            isAnimating = e.target.checked;
+        });
+        
+        document.getElementById('resetCamera').addEventListener('click', () => {
+            controls.reset();
+            if (hoodieModel) {
+                const box = new THREE.Box3().setFromObject(hoodieModel);
+                camera.position.z = box.getSize(new THREE.Vector3()).length() * 1.5;
+                controls.update();
+            }
+        });
+        
+        document.getElementById('applyDesign').addEventListener('click', async () => {
+            const file = document.getElementById('designUpload').files[0];
+            if (!file) {
+                alert('Please select an image first');
+                return;
+            }
+            
+            const placement = document.getElementById('placementArea').value;
+            const imageUrl = await new Promise(resolve => {
+                const reader = new FileReader();
+                reader.onload = (e) => resolve(e.target.result);
+                reader.readAsDataURL(file);
+            });
+            
+            try {
+                await applyDesign(imageUrl, placement);
+                document.getElementById('debug').textContent = `Design applied to ${placement}`;
+            } catch (error) {
+                console.error('Error applying design:', error);
+                document.getElementById('debug').textContent = 'Error applying design';
+            }
+        });
+        
+        // Export function - Fixed syntax
+        document.getElementById('exportBtn').addEventListener('click', () => {
+            // Store current animation state
+            const wasAnimating = isAnimating;
+            
+            // Pause animation for clean screenshot
+            isAnimating = false;
+            
+            // Force render one final frame
+            renderer.render(scene, camera);
+            
+            // Get screenshot
+            const image = renderer.domElement.toDataURL('image/png');
+            
+            // Create download page with ad
+            const downloadPage = `
+                <!DOCTYPE html>
+                <html>
+                <head>
+                    <title>Download Your Design</title>
+                    <style>
+                        body { 
+                            font-family: Arial, sans-serif;
+                            text-align: center;
+                            padding: 20px;
+                            background: #f5f5f5;
+                        }
+                        #preview { 
+                            max-width: 80%; 
+                            margin: 20px auto; 
+                            border: 1px solid #ddd;
+                            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+                        }
+                        button { 
+                            padding: 12px 24px; 
+                            background: #3498db; 
+                            color: white; 
+                            border: none; 
+                            border-radius: 4px; 
+                            cursor: pointer;
+                            font-size: 16px;
+                            transition: background 0.3s;
+                        }
+                        button:hover {
+                            background: #2980b9;
+                        }
+                        .countdown {
+                            margin-top: 10px;
+                            color: #7f8c8d;
+                        }
+                    </style>
+                </head>
+                <body>
+                    <h2>Your Hoodie Design</h2>
+                    <img id="preview" src="${image}" alt="Hoodie Design Preview">
+                    <p>Click below to download your design</p>
+                    <button onclick="startDownload()">Download Now</button>
+                    <div class="countdown" id="countdown"></div>
+                    
+                    <script>
+                        let seconds = 5;
+                        const countdownEl = document.getElementById('countdown');
+                        countdownEl.textContent = 'Download will start in ' + seconds + ' seconds...';
+                        
+                        const timer = setInterval(() => {
+                            seconds--;
+                            countdownEl.textContent = 'Download will start in ' + seconds + ' seconds...';
+                            if (seconds <= 0) {
+                                clearInterval(timer);
+                            }
+                        }, 1000);
+                        
+                        function startDownload() {
+                            // Show ad in new tab
+                            window.open("https://www.example.com/ad", "_blank");
+                            
+                            // Start countdown
+                            let remaining = 5;
+                            const countdown = setInterval(() => {
+                                if (remaining <= 0) {
+                                    clearInterval(countdown);
+                                    // Trigger download
+                                    const link = document.createElement('a');
+                                    link.href = "${image}";
+                                    link.download = 'custom-hoodie-design.png';
+                                    document.body.appendChild(link);
+                                    link.click();
+                                    document.body.removeChild(link);
+                                }
+                                remaining--;
+                            }, 1000);
+                        }
+                    </script>
+                </body>
+                </html>
+            `;
+            
+            // Open download page
+            const win = window.open('', '_blank');
+            win.document.write(downloadPage);
+            
+            // Resume animation if it was playing
+            isAnimating = wasAnimating;
+        });
+
         // Animation loop
-        const clock = new THREE.Clock();
         function animate() {
             requestAnimationFrame(animate);
+            
             const delta = clock.getDelta();
-            if (mixer) mixer.update(delta);
+            
+            // Only update animations if enabled
+            if (mixer && isAnimating) {
+                mixer.update(delta);
+            }
+            
+            // Always update controls and render
             controls.update();
             renderer.render(scene, camera);
         }
