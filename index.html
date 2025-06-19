@@ -11,13 +11,14 @@
             height: 100vh;
             overflow: hidden;
             flex-direction: row-reverse;
+            font-family: Arial, sans-serif;
         }
         #sidebar {
-            width: 250px;
+            width: 300px;
             background: #f8f9fa;
-            padding: 15px;
+            padding: 20px;
             overflow-y: auto;
-            box-shadow: -2px 0 5px rgba(0,0,0,0.1);
+            box-shadow: -2px 0 10px rgba(0,0,0,0.1);
         }
         #viewer-container {
             flex: 1;
@@ -35,48 +36,71 @@
             z-index: 100;
         }
         .control-group {
-            margin-bottom: 20px;
-            padding-bottom: 15px;
-            border-bottom: 1px solid #dee2e6;
+            margin-bottom: 25px;
+            background: white;
+            padding: 15px;
+            border-radius: 8px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
         }
         .control-group h3 {
-            margin-top: 0;
-            margin-bottom: 15px;
+            margin: 0 0 15px 0;
+            color: #2c3e50;
+            font-size: 1.1em;
+            padding-bottom: 8px;
+            border-bottom: 1px solid #ecf0f1;
         }
-        .color-control {
-            margin-bottom: 15px;
-        }
-        .color-control label {
+        label {
             display: block;
-            margin-bottom: 5px;
-            font-weight: 500;
+            margin: 12px 0 6px;
+            color: #7f8c8d;
+            font-size: 0.9em;
         }
-        .color-control input[type="color"] {
+        input[type="color"] {
             width: 100%;
-            height: 30px;
-        }
-        #designUpload {
-            width: 100%;
-            margin-bottom: 10px;
-        }
-        #applyDesign {
-            width: 100%;
-            padding: 8px;
-            background: #007bff;
-            color: white;
-            border: none;
-            border-radius: 4px;
+            height: 40px;
+            padding: 2px;
             cursor: pointer;
-        }
-        #applyDesign:hover {
-            background: #0069d9;
-        }
-        select {
-            width: 100%;
-            padding: 8px;
-            margin-bottom: 10px;
             border: 1px solid #ddd;
             border-radius: 4px;
+        }
+        select, button {
+            width: 100%;
+            padding: 10px;
+            margin-bottom: 12px;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            font-size: 0.9em;
+        }
+        button {
+            background: #3498db;
+            color: white;
+            border: none;
+            padding: 12px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+        button:hover {
+            background: #2980b9;
+        }
+        .color-preview {
+            width: 25px;
+            height: 25px;
+            display: inline-block;
+            margin-left: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            vertical-align: middle;
+        }
+        @media (max-width: 768px) {
+            body {
+                flex-direction: column;
+            }
+            #sidebar {
+                width: 100%;
+                height: auto;
+                max-height: 40vh;
+            }
         }
     </style>
 </head>
@@ -84,19 +108,16 @@
     <div id="sidebar">
         <div class="control-group">
             <h3>Color Customization</h3>
-            <div class="color-control">
-                <label for="bodyColor">Body Color</label>
-                <input type="color" id="bodyColor" value="#333333">
-            </div>
-            <div class="color-control">
-                <label for="hoodColor">Hood Color</label>
-                <input type="color" id="hoodColor" value="#222222">
-            </div>
+            <label>Body Color <span class="color-preview" id="bodyColorPreview" style="background-color: #333333"></span></label>
+            <input type="color" id="bodyColor" value="#333333">
+            
+            <label>Hood Color <span class="color-preview" id="hoodColorPreview" style="background-color: #444444"></span></label>
+            <input type="color" id="hoodColor" value="#444444">
         </div>
         
         <div class="control-group">
             <h3>Design Upload</h3>
-            <input type="file" id="designUpload" accept="image/*">
+            <input type="file" id="designUpload" accept="image/png, image/jpeg">
             <select id="placementArea">
                 <option value="front">Front Chest</option>
                 <option value="back">Back</option>
@@ -105,11 +126,19 @@
             </select>
             <button id="applyDesign">Apply Design</button>
         </div>
+        
+        <div class="control-group">
+            <h3>View Options</h3>
+            <label>
+                <input type="checkbox" id="toggleAnimation" checked> Enable Animation
+            </label>
+            <button id="resetCamera">Reset View</button>
+        </div>
     </div>
     
     <div id="viewer-container">
-        <div id="debug">Loading model...</div>
-        <div id="viewer"></div>
+        <div id="debug">Loading 3D viewer...</div>
+        <canvas id="viewer"></canvas>
     </div>
 
     <script type="importmap">
@@ -125,37 +154,43 @@
         import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
         import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
         
-        // Scene setup
+        // Initialize Three.js
         const scene = new THREE.Scene();
         scene.background = new THREE.Color(0xf0f0f0);
+        
         const camera = new THREE.PerspectiveCamera(75, window.innerWidth/window.innerHeight, 0.1, 1000);
-        const renderer = new THREE.WebGLRenderer({ 
+        camera.position.set(0, 1.6, 3);
+        
+        const renderer = new THREE.WebGLRenderer({
             antialias: true,
+            canvas: document.getElementById('viewer'),
             preserveDrawingBuffer: true
         });
-        renderer.setSize(window.innerWidth - 250, window.innerHeight);
-        document.getElementById('viewer').appendChild(renderer.domElement);
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.setPixelRatio(window.devicePixelRatio);
         
         // Lighting
-        const ambientLight = new THREE.AmbientLight(0xffffff, 0.5);
+        const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
         scene.add(ambientLight);
         
-        const directionalLight = new THREE.DirectionalLight(0xffffff, 1);
-        directionalLight.position.set(1, 1, 1);
+        const directionalLight = new THREE.DirectionalLight(0xffffff, 0.8);
+        directionalLight.position.set(1, 1, 1).normalize();
         scene.add(directionalLight);
         
         // Controls
         const controls = new OrbitControls(camera, renderer.domElement);
         controls.enableDamping = true;
         controls.dampingFactor = 0.05;
+        controls.screenSpacePanning = true;
         
-        // Model loading
-        const loader = new GLTFLoader();
-        let mixer;
-        let hoodieModel;
+        // Animation system
+        const clock = new THREE.Clock();
+        let mixer = null;
+        let hoodieModel = null;
+        let isAnimating = true;
         
-        // Material mapping system
-        const materialMap = {
+        // Material references with precise part mapping
+        const partMaterials = {
             front: null,
             back: null,
             leftSleeve: null,
@@ -164,75 +199,61 @@
             body: null
         };
         
-        // Design textures for each part
-        const designTextures = {
-            front: null,
-            back: null,
-            leftSleeve: null,
-            rightSleeve: null
-        };
-        
-        // Load base fabric texture
-        const textureLoader = new THREE.TextureLoader();
-        const fabricTexture = textureLoader.load('https://raw.githubusercontent.com/mrdoob/three.js/dev/examples/textures/terrain/grasslight-big.jpg');
-        fabricTexture.wrapS = fabricTexture.wrapT = THREE.RepeatWrapping;
-        fabricTexture.repeat.set(4, 4);
-        
+        // Load model with precise part mapping
+        const loader = new GLTFLoader();
         loader.load(
             'Hoodie_Walking_Animated.glb',
             (gltf) => {
                 hoodieModel = gltf.scene;
                 scene.add(hoodieModel);
                 
-                // First pass: Try to map materials by name
+                // Map materials to specific parts
                 hoodieModel.traverse((child) => {
                     if (child.isMesh) {
                         // Clone material to allow individual changes
                         child.material = child.material.clone();
                         
-                        // Apply fabric texture as base
-                        child.material.map = fabricTexture;
-                        child.material.needsUpdate = true;
-                        
+                        // Map materials based on precise mesh naming
                         const name = child.name.toLowerCase();
                         
-                        // More specific name matching for better targeting
-                        if (name.includes('front') || name.includes('chest') || name.includes('shirt_front')) {
-                            materialMap.front = child.material;
-                            console.log('Found front material:', child.name);
-                        } 
-                        else if (name.includes('back') || name.includes('shirt_back')) {
-                            materialMap.back = child.material;
-                            console.log('Found back material:', child.name);
+                        // Front chest area
+                        if (name.includes('front') || name.includes('chest') || name.includes('torso_front')) {
+                            partMaterials.front = child.material;
+                            console.log('Mapped front material:', child.name);
                         }
-                        else if (name.includes('left_sleeve') || name.includes('sleeve_l') || 
-                                (name.includes('left') && name.includes('sleeve'))) {
-                            materialMap.leftSleeve = child.material;
-                            console.log('Found left sleeve material:', child.name);
+                        // Back area
+                        else if (name.includes('back') || name.includes('torso_back')) {
+                            partMaterials.back = child.material;
+                            console.log('Mapped back material:', child.name);
                         }
-                        else if (name.includes('right_sleeve') || name.includes('sleeve_r') || 
-                                (name.includes('right') && name.includes('sleeve'))) {
-                            materialMap.rightSleeve = child.material;
-                            console.log('Found right sleeve material:', child.name);
+                        // Left sleeve
+                        else if (name.includes('left_sleeve') || (name.includes('left') && name.includes('sleeve'))) {
+                            partMaterials.leftSleeve = child.material;
+                            console.log('Mapped left sleeve material:', child.name);
                         }
+                        // Right sleeve
+                        else if (name.includes('right_sleeve') || (name.includes('right') && name.includes('sleeve'))) {
+                            partMaterials.rightSleeve = child.material;
+                            console.log('Mapped right sleeve material:', child.name);
+                        }
+                        // Hood
                         else if (name.includes('hood')) {
-                            materialMap.hood = child.material;
+                            partMaterials.hood = child.material;
                         }
-                        else if (name.includes('body') || name.includes('main') || name.includes('torso')) {
-                            materialMap.body = child.material;
+                        // Main body (fallback)
+                        else if (name.includes('body') || name.includes('main')) {
+                            partMaterials.body = child.material;
                         }
                     }
                 });
                 
                 // Set initial colors
-                if (materialMap.body) materialMap.body.color.setStyle(document.getElementById('bodyColor').value);
-                if (materialMap.hood) materialMap.hood.color.setStyle(document.getElementById('hoodColor').value);
+                updateColors();
                 
                 // Center model
                 const box = new THREE.Box3().setFromObject(hoodieModel);
                 const center = box.getCenter(new THREE.Vector3());
                 hoodieModel.position.sub(center);
-                
                 camera.position.z = box.getSize(new THREE.Vector3()).length() * 1.5;
                 controls.update();
                 
@@ -254,74 +275,102 @@
             }
         );
         
-        // Color controls
-        document.getElementById('bodyColor').addEventListener('input', (e) => {
-            if (materialMap.body) materialMap.body.color.setStyle(e.target.value);
-        });
+        // Color update function
+        function updateColors() {
+            const bodyColor = new THREE.Color(document.getElementById('bodyColor').value);
+            const hoodColor = new THREE.Color(document.getElementById('hoodColor').value);
+            
+            // Update materials if they exist
+            if (partMaterials.body) partMaterials.body.color.copy(bodyColor);
+            if (partMaterials.hood) partMaterials.hood.color.copy(hoodColor);
+            
+            // Update color previews
+            document.getElementById('bodyColorPreview').style.backgroundColor = bodyColor.getStyle();
+            document.getElementById('hoodColorPreview').style.backgroundColor = hoodColor.getStyle();
+        }
         
-        document.getElementById('hoodColor').addEventListener('input', (e) => {
-            if (materialMap.hood) materialMap.hood.color.setStyle(e.target.value);
-        });
-        
-        // Enhanced design upload with targeted application
+        // Apply design to specific part only
         document.getElementById('applyDesign').addEventListener('click', async () => {
             const file = document.getElementById('designUpload').files[0];
             const placement = document.getElementById('placementArea').value;
             
             if (!file) {
-                document.getElementById('debug').textContent = 'Please select an image first';
+                alert('Please select an image first');
                 return;
             }
             
             try {
-                // Clear previous design if exists
-                if (designTextures[placement]) {
-                    designTextures[placement].dispose();
-                }
-                
-                // Load new design texture
-                const designTexture = await new THREE.TextureLoader().loadAsync(URL.createObjectURL(file));
-                designTexture.encoding = THREE.sRGBEncoding;
-                designTextures[placement] = designTexture;
-                
-                // Find the specific target material
-                const targetMaterial = materialMap[placement];
+                const targetMaterial = partMaterials[placement];
                 
                 if (!targetMaterial) {
-                    throw new Error(`Could not find material for ${placement}. Check console for available materials.`);
+                    throw new Error(`Could not find material for ${placement}. Check console for part mappings.`);
                 }
+                
+                // Load the design texture
+                const textureLoader = new THREE.TextureLoader();
+                const designTexture = await new Promise((resolve, reject) => {
+                    textureLoader.load(
+                        URL.createObjectURL(file),
+                        resolve,
+                        undefined,
+                        reject
+                    );
+                });
                 
                 // Apply only to the selected part
                 targetMaterial.map = designTexture;
                 targetMaterial.needsUpdate = true;
                 
                 document.getElementById('debug').textContent = `Design applied to ${placement} only`;
-                console.log(`Design applied to ${placement} material:`, targetMaterial);
             } catch (error) {
                 console.error('Error applying design:', error);
                 document.getElementById('debug').textContent = `Error: ${error.message}`;
                 
-                // Show available materials in console for debugging
-                console.log('Available materials:', materialMap);
-                console.log('Model structure:', hoodieModel);
+                // Help debug by showing available parts
+                console.log('Available part materials:', partMaterials);
             }
         });
         
+        // Event listeners
+        document.querySelectorAll('input[type="color"]').forEach(input => {
+            input.addEventListener('input', updateColors);
+        });
+        
+        document.getElementById('toggleAnimation').addEventListener('change', (e) => {
+            isAnimating = e.target.checked;
+        });
+        
+        document.getElementById('resetCamera').addEventListener('click', () => {
+            controls.reset();
+            if (hoodieModel) {
+                const box = new THREE.Box3().setFromObject(hoodieModel);
+                camera.position.z = box.getSize(new THREE.Vector3()).length() * 1.5;
+                controls.update();
+            }
+        });
+
         // Animation loop
-        const clock = new THREE.Clock();
         function animate() {
             requestAnimationFrame(animate);
+            
             const delta = clock.getDelta();
-            if (mixer) mixer.update(delta);
+            
+            // Only update animations if enabled
+            if (mixer && isAnimating) {
+                mixer.update(delta);
+            }
+            
+            // Always update controls and render
             controls.update();
             renderer.render(scene, camera);
         }
         animate();
         
+        // Handle window resize
         window.addEventListener('resize', () => {
-            camera.aspect = (window.innerWidth - 250) / window.innerHeight;
+            camera.aspect = window.innerWidth / window.innerHeight;
             camera.updateProjectionMatrix();
-            renderer.setSize(window.innerWidth - 250, window.innerHeight);
+            renderer.setSize(window.innerWidth, window.innerHeight);
         });
     </script>
 </body>
