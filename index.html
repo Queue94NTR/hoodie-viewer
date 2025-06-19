@@ -18,11 +18,32 @@
             font-size: 0.9em;
             z-index: 100;
         }
+        .color-controls {
+            position: absolute;
+            top: 80px;
+            left: 15px;
+            background: rgba(255,255,255,0.8);
+            padding: 10px;
+            border-radius: 5px;
+            z-index: 100;
+        }
+        .color-controls label {
+            display: block;
+            margin-bottom: 8px;
+        }
+        .color-controls input[type="color"] {
+            vertical-align: middle;
+            margin-left: 5px;
+        }
     </style>
 </head>
 <body>
     <div id="viewer"></div>
     <div id="debug">Loading model...</div>
+    <div class="color-controls">
+        <label>Body Color <input type="color" id="bodyColor" value="#333333"></label>
+        <label>Hood Color <input type="color" id="hoodColor" value="#222222"></label>
+    </div>
 
     <script type="importmap">
         {
@@ -60,12 +81,24 @@
         // Model loading
         const loader = new GLTFLoader();
         let mixer;
+        let materials = {};
         
         loader.load(
             'Hoodie_Walking_Animated.glb',
             (gltf) => {
                 const model = gltf.scene;
                 scene.add(model);
+                
+                // Map materials
+                model.traverse((child) => {
+                    if (child.isMesh) {
+                        child.material = child.material.clone();
+                        const name = child.name.toLowerCase();
+                        if (name.includes('body')) materials.body = child.material;
+                        else if (name.includes('hood')) materials.hood = child.material;
+                        // Add other parts as needed
+                    }
+                });
                 
                 // Center model
                 const box = new THREE.Box3().setFromObject(model);
@@ -83,6 +116,10 @@
                 } else {
                     document.getElementById('debug').textContent = 'Model loaded (no animations)';
                 }
+                
+                // Set initial colors
+                if (materials.body) materials.body.color.setStyle(document.getElementById('bodyColor').value);
+                if (materials.hood) materials.hood.color.setStyle(document.getElementById('hoodColor').value);
             },
             undefined,
             (error) => {
@@ -90,6 +127,15 @@
                 document.getElementById('debug').textContent = `Error: ${error.message}`;
             }
         );
+        
+        // Color controls
+        document.getElementById('bodyColor').addEventListener('input', (e) => {
+            if (materials.body) materials.body.color.setStyle(e.target.value);
+        });
+        
+        document.getElementById('hoodColor').addEventListener('input', (e) => {
+            if (materials.hood) materials.hood.color.setStyle(e.target.value);
+        });
         
         // Animation loop
         const clock = new THREE.Clock();
