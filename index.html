@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>3D Hoodie Customizer</title>
+    <title>3D Hoodie Viewer</title>
     <style>
         body { 
             margin: 0;
@@ -71,12 +71,16 @@
         #applyDesign:hover {
             background: #0069d9;
         }
-        select {
+        .placement-control {
+            margin-top: 10px;
+        }
+        .placement-control label {
+            display: block;
+            margin-bottom: 5px;
+        }
+        .placement-control select {
             width: 100%;
-            padding: 8px;
-            margin-bottom: 10px;
-            border: 1px solid #ddd;
-            border-radius: 4px;
+            padding: 5px;
         }
     </style>
 </head>
@@ -97,12 +101,16 @@
         <div class="control-group">
             <h3>Design Upload</h3>
             <input type="file" id="designUpload" accept="image/*">
-            <select id="placementArea">
-                <option value="front">Front</option>
-                <option value="back">Back</option>
-                <option value="leftSleeve">Left Sleeve</option>
-                <option value="rightSleeve">Right Sleeve</option>
-            </select>
+            <div class="placement-control">
+                <label for="placementArea">Placement Area</label>
+                <select id="placementArea">
+                    <option value="front">Front</option>
+                    <option value="back">Back</option>
+                    <option value="leftSleeve">Left Sleeve</option>
+                    <option value="rightSleeve">Right Sleeve</option>
+                    <option value="hood">Hood</option>
+                </select>
+            </div>
             <button id="applyDesign">Apply Design</button>
         </div>
     </div>
@@ -129,133 +137,80 @@
         const scene = new THREE.Scene();
         scene.background = new THREE.Color(0xf0f0f0);
         const camera = new THREE.PerspectiveCamera(75, window.innerWidth/window.innerHeight, 0.1, 1000);
-        const renderer = new THREE.WebGLRenderer({ 
-            antialias: true,
-            preserveDrawingBuffer: true
-        });
+        const renderer = new THREE.WebGLRenderer({ antialias: true });
         renderer.setSize(window.innerWidth - 250, window.innerHeight);
         document.getElementById('viewer').appendChild(renderer.domElement);
         
         // Lighting
         const ambientLight = new THREE.AmbientLight(0xffffff, 0.5);
         scene.add(ambientLight);
-        
         const directionalLight = new THREE.DirectionalLight(0xffffff, 1);
         directionalLight.position.set(1, 1, 1);
         scene.add(directionalLight);
-        
-        // Add additional lights for better visualization
-        const light1 = new THREE.DirectionalLight(0xffffff, 0.5);
-        light1.position.set(-1, 1, 1);
-        scene.add(light1);
-        
-        const light2 = new THREE.HemisphereLight(0xffffff, 0x444444, 0.3);
-        scene.add(light2);
         
         // Controls
         const controls = new OrbitControls(camera, renderer.domElement);
         controls.enableDamping = true;
         controls.dampingFactor = 0.05;
-        controls.minDistance = 1;
-        controls.maxDistance = 10;
         
         // Model loading
         const loader = new GLTFLoader();
         let mixer;
-        let hoodieModel;
+        let materials = {};
+        let hoodieMesh; // Reference to the main hoodie mesh
         
-        // Material mapping system with fallback
-        const materialMap = {
-            front: null,
-            back: null,
-            leftSleeve: null,
-            rightSleeve: null,
-            hood: null,
-            body: null
+        // Define UV regions for different parts of the hoodie
+        // These would ideally come from your 3D model's UV mapping
+        const uvRegions = {
+            front: { min: new THREE.Vector2(0.2, 0.5), max: new THREE.Vector2(0.8, 0.9) },
+            back: { min: new THREE.Vector2(0.2, 0.1), max: new THREE.Vector2(0.8, 0.5) },
+            leftSleeve: { min: new THREE.Vector2(0.0, 0.2), max: new THREE.Vector2(0.2, 0.8) },
+            rightSleeve: { min: new THREE.Vector2(0.8, 0.2), max: new THREE.Vector2(1.0, 0.8) },
+            hood: { min: new THREE.Vector2(0.3, 0.9), max: new THREE.Vector2(0.7, 1.0) }
         };
-        
-        // Load base fabric texture
-        const textureLoader = new THREE.TextureLoader();
-        const fabricTexture = textureLoader.load('https://raw.githubusercontent.com/mrdoob/three.js/dev/examples/textures/terrain/grasslight-big.jpg');
-        fabricTexture.wrapS = fabricTexture.wrapT = THREE.RepeatWrapping;
-        fabricTexture.repeat.set(4, 4);
         
         loader.load(
             'Hoodie_Walking_Animated.glb',
             (gltf) => {
-                hoodieModel = gltf.scene;
-                scene.add(hoodieModel);
+                const model = gltf.scene;
+                scene.add(model);
                 
-                // First pass: Try to map materials by name
-                hoodieModel.traverse((child) => {
+                // Find and store the main hoodie mesh
+                model.traverse((child) => {
                     if (child.isMesh) {
-                        // Clone material to allow individual changes
+                        // Store reference to the main hoodie mesh
+                        if (child.name.toLowerCase().includes('body') || !hoodieMesh) {
+                            hoodieMesh = child;
+                        }
+                        
+                        // Clone materials for customization
                         child.material = child.material.clone();
-                        
-                        // Apply fabric texture as base
-                        child.material.map = fabricTexture;
-                        child.material.needsUpdate = true;
-                        
                         const name = child.name.toLowerCase();
-                        
-                        // More flexible name matching
-                        if (name.includes('front') || name.includes('chest') || name.includes('shirt_front')) {
-                            materialMap.front = child.material;
-                        } 
-                        else if (name.includes('back') || name.includes('shirt_back')) {
-                            materialMap.back = child.material;
-                        }
-                        else if ((name.includes('left') && name.includes('sleeve')) || name.includes('sleeve_l')) {
-                            materialMap.leftSleeve = child.material;
-                        }
-                        else if ((name.includes('right') && name.includes('sleeve')) || name.includes('sleeve_r')) {
-                            materialMap.rightSleeve = child.material;
-                        }
-                        else if (name.includes('hood')) {
-                            materialMap.hood = child.material;
-                        }
-                        else if (name.includes('body') || name.includes('main') || name.includes('torso')) {
-                            materialMap.body = child.material;
-                        }
+                        if (name.includes('body')) materials.body = child.material;
+                        else if (name.includes('hood')) materials.hood = child.material;
                     }
                 });
                 
-                // Second pass: Fallback to index-based assignment if names didn't match
-                if (!materialMap.front && hoodieModel.children.length > 0) {
-                    materialMap.front = hoodieModel.children[0].material;
-                }
-                if (!materialMap.back && hoodieModel.children.length > 1) {
-                    materialMap.back = hoodieModel.children[1].material;
-                }
-                
-                // Debug: Log found materials
-                console.log('Material mapping:', materialMap);
-                console.log('Model children:', hoodieModel.children);
-                
-                // Set initial colors
-                if (materialMap.body) materialMap.body.color.setStyle(document.getElementById('bodyColor').value);
-                if (materialMap.hood) materialMap.hood.color.setStyle(document.getElementById('hoodColor').value);
-                
                 // Center model
-                const box = new THREE.Box3().setFromObject(hoodieModel);
+                const box = new THREE.Box3().setFromObject(model);
                 const center = box.getCenter(new THREE.Vector3());
-                hoodieModel.position.sub(center);
+                model.position.sub(center);
                 
-                // Adjust camera position based on model size
-                const size = box.getSize(new THREE.Vector3()).length();
-                camera.position.z = size * 1.5;
+                camera.position.z = box.getSize(new THREE.Vector3()).length() * 1.5;
                 controls.update();
                 
                 // Handle animations
                 if (gltf.animations?.length) {
-                    mixer = new THREE.AnimationMixer(hoodieModel);
-                    gltf.animations.forEach(clip => {
-                        mixer.clipAction(clip).play();
-                    });
+                    mixer = new THREE.AnimationMixer(model);
+                    mixer.clipAction(gltf.animations[0]).play();
                     document.getElementById('debug').textContent = `Model loaded with ${gltf.animations.length} animations`;
                 } else {
                     document.getElementById('debug').textContent = 'Model loaded (no animations)';
                 }
+                
+                // Set initial colors
+                if (materials.body) materials.body.color.setStyle(document.getElementById('bodyColor').value);
+                if (materials.hood) materials.hood.color.setStyle(document.getElementById('hoodColor').value);
             },
             undefined,
             (error) => {
@@ -266,87 +221,76 @@
         
         // Color controls
         document.getElementById('bodyColor').addEventListener('input', (e) => {
-            if (materialMap.body) materialMap.body.color.setStyle(e.target.value);
+            if (materials.body) materials.body.color.setStyle(e.target.value);
         });
         
         document.getElementById('hoodColor').addEventListener('input', (e) => {
-            if (materialMap.hood) materialMap.hood.color.setStyle(e.target.value);
+            if (materials.hood) materials.hood.color.setStyle(e.target.value);
         });
         
-        // Enhanced design upload functionality with texture blending
+        // Design upload functionality - now with UV mapping
         document.getElementById('applyDesign').addEventListener('click', async () => {
             const file = document.getElementById('designUpload').files[0];
-            const placement = document.getElementById('placementArea').value;
+            if (!file || !hoodieMesh) return;
             
-            if (!file) {
-                document.getElementById('debug').textContent = 'Please select an image first';
-                return;
-            }
+            const placementArea = document.getElementById('placementArea').value;
+            const uvRegion = uvRegions[placementArea];
             
-            try {
-                // Find target material with fallback
-                let targetMaterial = materialMap[placement];
-                
-                // If specific placement not found, try to find a suitable fallback
-                if (!targetMaterial) {
-                    if (placement === 'front' || placement === 'back') {
-                        targetMaterial = materialMap.body;
-                    } else if (placement.includes('Sleeve')) {
-                        targetMaterial = materialMap.body; // Fallback to body material
+            const texture = await new THREE.TextureLoader().loadAsync(URL.createObjectURL(file));
+            
+            // Create a custom shader material that combines the base texture with the decal
+            const decalMaterial = new THREE.ShaderMaterial({
+                uniforms: {
+                    baseTexture: { value: hoodieMesh.material.map || new THREE.Texture() },
+                    baseColor: { value: hoodieMesh.material.color },
+                    decalTexture: { value: texture },
+                    uvMin: { value: uvRegion.min },
+                    uvMax: { value: uvRegion.max }
+                },
+                vertexShader: `
+                    varying vec2 vUv;
+                    void main() {
+                        vUv = uv;
+                        gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
                     }
-                }
-                
-                if (!targetMaterial) {
-                    document.getElementById('debug').textContent = `No material found for ${placement}. Trying default material...`;
-                    console.warn(`No material mapped for ${placement}. Current mapping:`, materialMap);
+                `,
+                fragmentShader: `
+                    uniform sampler2D baseTexture;
+                    uniform sampler2D decalTexture;
+                    uniform vec3 baseColor;
+                    uniform vec2 uvMin;
+                    uniform vec2 uvMax;
+                    varying vec2 vUv;
                     
-                    // Last resort: apply to first found material
-                    for (const key in materialMap) {
-                        if (materialMap[key]) {
-                            targetMaterial = materialMap[key];
-                            break;
-                        }
-                    }
-                    
-                    if (!targetMaterial && hoodieModel) {
-                        hoodieModel.traverse(child => {
-                            if (child.isMesh && !targetMaterial) {
-                                targetMaterial = child.material;
+                    void main() {
+                        vec4 base = texture2D(baseTexture, vUv) * vec4(baseColor, 1.0);
+                        
+                        // Check if current UV is within the decal region
+                        if (vUv.x >= uvMin.x && vUv.x <= uvMax.x && 
+                            vUv.y >= uvMin.y && vUv.y <= uvMax.y) {
+                            // Calculate normalized UVs within the decal region
+                            vec2 decalUV = (vUv - uvMin) / (uvMax - uvMin);
+                            vec4 decal = texture2D(decalTexture, decalUV);
+                            
+                            // Blend the decal with the base texture
+                            if (decal.a > 0.1) {
+                                gl_FragColor = mix(base, decal, decal.a);
+                            } else {
+                                gl_FragColor = base;
                             }
-                        });
-                    }
-                }
-                
-                if (!targetMaterial) {
-                    throw new Error("No suitable material found");
-                }
-                
-                // Load new design texture
-                const designTexture = await new THREE.TextureLoader().loadAsync(URL.createObjectURL(file));
-                designTexture.encoding = THREE.sRGBEncoding;
-                
-                // Create a simple blended material
-                targetMaterial.map = designTexture;
-                targetMaterial.needsUpdate = true;
-                
-                document.getElementById('debug').textContent = `Design applied to ${placement}`;
-            } catch (error) {
-                console.error('Error applying design:', error);
-                document.getElementById('debug').textContent = `Error: ${error.message}`;
-                
-                // Fallback: apply to all materials
-                if (hoodieModel) {
-                    hoodieModel.traverse(child => {
-                        if (child.isMesh) {
-                            new THREE.TextureLoader().load(URL.createObjectURL(file), texture => {
-                                child.material.map = texture;
-                                child.material.needsUpdate = true;
-                            });
+                        } else {
+                            gl_FragColor = base;
                         }
-                    });
-                    document.getElementById('debug').textContent = 'Design applied to all parts (fallback)';
-                }
-            }
+                    }
+                `,
+                transparent: true
+            });
+            
+            // Apply the new material to the hoodie
+            hoodieMesh.material = decalMaterial;
+            
+            // Update debug message
+            document.getElementById('debug').textContent = `Custom design applied to ${placementArea}`;
         });
         
         // Animation loop
@@ -360,7 +304,6 @@
         }
         animate();
         
-        // Handle window resize
         window.addEventListener('resize', () => {
             camera.aspect = (window.innerWidth - 250) / window.innerHeight;
             camera.updateProjectionMatrix();
