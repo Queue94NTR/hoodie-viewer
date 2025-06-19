@@ -7,12 +7,10 @@
     <style>
         body { margin: 0; overflow: hidden; }
         #viewer { width: 100vw; height: 100vh; }
-        #debug { position: absolute; top: 10px; left: 10px; background: rgba(0,0,0,0.7); color: white; padding: 10px; }
     </style>
 </head>
 <body>
     <div id="viewer"></div>
-    <div id="debug">Loading...</div>
 
     <script type="importmap">
         {
@@ -47,50 +45,38 @@
         controls.enableDamping = true;
         controls.dampingFactor = 0.05;
         
-        // Animation system
-        const clock = new THREE.Clock();
-        let mixer = null;
-        
         // Model loading
         const loader = new GLTFLoader();
+        let mixer; // For animations
+        
         loader.load(
             'Hoodie_Walking_Animated.glb',
             (gltf) => {
                 const model = gltf.scene;
                 scene.add(model);
                 
-                // Debug output
-                const debug = document.getElementById('debug');
-                debug.innerHTML = `Loaded model with ${gltf.animations?.length || 0} animations`;
-                
-                if (gltf.animations && gltf.animations.length) {
-                    console.log("Available animations:", gltf.animations);
-                    mixer = new THREE.AnimationMixer(model);
-                    
-                    // Play all animations
-                    gltf.animations.forEach((clip) => {
-                        const action = mixer.clipAction(clip);
-                        action.play();
-                    });
-                    
-                    debug.innerHTML += `<br>Playing ${gltf.animations.length} animations`;
-                }
-                
-                // Center model
+                // Center and scale model
                 const box = new THREE.Box3().setFromObject(model);
                 const center = box.getCenter(new THREE.Vector3());
                 model.position.sub(center);
+                
+                // Set camera position
                 camera.position.z = box.getSize(new THREE.Vector3()).length() * 1.5;
                 controls.update();
+                
+                // Handle animations
+                if (gltf.animations && gltf.animations.length) {
+                    mixer = new THREE.AnimationMixer(model);
+                    const action = mixer.clipAction(gltf.animations[0]);
+                    action.play();
+                }
             },
             undefined,
-            (error) => {
-                console.error(error);
-                document.getElementById('debug').innerHTML = `Error: ${error.message}`;
-            }
+            (error) => console.error(error)
         );
         
         // Animation loop
+        const clock = new THREE.Clock();
         function animate() {
             requestAnimationFrame(animate);
             const delta = clock.getDelta();
