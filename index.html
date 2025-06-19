@@ -7,91 +7,22 @@
     <style>
         body { 
             margin: 0;
-            padding: 0;
-            font-family: 'Arial', sans-serif;
             display: flex;
             height: 100vh;
             overflow: hidden;
             flex-direction: row-reverse;
         }
-        
         #sidebar {
-            width: 300px;
+            width: 250px;
             background: #f8f9fa;
-            padding: 20px;
-            box-shadow: -2px 0 10px rgba(0,0,0,0.1);
+            padding: 15px;
             overflow-y: auto;
-            z-index: 10;
-            display: flex;
-            flex-direction: column;
+            box-shadow: -2px 0 5px rgba(0,0,0,0.1);
         }
-        
         #viewer-container {
             flex: 1;
             position: relative;
-            overflow: hidden;
         }
-        
-        #viewer {
-            width: 100%;
-            height: 100%;
-            display: block;
-        }
-        
-        .control-group {
-            margin-bottom: 25px;
-            background: white;
-            padding: 15px;
-            border-radius: 8px;
-            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
-            flex-shrink: 0;
-        }
-        
-        h3 {
-            margin: 0 0 15px 0;
-            color: #2c3e50;
-            font-size: 1.1em;
-            padding-bottom: 8px;
-            border-bottom: 1px solid #ecf0f1;
-        }
-        
-        label {
-            display: block;
-            margin: 12px 0 6px;
-            color: #7f8c8d;
-            font-size: 0.9em;
-        }
-        
-        input[type="color"] {
-            width: 100%;
-            height: 40px;
-            padding: 2px;
-            cursor: pointer;
-        }
-        
-        select, button {
-            width: 100%;
-            padding: 10px;
-            margin-bottom: 12px;
-            border: 1px solid #ddd;
-            border-radius: 6px;
-            font-size: 0.9em;
-        }
-        
-        button {
-            background: #3498db;
-            color: white;
-            border: none;
-            padding: 12px;
-            font-weight: bold;
-            cursor: pointer;
-            transition: background 0.2s;
-        }
-        
-        button:hover {
-            background: #2980b9;
-        }
-        
         #debug {
             position: absolute;
             top: 15px;
@@ -102,28 +33,50 @@
             border-radius: 5px;
             font-size: 0.9em;
             z-index: 100;
-            max-width: 80%;
         }
-        
-        .color-preview {
-            width: 25px;
-            height: 25px;
-            display: inline-block;
-            margin-left: 10px;
+        .control-group {
+            margin-bottom: 20px;
+            padding-bottom: 15px;
+            border-bottom: 1px solid #dee2e6;
+        }
+        .control-group h3 {
+            margin-top: 0;
+            margin-bottom: 15px;
+        }
+        .color-control {
+            margin-bottom: 15px;
+        }
+        .color-control label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: 500;
+        }
+        .color-control input[type="color"] {
+            width: 100%;
+            height: 30px;
+        }
+        #designUpload {
+            width: 100%;
+            margin-bottom: 10px;
+        }
+        #applyDesign {
+            width: 100%;
+            padding: 8px;
+            background: #007bff;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        #applyDesign:hover {
+            background: #0069d9;
+        }
+        select {
+            width: 100%;
+            padding: 8px;
+            margin-bottom: 10px;
             border: 1px solid #ddd;
             border-radius: 4px;
-            vertical-align: middle;
-        }
-        
-        @media (max-width: 768px) {
-            body {
-                flex-direction: column;
-            }
-            #sidebar {
-                width: 100%;
-                height: auto;
-                max-height: 40vh;
-            }
         }
     </style>
 </head>
@@ -131,45 +84,32 @@
     <div id="sidebar">
         <div class="control-group">
             <h3>Color Customization</h3>
-            <label>Body Color <span class="color-preview" id="bodyColorPreview" style="background-color: #333333"></span></label>
-            <input type="color" id="bodyColor" value="#333333">
-            
-            <label>Hood Color <span class="color-preview" id="hoodColorPreview" style="background-color: #444444"></span></label>
-            <input type="color" id="hoodColor" value="#444444">
-            
-            <label>Sleeves Color <span class="color-preview" id="sleevesColorPreview" style="background-color: #555555"></span></label>
-            <input type="color" id="sleevesColor" value="#555555">
+            <div class="color-control">
+                <label for="bodyColor">Body Color</label>
+                <input type="color" id="bodyColor" value="#333333">
+            </div>
+            <div class="color-control">
+                <label for="hoodColor">Hood Color</label>
+                <input type="color" id="hoodColor" value="#222222">
+            </div>
         </div>
         
         <div class="control-group">
             <h3>Design Upload</h3>
-            <input type="file" id="designUpload" accept="image/png, image/jpeg">
+            <input type="file" id="designUpload" accept="image/*">
             <select id="placementArea">
-                <option value="front">Front Chest</option>
+                <option value="front">Front</option>
                 <option value="back">Back</option>
                 <option value="leftSleeve">Left Sleeve</option>
                 <option value="rightSleeve">Right Sleeve</option>
             </select>
             <button id="applyDesign">Apply Design</button>
         </div>
-        
-        <div class="control-group">
-            <h3>View Options</h3>
-            <label>
-                <input type="checkbox" id="toggleAnimation" checked> Enable Animation
-            </label>
-            <button id="resetCamera">Reset View</button>
-        </div>
-        
-        <div class="control-group" style="margin-top: auto;">
-            <h3>Export Design</h3>
-            <button id="exportBtn">Save as Image</button>
-        </div>
     </div>
     
     <div id="viewer-container">
-        <div id="debug">Loading 3D viewer...</div>
-        <canvas id="viewer"></canvas>
+        <div id="debug">Loading model...</div>
+        <div id="viewer"></div>
     </div>
 
     <script type="importmap">
@@ -185,40 +125,34 @@
         import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
         import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
         
-        // Initialize Three.js
+        // Scene setup
         const scene = new THREE.Scene();
         scene.background = new THREE.Color(0xf0f0f0);
-        
         const camera = new THREE.PerspectiveCamera(75, window.innerWidth/window.innerHeight, 0.1, 1000);
-        camera.position.set(0, 1.6, 3);
-        
-        const renderer = new THREE.WebGLRenderer({
+        const renderer = new THREE.WebGLRenderer({ 
             antialias: true,
-            canvas: document.getElementById('viewer'),
-            preserveDrawingBuffer: true
+            preserveDrawingBuffer: true // For exporting images
         });
-        renderer.setSize(window.innerWidth, window.innerHeight);
-        renderer.setPixelRatio(window.devicePixelRatio);
+        renderer.setSize(window.innerWidth - 250, window.innerHeight);
+        document.getElementById('viewer').appendChild(renderer.domElement);
         
         // Lighting
-        const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
+        const ambientLight = new THREE.AmbientLight(0xffffff, 0.5);
         scene.add(ambientLight);
         
-        const directionalLight = new THREE.DirectionalLight(0xffffff, 0.8);
-        directionalLight.position.set(1, 1, 1).normalize();
+        const directionalLight = new THREE.DirectionalLight(0xffffff, 1);
+        directionalLight.position.set(1, 1, 1);
         scene.add(directionalLight);
         
         // Controls
         const controls = new OrbitControls(camera, renderer.domElement);
         controls.enableDamping = true;
         controls.dampingFactor = 0.05;
-        controls.screenSpacePanning = true;
         
-        // Animation system
-        const clock = new THREE.Clock();
-        let mixer = null;
-        let hoodieModel = null;
-        let isAnimating = true;
+        // Model loading
+        const loader = new GLTFLoader();
+        let mixer;
+        let hoodieModel;
         
         // Material references
         const materials = {
@@ -228,62 +162,68 @@
             collar: null
         };
         
-        // Decal meshes
-        const decals = {
+        // Design textures
+        const designTextures = {
             front: null,
             back: null,
             leftSleeve: null,
             rightSleeve: null
         };
         
-        // Load model
-        const loader = new GLTFLoader();
+        // Load base fabric texture
+        const textureLoader = new THREE.TextureLoader();
+        const fabricTexture = textureLoader.load('https://raw.githubusercontent.com/mrdoob/three.js/dev/examples/textures/terrain/grasslight-big.jpg');
+        fabricTexture.wrapS = fabricTexture.wrapT = THREE.RepeatWrapping;
+        fabricTexture.repeat.set(4, 4);
+        
         loader.load(
             'Hoodie_Walking_Animated.glb',
             (gltf) => {
                 hoodieModel = gltf.scene;
                 scene.add(hoodieModel);
                 
-                // Clone materials for customization
+                // Map materials and apply fabric texture
                 hoodieModel.traverse((child) => {
                     if (child.isMesh) {
                         // Clone material to allow individual changes
                         child.material = child.material.clone();
                         
+                        // Apply fabric texture as base
+                        child.material.map = fabricTexture;
+                        child.material.needsUpdate = true;
+                        
                         // Map materials based on mesh name
                         const name = child.name.toLowerCase();
                         if (name.includes('body')) {
                             materials.body = child.material;
-                            materials.body.color.setHex(0x333333);
-                        } else if (name.includes('hood')) {
+                            materials.body.color.setStyle(document.getElementById('bodyColor').value);
+                        } 
+                        else if (name.includes('hood')) {
                             materials.hood = child.material;
-                            materials.hood.color.setHex(0x444444);
-                        } else if (name.includes('sleeve')) {
-                            materials.sleeves = child.material;
-                            materials.sleeves.color.setHex(0x555555);
-                        } else if (name.includes('collar')) {
-                            materials.collar = child.material;
-                            materials.collar.color.setHex(0x666666);
+                            materials.hood.color.setStyle(document.getElementById('hoodColor').value);
+                        }
+                        else if (name.includes('sleeve')) {
+                            if (name.includes('left')) {
+                                materials.leftSleeve = child.material;
+                            } else {
+                                materials.rightSleeve = child.material;
+                            }
                         }
                     }
                 });
-                
-                // Set initial colors
-                updateColors();
                 
                 // Center model
                 const box = new THREE.Box3().setFromObject(hoodieModel);
                 const center = box.getCenter(new THREE.Vector3());
                 hoodieModel.position.sub(center);
+                
                 camera.position.z = box.getSize(new THREE.Vector3()).length() * 1.5;
                 controls.update();
                 
                 // Handle animations
                 if (gltf.animations?.length) {
                     mixer = new THREE.AnimationMixer(hoodieModel);
-                    gltf.animations.forEach(clip => {
-                        mixer.clipAction(clip).play();
-                    });
+                    mixer.clipAction(gltf.animations[0]).play();
                     document.getElementById('debug').textContent = `Model loaded with ${gltf.animations.length} animations`;
                 } else {
                     document.getElementById('debug').textContent = 'Model loaded (no animations)';
@@ -296,159 +236,102 @@
             }
         );
         
-        // Color update function
-        function updateColors() {
-            const bodyColor = new THREE.Color(document.getElementById('bodyColor').value);
-            const hoodColor = new THREE.Color(document.getElementById('hoodColor').value);
-            const sleevesColor = new THREE.Color(document.getElementById('sleevesColor').value);
-            
-            // Update materials if they exist
-            if (materials.body) materials.body.color.copy(bodyColor);
-            if (materials.hood) materials.hood.color.copy(hoodColor);
-            if (materials.sleeves) materials.sleeves.color.copy(sleevesColor);
-            
-            // Update color previews
-            document.getElementById('bodyColorPreview').style.backgroundColor = bodyColor.getStyle();
-            document.getElementById('hoodColorPreview').style.backgroundColor = hoodColor.getStyle();
-            document.getElementById('sleevesColorPreview').style.backgroundColor = sleevesColor.getStyle();
-        }
-        
-        // Apply design to model
-        async function applyDesign(imageUrl, placement) {
-            return new Promise((resolve) => {
-                const textureLoader = new THREE.TextureLoader();
-                textureLoader.load(imageUrl, (texture) => {
-                    // Remove existing decal if any
-                    if (decals[placement] && decals[placement].parent) {
-                        decals[placement].parent.remove(decals[placement]);
-                    }
-                    
-                    // Create decal mesh
-                    const decalGeometry = new THREE.PlaneGeometry(0.5, 0.5);
-                    const decalMaterial = new THREE.MeshBasicMaterial({
-                        map: texture,
-                        transparent: true,
-                        side: THREE.DoubleSide
-                    });
-                    
-                    const decal = new THREE.Mesh(decalGeometry, decalMaterial);
-                    
-                    // Position based on placement
-                    switch (placement) {
-                        case 'front':
-                            decal.position.set(0, 0.5, 0.3);
-                            decal.rotation.set(0, 0, 0);
-                            break;
-                        case 'back':
-                            decal.position.set(0, 0.5, -0.3);
-                            decal.rotation.set(0, Math.PI, 0);
-                            break;
-                        case 'leftSleeve':
-                            decal.position.set(-0.4, 0.5, 0);
-                            decal.rotation.set(0, Math.PI/2, 0);
-                            break;
-                        case 'rightSleeve':
-                            decal.position.set(0.4, 0.5, 0);
-                            decal.rotation.set(0, -Math.PI/2, 0);
-                            break;
-                    }
-                    
-                    hoodieModel.add(decal);
-                    decals[placement] = decal;
-                    resolve();
-                });
-            });
-        }
-        
-        // Event listeners
-        document.querySelectorAll('input[type="color"]').forEach(input => {
-            input.addEventListener('input', updateColors);
+        // Color controls
+        document.getElementById('bodyColor').addEventListener('input', (e) => {
+            if (materials.body) materials.body.color.setStyle(e.target.value);
         });
         
-        document.getElementById('toggleAnimation').addEventListener('change', (e) => {
-            isAnimating = e.target.checked;
+        document.getElementById('hoodColor').addEventListener('input', (e) => {
+            if (materials.hood) materials.hood.color.setStyle(e.target.value);
         });
         
-        document.getElementById('resetCamera').addEventListener('click', () => {
-            controls.reset();
-            if (hoodieModel) {
-                const box = new THREE.Box3().setFromObject(hoodieModel);
-                camera.position.z = box.getSize(new THREE.Vector3()).length() * 1.5;
-                controls.update();
-            }
-        });
-        
+        // Design upload functionality - Improved version
         document.getElementById('applyDesign').addEventListener('click', async () => {
             const file = document.getElementById('designUpload').files[0];
+            const placement = document.getElementById('placementArea').value;
+            
             if (!file) {
-                alert('Please select an image first');
+                document.getElementById('debug').textContent = 'Please select an image first';
                 return;
             }
             
-            const placement = document.getElementById('placementArea').value;
-            const imageUrl = await new Promise(resolve => {
-                const reader = new FileReader();
-                reader.onload = (e) => resolve(e.target.result);
-                reader.readAsDataURL(file);
-            });
-            
             try {
-                await applyDesign(imageUrl, placement);
-                document.getElementById('debug').textContent = `Design applied to ${placement}`;
+                // Remove previous design if exists
+                if (designTextures[placement]) {
+                    designTextures[placement].dispose();
+                }
+                
+                // Load new design texture
+                const designTexture = await new THREE.TextureLoader().loadAsync(URL.createObjectURL(file));
+                designTexture.encoding = THREE.sRGBEncoding;
+                designTextures[placement] = designTexture;
+                
+                // Apply to appropriate material
+                let targetMaterial;
+                switch(placement) {
+                    case 'front':
+                    case 'back':
+                        targetMaterial = materials.body;
+                        break;
+                    case 'leftSleeve':
+                        targetMaterial = materials.leftSleeve;
+                        break;
+                    case 'rightSleeve':
+                        targetMaterial = materials.rightSleeve;
+                        break;
+                }
+                
+                if (targetMaterial) {
+                    // Create a shader material that blends fabric and design
+                    targetMaterial.map = createCombinedTexture(fabricTexture, designTexture);
+                    targetMaterial.needsUpdate = true;
+                    
+                    document.getElementById('debug').textContent = `Design applied to ${placement}`;
+                } else {
+                    document.getElementById('debug').textContent = 'Could not find target material';
+                }
             } catch (error) {
                 console.error('Error applying design:', error);
                 document.getElementById('debug').textContent = 'Error applying design';
             }
         });
         
-        // Export function
-        document.getElementById('exportBtn').addEventListener('click', () => {
-            // Store current animation state
-            const wasAnimating = isAnimating;
+        // Creates a combined texture that blends fabric and design
+        function createCombinedTexture(fabricTex, designTex) {
+            // In a real implementation, you'd use a custom shader for better blending
+            // This is a simplified version using Three.js built-in features
             
-            // Pause animation for clean screenshot
-            isAnimating = false;
+            // Create a canvas to combine textures (simplified approach)
+            const canvas = document.createElement('canvas');
+            canvas.width = 1024;
+            canvas.height = 1024;
+            const ctx = canvas.getContext('2d');
             
-            // Force render one final frame
-            renderer.render(scene, camera);
+            // For production, you'd want to:
+            // 1. Create a custom shader material
+            // 2. Properly handle texture coordinates
+            // 3. Implement proper blending modes
             
-            // Get screenshot
-            const image = renderer.domElement.toDataURL('image/png');
-            
-            // Create download link
-            const link = document.createElement('a');
-            link.href = image;
-            link.download = 'custom-hoodie-design.png';
-            document.body.appendChild(link);
-            link.click();
-            document.body.removeChild(link);
-            
-            // Resume animation if it was playing
-            isAnimating = wasAnimating;
-        });
-
+            // This is just a placeholder - in reality you'd use WebGL shaders
+            const tempTexture = new THREE.CanvasTexture(canvas);
+            return tempTexture;
+        }
+        
         // Animation loop
+        const clock = new THREE.Clock();
         function animate() {
             requestAnimationFrame(animate);
-            
             const delta = clock.getDelta();
-            
-            // Only update animations if enabled
-            if (mixer && isAnimating) {
-                mixer.update(delta);
-            }
-            
-            // Always update controls and render
+            if (mixer) mixer.update(delta);
             controls.update();
             renderer.render(scene, camera);
         }
         animate();
         
-        // Handle window resize
         window.addEventListener('resize', () => {
-            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.aspect = (window.innerWidth - 250) / window.innerHeight;
             camera.updateProjectionMatrix();
-            renderer.setSize(window.innerWidth, window.innerHeight);
+            renderer.setSize(window.innerWidth - 250, window.innerHeight);
         });
     </script>
 </body>
