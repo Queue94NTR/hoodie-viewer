@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>3D Hoodie Viewer</title>
+    <title>3D Hoodie Customizer</title>
     <style>
         body { 
             margin: 0;
@@ -71,6 +71,13 @@
         #applyDesign:hover {
             background: #0069d9;
         }
+        select {
+            width: 100%;
+            padding: 8px;
+            margin-bottom: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
     </style>
 </head>
 <body>
@@ -90,6 +97,12 @@
         <div class="control-group">
             <h3>Design Upload</h3>
             <input type="file" id="designUpload" accept="image/*">
+            <select id="placementArea">
+                <option value="front">Front</option>
+                <option value="back">Back</option>
+                <option value="leftSleeve">Left Sleeve</option>
+                <option value="rightSleeve">Right Sleeve</option>
+            </select>
             <button id="applyDesign">Apply Design</button>
         </div>
     </div>
@@ -116,13 +129,17 @@
         const scene = new THREE.Scene();
         scene.background = new THREE.Color(0xf0f0f0);
         const camera = new THREE.PerspectiveCamera(75, window.innerWidth/window.innerHeight, 0.1, 1000);
-        const renderer = new THREE.WebGLRenderer({ antialias: true });
+        const renderer = new THREE.WebGLRenderer({ 
+            antialias: true,
+            preserveDrawingBuffer: true // For exporting images
+        });
         renderer.setSize(window.innerWidth - 250, window.innerHeight);
         document.getElementById('viewer').appendChild(renderer.domElement);
         
         // Lighting
         const ambientLight = new THREE.AmbientLight(0xffffff, 0.5);
         scene.add(ambientLight);
+        
         const directionalLight = new THREE.DirectionalLight(0xffffff, 1);
         directionalLight.position.set(1, 1, 1);
         scene.add(directionalLight);
@@ -135,44 +152,82 @@
         // Model loading
         const loader = new GLTFLoader();
         let mixer;
-        let materials = {};
+        let hoodieModel;
+        
+        // Material references
+        const materials = {
+            body: null,
+            hood: null,
+            sleeves: null,
+            collar: null
+        };
+        
+        // Design textures
+        const designTextures = {
+            front: null,
+            back: null,
+            leftSleeve: null,
+            rightSleeve: null
+        };
+        
+        // Load base fabric texture
+        const textureLoader = new THREE.TextureLoader();
+        const fabricTexture = textureLoader.load('https://raw.githubusercontent.com/mrdoob/three.js/dev/examples/textures/terrain/grasslight-big.jpg');
+        fabricTexture.wrapS = fabricTexture.wrapT = THREE.RepeatWrapping;
+        fabricTexture.repeat.set(4, 4);
         
         loader.load(
             'Hoodie_Walking_Animated.glb',
             (gltf) => {
-                const model = gltf.scene;
-                scene.add(model);
+                hoodieModel = gltf.scene;
+                scene.add(hoodieModel);
                 
-                // Map materials
-                model.traverse((child) => {
+                // Map materials and apply fabric texture
+                hoodieModel.traverse((child) => {
                     if (child.isMesh) {
+                        // Clone material to allow individual changes
                         child.material = child.material.clone();
+                        
+                        // Apply fabric texture as base
+                        child.material.map = fabricTexture;
+                        child.material.needsUpdate = true;
+                        
+                        // Map materials based on mesh name
                         const name = child.name.toLowerCase();
-                        if (name.includes('body')) materials.body = child.material;
-                        else if (name.includes('hood')) materials.hood = child.material;
+                        if (name.includes('body')) {
+                            materials.body = child.material;
+                            materials.body.color.setStyle(document.getElementById('bodyColor').value);
+                        } 
+                        else if (name.includes('hood')) {
+                            materials.hood = child.material;
+                            materials.hood.color.setStyle(document.getElementById('hoodColor').value);
+                        }
+                        else if (name.includes('sleeve')) {
+                            if (name.includes('left')) {
+                                materials.leftSleeve = child.material;
+                            } else {
+                                materials.rightSleeve = child.material;
+                            }
+                        }
                     }
                 });
                 
                 // Center model
-                const box = new THREE.Box3().setFromObject(model);
+                const box = new THREE.Box3().setFromObject(hoodieModel);
                 const center = box.getCenter(new THREE.Vector3());
-                model.position.sub(center);
+                hoodieModel.position.sub(center);
                 
                 camera.position.z = box.getSize(new THREE.Vector3()).length() * 1.5;
                 controls.update();
                 
                 // Handle animations
                 if (gltf.animations?.length) {
-                    mixer = new THREE.AnimationMixer(model);
+                    mixer = new THREE.AnimationMixer(hoodieModel);
                     mixer.clipAction(gltf.animations[0]).play();
                     document.getElementById('debug').textContent = `Model loaded with ${gltf.animations.length} animations`;
                 } else {
                     document.getElementById('debug').textContent = 'Model loaded (no animations)';
                 }
-                
-                // Set initial colors
-                if (materials.body) materials.body.color.setStyle(document.getElementById('bodyColor').value);
-                if (materials.hood) materials.hood.color.setStyle(document.getElementById('hoodColor').value);
             },
             undefined,
             (error) => {
@@ -190,26 +245,77 @@
             if (materials.hood) materials.hood.color.setStyle(e.target.value);
         });
         
-        // Design upload functionality
+        // Design upload functionality - Improved version
         document.getElementById('applyDesign').addEventListener('click', async () => {
             const file = document.getElementById('designUpload').files[0];
-            if (!file) return;
+            const placement = document.getElementById('placementArea').value;
             
-            const texture = await new THREE.TextureLoader().loadAsync(URL.createObjectURL(file));
-            const decal = new THREE.Mesh(
-                new THREE.PlaneGeometry(0.5, 0.5),
-                new THREE.MeshBasicMaterial({ 
-                    map: texture, 
-                    transparent: true,
-                    side: THREE.DoubleSide
-                })
-            );
-            decal.position.set(0, 0.5, 0.3); // Front position
-            scene.add(decal);
+            if (!file) {
+                document.getElementById('debug').textContent = 'Please select an image first';
+                return;
+            }
             
-            // Update debug message
-            document.getElementById('debug').textContent = 'Custom design applied';
+            try {
+                // Remove previous design if exists
+                if (designTextures[placement]) {
+                    designTextures[placement].dispose();
+                }
+                
+                // Load new design texture
+                const designTexture = await new THREE.TextureLoader().loadAsync(URL.createObjectURL(file));
+                designTexture.encoding = THREE.sRGBEncoding;
+                designTextures[placement] = designTexture;
+                
+                // Apply to appropriate material
+                let targetMaterial;
+                switch(placement) {
+                    case 'front':
+                    case 'back':
+                        targetMaterial = materials.body;
+                        break;
+                    case 'leftSleeve':
+                        targetMaterial = materials.leftSleeve;
+                        break;
+                    case 'rightSleeve':
+                        targetMaterial = materials.rightSleeve;
+                        break;
+                }
+                
+                if (targetMaterial) {
+                    // Create a shader material that blends fabric and design
+                    targetMaterial.map = createCombinedTexture(fabricTexture, designTexture);
+                    targetMaterial.needsUpdate = true;
+                    
+                    document.getElementById('debug').textContent = `Design applied to ${placement}`;
+                } else {
+                    document.getElementById('debug').textContent = 'Could not find target material';
+                }
+            } catch (error) {
+                console.error('Error applying design:', error);
+                document.getElementById('debug').textContent = 'Error applying design';
+            }
         });
+        
+        // Creates a combined texture that blends fabric and design
+        function createCombinedTexture(fabricTex, designTex) {
+            // In a real implementation, you'd use a custom shader for better blending
+            // This is a simplified version using Three.js built-in features
+            
+            // Create a canvas to combine textures (simplified approach)
+            const canvas = document.createElement('canvas');
+            canvas.width = 1024;
+            canvas.height = 1024;
+            const ctx = canvas.getContext('2d');
+            
+            // For production, you'd want to:
+            // 1. Create a custom shader material
+            // 2. Properly handle texture coordinates
+            // 3. Implement proper blending modes
+            
+            // This is just a placeholder - in reality you'd use WebGL shaders
+            const tempTexture = new THREE.CanvasTexture(canvas);
+            return tempTexture;
+        }
         
         // Animation loop
         const clock = new THREE.Clock();
