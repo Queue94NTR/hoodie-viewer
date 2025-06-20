@@ -131,6 +131,17 @@
         #pauseAnimation:hover {
             background: #e0a800;
         }
+        .effect-control {
+            margin-bottom: 15px;
+        }
+        .effect-control label {
+            display: block;
+            margin-bottom: 5px;
+        }
+        .effect-control select {
+            width: 100%;
+            padding: 5px;
+        }
     </style>
 </head>
 <body>
@@ -141,10 +152,18 @@
                 <button id="playAnimation">▶ Play</button>
                 <button id="pauseAnimation">⏸ Pause</button>
             </div>
+            <div class="effect-control">
+                <label for="animationEffect">Animation Effect</label>
+                <select id="animationEffect">
+                    <option value="none">None</option>
+                    <option value="wind">Wind</option>
+                    <option value="bounce">Bounce</option>
+                </select>
+            </div>
         </div>
 
         <div class="control-group">
-            <h3>Color Customization</h3>
+            <h3>Material Customization</h3>
             <div class="color-control">
                 <label for="bodyColor">Hoodie Color</label>
                 <input type="color" id="bodyColor" value="#333333">
@@ -152,6 +171,26 @@
             <div class="color-control">
                 <label for="hoodColor">Hood Color</label>
                 <input type="color" id="hoodColor" value="#222222">
+            </div>
+            <div class="color-control">
+                <label for="materialType">Material Type</label>
+                <select id="materialType">
+                    <option value="cotton">Cotton</option>
+                    <option value="polyester">Polyester</option>
+                    <option value="velvet">Velvet</option>
+                    <option value="denim">Denim</option>
+                    <option value="leather">Leather</option>
+                </select>
+            </div>
+            <div class="color-control">
+                <label for="roughness">Roughness</label>
+                <input type="range" id="roughness" min="0" max="1" step="0.05" value="0.7">
+                <span class="transform-value" id="roughnessValue">0.7</span>
+            </div>
+            <div class="color-control">
+                <label for="puffiness">Puff Print Effect</label>
+                <input type="range" id="puffiness" min="0" max="1" step="0.1" value="0">
+                <span class="transform-value" id="puffinessValue">0</span>
             </div>
         </div>
         
@@ -227,6 +266,7 @@
         import * as THREE from 'three';
         import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
         import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+        import { RGBELoader } from 'three/addons/loaders/RGBELoader.js';
         
         // Scene setup
         const scene = new THREE.Scene();
@@ -234,14 +274,38 @@
         const camera = new THREE.PerspectiveCamera(75, window.innerWidth/window.innerHeight, 0.1, 1000);
         const renderer = new THREE.WebGLRenderer({ antialias: true });
         renderer.setSize(window.innerWidth - 300, window.innerHeight);
+        renderer.outputEncoding = THREE.sRGBEncoding;
+        renderer.toneMapping = THREE.ACESFilmicToneMapping;
+        renderer.toneMappingExposure = 1.0;
         document.getElementById('viewer').appendChild(renderer.domElement);
         
-        // Lighting
+        // Lighting - using more realistic lighting for PBR
         const ambientLight = new THREE.AmbientLight(0xffffff, 0.5);
         scene.add(ambientLight);
-        const directionalLight = new THREE.DirectionalLight(0xffffff, 1);
+        
+        const directionalLight = new THREE.DirectionalLight(0xffffff, 2);
         directionalLight.position.set(1, 1, 1);
+        directionalLight.castShadow = true;
+        directionalLight.shadow.mapSize.width = 2048;
+        directionalLight.shadow.mapSize.height = 2048;
         scene.add(directionalLight);
+        
+        const directionalLight2 = new THREE.DirectionalLight(0xffffff, 0.5);
+        directionalLight2.position.set(-1, -1, -1);
+        scene.add(directionalLight2);
+        
+        // Environment map
+        const pmremGenerator = new THREE.PMREMGenerator(renderer);
+        pmremGenerator.compileEquirectangularShader();
+        
+        new RGBELoader()
+            .setDataType(THREE.UnsignedByteType)
+            .load('https://dl.polyhaven.org/file/ph-assets/HDRIs/hdr/1k/peppermint_powerplant_1k.hdr', (texture) => {
+                const envMap = pmremGenerator.fromEquirectangular(texture).texture;
+                scene.environment = envMap;
+                texture.dispose();
+                pmremGenerator.dispose();
+            });
         
         // Controls
         const controls = new OrbitControls(camera, renderer.domElement);
@@ -253,6 +317,7 @@
         let mixer;
         let currentAction;
         let hoodieMesh; // Reference to the main hoodie mesh
+        let originalPositionAttribute;
         
         // Define UV regions for different parts of the hoodie
         const uvRegions = {
@@ -261,6 +326,15 @@
             leftSleeve: { min: new THREE.Vector2(0.0, 0.2), max: new THREE.Vector2(0.2, 0.8), center: new THREE.Vector2(0.1, 0.5) },
             rightSleeve: { min: new THREE.Vector2(0.8, 0.2), max: new THREE.Vector2(1.0, 0.8), center: new THREE.Vector2(0.9, 0.5) },
             hood: { min: new THREE.Vector2(0.3, 0.9), max: new THREE.Vector2(0.7, 1.0), center: new THREE.Vector2(0.5, 0.95) }
+        };
+        
+        // Material properties
+        const materialPresets = {
+            cotton: { roughness: 0.7, metalness: 0.0, normalScale: 0.5, clearcoat: 0.0 },
+            polyester: { roughness: 0.3, metalness: 0.0, normalScale: 0.3, clearcoat: 0.3 },
+            velvet: { roughness: 0.9, metalness: 0.0, normalScale: 1.0, clearcoat: 0.0 },
+            denim: { roughness: 0.8, metalness: 0.0, normalScale: 0.8, clearcoat: 0.0 },
+            leather: { roughness: 0.4, metalness: 0.2, normalScale: 0.6, clearcoat: 0.5 }
         };
         
         // Current design properties
@@ -275,11 +349,37 @@
             }
         };
         
-        // Current color properties
-        let currentColors = {
-            body: new THREE.Color(0x333333),
-            hood: new THREE.Color(0x222222)
+        // Current material properties
+        let currentMaterial = {
+            bodyColor: new THREE.Color(0x333333),
+            hoodColor: new THREE.Color(0x222222),
+            roughness: 0.7,
+            metalness: 0.0,
+            normalScale: 0.5,
+            clearcoat: 0.0,
+            puffiness: 0.0,
+            materialType: 'cotton'
         };
+        
+        // Animation effects
+        let animationEffect = 'none';
+        let windEffect = {
+            strength: 0,
+            frequency: 0.5,
+            time: 0
+        };
+        
+        // Load fabric normal maps
+        const normalMapLoader = new THREE.TextureLoader();
+        const cottonNormalMap = normalMapLoader.load('https://threejs.org/examples/textures/normalmaps/fabric_normals.jpg');
+        const denimNormalMap = normalMapLoader.load('https://threejs.org/examples/textures/normalmaps/denim_normals.jpg');
+        const velvetNormalMap = normalMapLoader.load('https://threejs.org/examples/textures/normalmaps/velvet_normals.jpg');
+        const leatherNormalMap = normalMapLoader.load('https://threejs.org/examples/textures/normalmaps/leather_normals.jpg');
+        
+        // Load fabric displacement maps
+        const displacementMapLoader = new THREE.TextureLoader();
+        const puffDisplacementMap = displacementMapLoader.load('https://threejs.org/examples/textures/displacement/clouds.jpg');
+        puffDisplacementMap.wrapS = puffDisplacementMap.wrapT = THREE.RepeatWrapping;
         
         loader.load(
             'Hoodie_Walking_Animated.glb',
@@ -293,10 +393,16 @@
                         // Store reference to the main hoodie mesh
                         if (child.name.toLowerCase().includes('body') || !hoodieMesh) {
                             hoodieMesh = child;
+                            // Store original position attribute for wind effect
+                            originalPositionAttribute = child.geometry.attributes.position.clone();
+                            
                             // Store original material for reset
                             hoodieMesh.userData.originalMaterial = child.material.clone();
                             // Store original texture
                             hoodieMesh.userData.baseTexture = child.material.map;
+                            
+                            // Initialize with our custom material
+                            updateHoodieMaterial();
                         }
                     }
                 });
@@ -324,9 +430,6 @@
                     document.getElementById('playAnimation').disabled = true;
                     document.getElementById('pauseAnimation').disabled = true;
                 }
-                
-                // Apply initial colors
-                updateHoodieMaterial();
             },
             undefined,
             (error) => {
@@ -352,14 +455,48 @@
             }
         });
         
-        // Color controls
+        // Animation effect controls
+        document.getElementById('animationEffect').addEventListener('change', (e) => {
+            animationEffect = e.target.value;
+            windEffect.strength = animationEffect === 'wind' ? 0.1 : 0;
+            document.getElementById('debug').textContent = `Effect: ${animationEffect}`;
+        });
+        
+        // Material controls
         document.getElementById('bodyColor').addEventListener('input', (e) => {
-            currentColors.body.setStyle(e.target.value);
+            currentMaterial.bodyColor.setStyle(e.target.value);
             updateHoodieMaterial();
         });
         
         document.getElementById('hoodColor').addEventListener('input', (e) => {
-            currentColors.hood.setStyle(e.target.value);
+            currentMaterial.hoodColor.setStyle(e.target.value);
+            updateHoodieMaterial();
+        });
+        
+        document.getElementById('materialType').addEventListener('change', (e) => {
+            const preset = materialPresets[e.target.value];
+            currentMaterial.materialType = e.target.value;
+            currentMaterial.roughness = preset.roughness;
+            currentMaterial.metalness = preset.metalness;
+            currentMaterial.normalScale = preset.normalScale;
+            currentMaterial.clearcoat = preset.clearcoat;
+            
+            // Update UI
+            document.getElementById('roughness').value = preset.roughness;
+            document.getElementById('roughnessValue').textContent = preset.roughness.toFixed(2);
+            
+            updateHoodieMaterial();
+        });
+        
+        document.getElementById('roughness').addEventListener('input', (e) => {
+            currentMaterial.roughness = parseFloat(e.target.value);
+            document.getElementById('roughnessValue').textContent = currentMaterial.roughness.toFixed(2);
+            updateHoodieMaterial();
+        });
+        
+        document.getElementById('puffiness').addEventListener('input', (e) => {
+            currentMaterial.puffiness = parseFloat(e.target.value);
+            document.getElementById('puffinessValue').textContent = currentMaterial.puffiness.toFixed(1);
             updateHoodieMaterial();
         });
         
@@ -414,7 +551,7 @@
         setupTransformControl('positionX', 'positionX');
         setupTransformControl('positionY', 'positionY');
         setupTransformControl('scale', 'scale');
-        setupTransformControl('rotation', 'rotation', (v) => `${v}°`);
+        setupTransformControl('rotation', 'rotation', (v) => `${v}°');
         
         // Reset transformations
         document.getElementById('resetTransforms').addEventListener('click', () => {
@@ -437,41 +574,131 @@
             updateHoodieMaterial();
         });
         
-        // Update the hoodie material with current colors and design
+        // Get the appropriate normal map for the current material type
+        function getNormalMap() {
+            switch(currentMaterial.materialType) {
+                case 'denim': return denimNormalMap;
+                case 'velvet': return velvetNormalMap;
+                case 'leather': return leatherNormalMap;
+                case 'cotton': 
+                default: return cottonNormalMap;
+            }
+        }
+        
+        // Apply wind effect to the hoodie
+        function applyWindEffect(delta) {
+            if (!hoodieMesh || !originalPositionAttribute || animationEffect !== 'wind') return;
+            
+            windEffect.time += delta;
+            
+            const positionAttribute = hoodieMesh.geometry.attributes.position;
+            const originalPositions = originalPositionAttribute.array;
+            const positions = positionAttribute.array;
+            
+            for (let i = 0; i < positions.length; i += 3) {
+                const x = originalPositions[i];
+                const y = originalPositions[i + 1];
+                const z = originalPositions[i + 2];
+                
+                // Apply wind effect based on vertex position
+                const windStrength = windEffect.strength * Math.sin(windEffect.time * 2 + y * 5) * (1 + Math.sin(windEffect.time * 0.5 + x * 3)) * 0.5;
+                
+                positions[i] = x + windStrength;
+                positions[i + 2] = z + windStrength * 0.3;
+            }
+            
+            positionAttribute.needsUpdate = true;
+            hoodieMesh.geometry.computeVertexNormals();
+        }
+        
+        // Apply bounce effect
+        function applyBounceEffect(delta) {
+            if (!hoodieMesh || animationEffect !== 'bounce') return;
+            
+            const time = Date.now() * 0.001;
+            hoodieMesh.position.y = Math.sin(time * 2) * 0.05;
+        }
+        
+        // Update the hoodie material with current properties
         function updateHoodieMaterial() {
             if (!hoodieMesh) return;
             
             const uvRegion = currentDesign.texture ? uvRegions[currentDesign.placement] : null;
             const transform = currentDesign.transform;
+            const normalMap = getNormalMap();
             
-            // Create a custom shader material that combines the base texture with colors and decal
+            // Create a custom PBR shader material that combines all our elements
             hoodieMesh.material = new THREE.ShaderMaterial({
                 uniforms: {
+                    // Base material properties
+                    bodyColor: { value: currentMaterial.bodyColor },
+                    hoodColor: { value: currentMaterial.hoodColor },
+                    roughness: { value: currentMaterial.roughness },
+                    metalness: { value: currentMaterial.metalness },
+                    clearcoat: { value: currentMaterial.clearcoat },
+                    puffiness: { value: currentMaterial.puffiness },
+                    
+                    // Textures
                     baseTexture: { value: hoodieMesh.userData.baseTexture || new THREE.Texture() },
-                    bodyColor: { value: currentColors.body },
-                    hoodColor: { value: currentColors.hood },
+                    normalMap: { value: normalMap },
                     decalTexture: { value: currentDesign.texture || new THREE.Texture() },
+                    puffDisplacementMap: { value: puffDisplacementMap },
+                    
+                    // Decal properties
                     hasDecal: { value: !!currentDesign.texture },
                     uvMin: { value: uvRegion ? uvRegion.min : new THREE.Vector2(0, 0) },
                     uvMax: { value: uvRegion ? uvRegion.max : new THREE.Vector2(1, 1) },
                     uvCenter: { value: uvRegion ? uvRegion.center : new THREE.Vector2(0.5, 0.5) },
                     decalPosition: { value: new THREE.Vector2(transform.positionX, transform.positionY) },
                     decalScale: { value: transform.scale },
-                    decalRotation: { value: THREE.MathUtils.degToRad(transform.rotation) }
+                    decalRotation: { value: THREE.MathUtils.degToRad(transform.rotation) },
+                    
+                    // Lighting and environment
+                    envMap: { value: scene.environment },
+                    lightDirection: { value: directionalLight.position.clone().normalize() },
+                    lightColor: { value: new THREE.Color(directionalLight.color) },
+                    lightIntensity: { value: directionalLight.intensity },
+                    time: { value: 0 }
                 },
                 vertexShader: `
+                    uniform float puffiness;
+                    uniform sampler2D puffDisplacementMap;
+                    uniform float time;
+                    
                     varying vec2 vUv;
                     varying vec3 vPosition;
+                    varying vec3 vNormal;
+                    varying vec3 vViewPosition;
+                    
                     void main() {
                         vUv = uv;
-                        vPosition = position;
-                        gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+                        vNormal = normalize(normalMatrix * normal);
+                        
+                        // Apply puff print effect if enabled
+                        vec3 newPosition = position;
+                        if (puffiness > 0.0) {
+                            vec4 disp = texture2D(puffDisplacementMap, uv * 2.0 + vec2(time * 0.1));
+                            float displacement = disp.r * puffiness * 0.1;
+                            newPosition += normal * displacement;
+                        }
+                        
+                        vec4 mvPosition = modelViewMatrix * vec4(newPosition, 1.0);
+                        vViewPosition = -mvPosition.xyz;
+                        vPosition = newPosition;
+                        
+                        gl_Position = projectionMatrix * mvPosition;
                     }
                 `,
                 fragmentShader: `
-                    uniform sampler2D baseTexture;
                     uniform vec3 bodyColor;
                     uniform vec3 hoodColor;
+                    uniform float roughness;
+                    uniform float metalness;
+                    uniform float clearcoat;
+                    uniform float puffiness;
+                    
+                    uniform sampler2D baseTexture;
+                    uniform sampler2D normalMap;
                     uniform sampler2D decalTexture;
                     uniform bool hasDecal;
                     uniform vec2 uvMin;
@@ -480,18 +707,127 @@
                     uniform vec2 decalPosition;
                     uniform float decalScale;
                     uniform float decalRotation;
+                    
+                    uniform sampler2D envMap;
+                    uniform vec3 lightDirection;
+                    uniform vec3 lightColor;
+                    uniform float lightIntensity;
+                    
                     varying vec2 vUv;
                     varying vec3 vPosition;
+                    varying vec3 vNormal;
+                    varying vec3 vViewPosition;
+                    
+                    // Normal map unpacking
+                    vec3 unpackNormal(vec4 normalMapValue) {
+                        vec3 normal = normalize(normalMapValue.xyz * 2.0 - 1.0);
+                        return normal;
+                    }
+                    
+                    // GGX/Trowbridge-Reitz normal distribution function
+                    float ndfGGX(float NdotH, float roughness) {
+                        float a = roughness * roughness;
+                        float a2 = a * a;
+                        float NdotH2 = NdotH * NdotH;
+                        
+                        float denom = (NdotH2 * (a2 - 1.0) + 1.0);
+                        denom = 3.14159265359 * denom * denom;
+                        
+                        return a2 / denom;
+                    }
+                    
+                    // Schlick-GGX geometry function
+                    float gaSchlickGGX(float NdotV, float roughness) {
+                        float r = roughness + 1.0;
+                        float k = (r * r) / 8.0;
+                        
+                        float denom = NdotV * (1.0 - k) + k;
+                        
+                        return NdotV / denom;
+                    }
+                    
+                    // Smith geometry function
+                    float gSmith(float NdotV, float NdotL, float roughness) {
+                        return gaSchlickGGX(NdotV, roughness) * gaSchlickGGX(NdotL, roughness);
+                    }
+                    
+                    // Fresnel-Schlick approximation
+                    vec3 fSchlick(float cosTheta, vec3 F0) {
+                        return F0 + (1.0 - F0) * pow(1.0 - cosTheta, 5.0);
+                    }
+                    
+                    // Clearcoat Fresnel
+                    float fSchlickClearcoat(float cosTheta, float F0) {
+                        return F0 + (1.0 - F0) * pow(1.0 - cosTheta, 5.0);
+                    }
                     
                     void main() {
-                        // Get base fabric texture (grayscale)
+                        // Determine base color based on position (hood or body)
+                        vec3 baseColor = vPosition.z > 0.0 ? hoodColor : bodyColor;
+                        
+                        // Get fabric texture (grayscale) and apply to color
                         float fabric = texture2D(baseTexture, vUv).r;
+                        baseColor *= mix(1.0, fabric, 0.7); // Blend with texture
                         
-                        // Determine if this is hood or body (simple Z-position check)
-                        vec3 color = vPosition.z > 0.0 ? hoodColor : bodyColor;
+                        // Get normal from normal map
+                        vec3 normal = unpackNormal(texture2D(normalMap, vUv * 2.0));
+                        normal = normalize(vNormal + normal * currentMaterial.normalScale); // Blend with vertex normal
                         
-                        // Apply fabric texture to color (darkens folds, lightens raised areas)
-                        vec4 base = vec4(color * fabric, 1.0);
+                        // View direction
+                        vec3 viewDir = normalize(vViewPosition);
+                        
+                        // Light calculation
+                        vec3 lightDir = normalize(-lightDirection);
+                        vec3 halfDir = normalize(viewDir + lightDir);
+                        
+                        float NdotV = max(dot(normal, viewDir), 0.0001);
+                        float NdotL = max(dot(normal, lightDir), 0.0);
+                        float NdotH = max(dot(normal, halfDir), 0.0);
+                        float HdotV = max(dot(halfDir, viewDir), 0.0);
+                        
+                        // Fresnel (F0 for dielectrics)
+                        vec3 F0 = vec3(0.04);
+                        F0 = mix(F0, baseColor, metalness);
+                        vec3 F = fSchlick(HdotV, F0);
+                        
+                        // Normal distribution
+                        float NDF = ndfGGX(NdotH, roughness);
+                        
+                        // Geometry
+                        float G = gSmith(NdotV, NdotL, roughness);
+                        
+                        // Specular
+                        vec3 numerator = NDF * G * F;
+                        float denominator = 4.0 * NdotV * NdotL;
+                        vec3 specular = numerator / max(denominator, 0.001);
+                        
+                        // Diffuse
+                        vec3 kD = vec3(1.0) - F;
+                        kD *= 1.0 - metalness;
+                        vec3 diffuse = kD * baseColor / 3.14159265359;
+                        
+                        // Combine lighting
+                        vec3 radiance = lightColor * lightIntensity;
+                        vec3 color = (diffuse + specular) * radiance * NdotL;
+                        
+                        // Clearcoat layer (for materials like leather)
+                        if (clearcoat > 0.0) {
+                            float clearcoatRoughness = 0.1;
+                            float clearcoatF0 = 0.04;
+                            
+                            float clearcoatNDF = ndfGGX(NdotH, clearcoatRoughness);
+                            float clearcoatG = gSmith(NdotV, NdotL, clearcoatRoughness);
+                            float clearcoatF = fSchlickClearcoat(HdotV, clearcoatF0);
+                            
+                            vec3 clearcoatSpecular = vec3(clearcoatNDF * clearcoatG * clearcoatF / (4.0 * NdotV * NdotL));
+                            color = mix(color, color + clearcoatSpecular * radiance * NdotL, clearcoat);
+                        }
+                        
+                        // Apply ambient lighting with environment map
+                        vec3 reflectDir = reflect(-viewDir, normal);
+                        vec3 envColor = texture2D(envMap, reflectDir).rgb;
+                        vec3 ambient = mix(vec3(0.03), envColor * 0.5, metalness) * baseColor;
+                        color += ambient;
                         
                         // Apply decal if exists and in the right region
                         if (hasDecal && vUv.x >= uvMin.x && vUv.x <= uvMax.x && 
@@ -528,16 +864,24 @@
                                 
                                 // Blend the decal with the base texture
                                 if (decal.a > 0.1) {
-                                    gl_FragColor = mix(base, decal, decal.a);
-                                    return;
+                                    // Apply puff print effect to decal
+                                    if (puffiness > 0.0) {
+                                        float puffFactor = texture2D(puffDisplacementMap, vUv * 2.0).r * puffiness;
+                                        decal.rgb *= 1.0 + puffFactor * 0.5;
+                                    }
+                                    
+                                    color = mix(color, decal.rgb, decal.a);
                                 }
                             }
                         }
                         
-                        gl_FragColor = base;
+                        // Gamma correction
+                        color = pow(color, vec3(1.0/2.2));
+                        
+                        gl_FragColor = vec4(color, 1.0);
                     }
                 `,
-                transparent: true
+                lights: true
             });
         }
         
@@ -546,7 +890,18 @@
         function animate() {
             requestAnimationFrame(animate);
             const delta = clock.getDelta();
+            
             if (mixer) mixer.update(delta);
+            
+            // Apply effects
+            applyWindEffect(delta);
+            applyBounceEffect(delta);
+            
+            // Update time uniform for shader animations
+            if (hoodieMesh?.material?.uniforms?.time) {
+                hoodieMesh.material.uniforms.time.value += delta;
+            }
+            
             controls.update();
             renderer.render(scene, camera);
         }
