@@ -182,7 +182,6 @@
                     <option value="none">None</option>
                     <option value="wind">Wind</option>
                     <option value="bounce">Bounce</option>
-                    <option value="spin">Spin</option>
                 </select>
             </div>
         </div>
@@ -205,7 +204,6 @@
                     <option value="velvet">Velvet</option>
                     <option value="denim">Denim</option>
                     <option value="leather">Leather</option>
-                    <option value="silk">Silk</option>
                 </select>
             </div>
             <div class="color-control">
@@ -231,11 +229,9 @@
                     <option value="leftSleeve">Left Sleeve</option>
                     <option value="rightSleeve">Right Sleeve</option>
                     <option value="hood">Hood</option>
-                    <option value="full">Full Print</option>
                 </select>
             </div>
             <button id="applyDesign" disabled>Apply Design</button>
-            <button id="removeDesign" disabled>Remove Design</button>
         </div>
         
         <div class="control-group" id="transformControls" style="display: none;">
@@ -279,7 +275,6 @@
         <div class="control-group save-controls">
             <h3>Save & Export</h3>
             <button id="screenshotBtn" disabled>Take Screenshot</button>
-            <button id="saveDesignBtn" disabled>Save Design</button>
         </div>
     </div>
     
@@ -302,7 +297,6 @@
         import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
         import { RGBELoader } from 'three/addons/loaders/RGBELoader.js';
         import { WEBGL } from 'three/addons/WebGL.js';
-        import { GUI } from 'three/addons/libs/lil-gui.module.min.js';
         
         // Check for WebGL support
         if (!WEBGL.isWebGLAvailable()) {
@@ -348,8 +342,7 @@
             back: { min: new THREE.Vector2(0.2, 0.1), max: new THREE.Vector2(0.8, 0.5), center: new THREE.Vector2(0.5, 0.3) },
             leftSleeve: { min: new THREE.Vector2(0.0, 0.2), max: new THREE.Vector2(0.2, 0.8), center: new THREE.Vector2(0.1, 0.5) },
             rightSleeve: { min: new THREE.Vector2(0.8, 0.2), max: new THREE.Vector2(1.0, 0.8), center: new THREE.Vector2(0.9, 0.5) },
-            hood: { min: new THREE.Vector2(0.3, 0.9), max: new THREE.Vector2(0.7, 1.0), center: new THREE.Vector2(0.5, 0.95) },
-            full: { min: new THREE.Vector2(0.0, 0.0), max: new THREE.Vector2(1.0, 1.0), center: new THREE.Vector2(0.5, 0.5) }
+            hood: { min: new THREE.Vector2(0.3, 0.9), max: new THREE.Vector2(0.7, 1.0), center: new THREE.Vector2(0.5, 0.95) }
         };
         
         // Material properties
@@ -358,8 +351,7 @@
             polyester: { roughness: 0.3, metalness: 0.0, normalScale: 0.3, clearcoat: 0.3 },
             velvet: { roughness: 0.9, metalness: 0.0, normalScale: 1.0, clearcoat: 0.0 },
             denim: { roughness: 0.8, metalness: 0.0, normalScale: 0.8, clearcoat: 0.0 },
-            leather: { roughness: 0.4, metalness: 0.2, normalScale: 0.6, clearcoat: 0.5 },
-            silk: { roughness: 0.2, metalness: 0.1, normalScale: 0.2, clearcoat: 0.7 }
+            leather: { roughness: 0.4, metalness: 0.2, normalScale: 0.6, clearcoat: 0.5 }
         };
         
         // Current design properties
@@ -391,10 +383,6 @@
         let windEffect = {
             strength: 0,
             frequency: 0.5,
-            time: 0
-        };
-        let spinEffect = {
-            speed: 0,
             time: 0
         };
         
@@ -440,7 +428,6 @@
                 denimNormalMap: 'https://threejs.org/examples/textures/normalmaps/denim_normals.jpg',
                 velvetNormalMap: 'https://threejs.org/examples/textures/normalmaps/velvet_normals.jpg',
                 leatherNormalMap: 'https://threejs.org/examples/textures/normalmaps/leather_normals.jpg',
-                silkNormalMap: 'https://threejs.org/examples/textures/normalmaps/silk_normals.jpg',
                 puffDisplacementMap: 'https://threejs.org/examples/textures/displacement/clouds.jpg'
             };
             
@@ -553,29 +540,16 @@
                     }
                 } catch (modelError) {
                     console.error('Error loading hoodie model:', modelError);
-                    document.getElementById('debug').textContent = 'Using fallback hoodie model';
+                    document.getElementById('debug').textContent = 'Using fallback cube model';
                     
-                    // Create a fallback hoodie-like shape
-                    const bodyGeometry = new THREE.BoxGeometry(1, 1.5, 0.8);
-                    const hoodGeometry = new THREE.ConeGeometry(0.6, 0.8, 4);
-                    hoodGeometry.rotateX(Math.PI);
-                    hoodGeometry.translate(0, 0.9, 0.4);
-                    
-                    const bodyMaterial = new THREE.MeshStandardMaterial({ color: 0x333333 });
-                    const hoodMaterial = new THREE.MeshStandardMaterial({ color: 0x222222 });
-                    
-                    const body = new THREE.Mesh(bodyGeometry, bodyMaterial);
-                    const hood = new THREE.Mesh(hoodGeometry, hoodMaterial);
-                    
-                    hoodieMesh = new THREE.Group();
-                    hoodieMesh.add(body);
-                    hoodieMesh.add(hood);
+                    // Create a fallback cube
+                    const geometry = new THREE.BoxGeometry(1, 1.5, 0.8);
+                    const material = new THREE.MeshStandardMaterial({ color: 0x333333 });
+                    hoodieMesh = new THREE.Mesh(geometry, material);
                     scene.add(hoodieMesh);
                     
-                    // Store references for material updates
-                    hoodieMesh.userData.bodyMesh = body;
-                    hoodieMesh.userData.hoodMesh = hood;
-                    hoodieMesh.userData.originalMaterial = bodyMaterial.clone();
+                    originalPositionAttribute = hoodieMesh.geometry.attributes.position.clone();
+                    hoodieMesh.userData.originalMaterial = material.clone();
                     hoodieMesh.userData.baseTexture = createDefaultTexture();
                     
                     camera.position.z = 3;
@@ -626,7 +600,7 @@
                     time: { value: 0 }
                 };
                 
-                const shaderMaterial = new THREE.ShaderMaterial({
+                hoodieMesh.material = new THREE.ShaderMaterial({
                     uniforms,
                     vertexShader: `
                         uniform float puffiness;
@@ -819,34 +793,13 @@
                     `,
                     lights: true
                 });
-
-                // Apply material to all parts of the hoodie
-                if (hoodieMesh.isGroup) {
-                    hoodieMesh.traverse(child => {
-                        if (child.isMesh) {
-                            child.material = shaderMaterial;
-                        }
-                    });
-                } else {
-                    hoodieMesh.material = shaderMaterial;
-                }
             } catch (error) {
                 console.error('Error updating material:', error);
-                const fallbackMaterial = new THREE.MeshStandardMaterial({
+                hoodieMesh.material = new THREE.MeshStandardMaterial({
                     color: 0x333333,
                     roughness: 0.7,
                     metalness: 0.0
                 });
-                
-                if (hoodieMesh.isGroup) {
-                    hoodieMesh.traverse(child => {
-                        if (child.isMesh) {
-                            child.material = fallbackMaterial;
-                        }
-                    });
-                } else {
-                    hoodieMesh.material = fallbackMaterial;
-                }
             }
         };
         
@@ -858,7 +811,6 @@
                 case 'denim': return textures.denimNormalMap;
                 case 'velvet': return textures.velvetNormalMap;
                 case 'leather': return textures.leatherNormalMap;
-                case 'silk': return textures.silkNormalMap;
                 case 'cotton': 
                 default: return textures.cottonNormalMap;
             }
@@ -870,9 +822,7 @@
             
             windEffect.time += delta;
             
-            const positionAttribute = hoodieMesh.geometry?.attributes?.position;
-            if (!positionAttribute) return;
-            
+            const positionAttribute = hoodieMesh.geometry.attributes.position;
             const originalPositions = originalPositionAttribute.array;
             const positions = positionAttribute.array;
             
@@ -888,9 +838,7 @@
             }
             
             positionAttribute.needsUpdate = true;
-            if (hoodieMesh.geometry) {
-                hoodieMesh.geometry.computeVertexNormals();
-            }
+            hoodieMesh.geometry.computeVertexNormals();
         };
         
         // Apply bounce effect
@@ -901,14 +849,6 @@
             hoodieMesh.position.y = Math.sin(time * 2) * 0.05;
         };
         
-        // Apply spin effect
-        const applySpinEffect = (delta) => {
-            if (!hoodieMesh || animationEffect !== 'spin') return;
-            
-            spinEffect.time += delta;
-            hoodieMesh.rotation.y = spinEffect.time * spinEffect.speed;
-        };
-        
         // Take screenshot
         const takeScreenshot = () => {
             renderer.render(scene, camera);
@@ -917,26 +857,6 @@
             link.href = image;
             link.download = 'hoodie-design.png';
             link.click();
-        };
-        
-        // Save design configuration
-        const saveDesign = () => {
-            const designData = {
-                material: currentMaterial,
-                design: currentDesign,
-                timestamp: new Date().toISOString()
-            };
-            
-            const dataStr = JSON.stringify(designData);
-            const blob = new Blob([dataStr], { type: 'application/json' });
-            const url = URL.createObjectURL(blob);
-            
-            const link = document.createElement('a');
-            link.href = url;
-            link.download = 'hoodie-design.json';
-            link.click();
-            
-            URL.revokeObjectURL(url);
         };
         
         // Initialize the application
@@ -961,10 +881,8 @@
                 document.getElementById('designUpload').disabled = false;
                 document.getElementById('placementArea').disabled = false;
                 document.getElementById('applyDesign').disabled = false;
-                document.getElementById('removeDesign').disabled = false;
                 document.getElementById('animationEffect').disabled = false;
                 document.getElementById('screenshotBtn').disabled = false;
-                document.getElementById('saveDesignBtn').disabled = false;
                 
                 // Hide loading overlay
                 document.getElementById('loading-overlay').style.display = 'none';
@@ -998,7 +916,6 @@
         document.getElementById('animationEffect').addEventListener('change', (e) => {
             animationEffect = e.target.value;
             windEffect.strength = animationEffect === 'wind' ? 0.1 : 0;
-            spinEffect.speed = animationEffect === 'spin' ? 0.5 : 0;
             document.getElementById('debug').textContent = `Effect: ${animationEffect}`;
         });
         
@@ -1082,14 +999,6 @@
             }
         });
         
-        // Remove design
-        document.getElementById('removeDesign').addEventListener('click', () => {
-            currentDesign.texture = null;
-            document.getElementById('transformControls').style.display = 'none';
-            updateHoodieMaterial();
-            document.getElementById('debug').textContent = 'Design removed';
-        });
-        
         // Transformation controls
         function setupTransformControl(id, property, formatFn = (v) => v) {
             const slider = document.getElementById(id);
@@ -1132,9 +1041,6 @@
         // Screenshot button
         document.getElementById('screenshotBtn').addEventListener('click', takeScreenshot);
         
-        // Save design button
-        document.getElementById('saveDesignBtn').addEventListener('click', saveDesign);
-        
         // Animation loop
         const clock = new THREE.Clock();
         function animate() {
@@ -1144,7 +1050,6 @@
             if (mixer) mixer.update(delta);
             applyWindEffect(delta);
             applyBounceEffect(delta);
-            applySpinEffect(delta);
             
             if (hoodieMesh?.material?.uniforms?.time) {
                 hoodieMesh.material.uniforms.time.value += delta;
