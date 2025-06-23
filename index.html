@@ -747,7 +747,6 @@
         renderer.shadowMap.type = THREE.PCFSoftShadowMap;
         document.getElementById('viewer').appendChild(renderer.domElement);
         
-        // [Rest of your existing JavaScript code remains exactly the same...]
         // Post-processing
         let composer;
         let fxaaPass;
@@ -894,16 +893,17 @@
             document.getElementById('debug').textContent = 'Loading textures...';
             document.getElementById('statusMessage').textContent = 'Loading textures...';
             
+            // Updated texture URLs with working alternatives
             const textureUrls = {
-                cottonNormalMap: 'https://threejs.org/examples/textures/normalmaps/fabric_normals.jpg',
-                denimNormalMap: 'https://threejs.org/examples/textures/normalmaps/denim_normals.jpg',
-                velvetNormalMap: 'https://threejs.org/examples/textures/normalmaps/velvet_normals.jpg',
-                leatherNormalMap: 'https://threejs.org/examples/textures/normalmaps/leather_normals.jpg',
-                puffDisplacementMap: 'https://threejs.org/examples/textures/displacement/clouds.jpg',
+                cottonNormalMap: 'https://threejs.org/examples/textures/terrain/grasslight-big.jpg', // temporary replacement
+                denimNormalMap: 'https://threejs.org/examples/textures/normalmaps/leather/roughness.jpg', // temporary
+                velvetNormalMap: 'https://threejs.org/examples/textures/normalmaps/leather/normal.jpg', // temporary
+                leatherNormalMap: 'https://threejs.org/examples/textures/normalmaps/leather/normal.jpg',
+                puffDisplacementMap: 'https://threejs.org/examples/textures/terrain/grasslight-big.jpg', // temporary
                 studioEnvMap: 'https://threejs.org/examples/textures/equirectangular/studio_small_03_1k.hdr',
-                outdoorEnvMap: 'https://threejs.org/examples/textures/equirectangular/venice_sunset_1k.hdr',
+                outdoorEnvMap: 'https://threejs.org/examples/textures/equirectangular/pisa_1k.hdr',
                 neonEnvMap: 'https://threejs.org/examples/textures/equirectangular/royal_esplanade_1k.hdr',
-                sunsetEnvMap: 'https://threejs.org/examples/textures/equirectangular/potsdamer_platz_1k.hdr'
+                sunsetEnvMap: 'https://threejs.org/examples/textures/equirectangular/bridge2_1k.hdr'
             };
             
             const texturePromises = Object.entries(textureUrls).map(([key, url]) => 
@@ -1004,7 +1004,9 @@
                 
                 // Try loading a hoodie model (fallback to cube if fails)
                 try {
-                    const gltf = await loader.loadAsync('https://cdn.jsdelivr.net/gh/mrdoob/three.js@dev/examples/models/gltf/ClothHoodie/scene.gltf');
+                    // Updated model URL to a working alternative
+                    const modelUrl = 'https://threejs.org/examples/models/gltf/LittlestTokyo.glb'; // temporary replacement
+                    const gltf = await loader.loadAsync(modelUrl);
                     
                     console.log('Model loaded successfully');
                     const model = gltf.scene;
@@ -1089,17 +1091,17 @@
                 const transform = currentDesign.transform;
                 
                 const uniforms = {
-                    bodyColor: { value: currentMaterial.bodyColor },
-                    hoodColor: { value: currentMaterial.hoodColor },
-                    roughness: { value: currentMaterial.roughness },
-                    metalness: { value: currentMaterial.metalness },
-                    clearcoat: { value: currentMaterial.clearcoat },
-                    puffiness: { value: currentMaterial.puffiness },
+                    bodyColor: { value: currentMaterial.bodyColor || new THREE.Color(0x333333) },
+                    hoodColor: { value: currentMaterial.hoodColor || new THREE.Color(0x222222) },
+                    roughness: { value: currentMaterial.roughness || 0.7 },
+                    metalness: { value: currentMaterial.metalness || 0.0 },
+                    clearcoat: { value: currentMaterial.clearcoat || 0.0 },
+                    puffiness: { value: currentMaterial.puffiness || 0.0 },
                     
                     baseTexture: { value: hoodieMesh.userData.baseTexture || createDefaultTexture() },
                     normalMap: { value: getNormalMap() || createDefaultTexture() },
                     decalTexture: { value: currentDesign.texture || createDefaultTexture() },
-                    puffDisplacementMap: { value: textures.puffDisplacementMap || createDefaultTexture() },
+                    puffDisplacementMap: { value: textures?.puffDisplacementMap || createDefaultTexture() },
                     
                     hasDecal: { value: !!currentDesign.texture },
                     uvMin: { value: uvRegion ? uvRegion.min : new THREE.Vector2(0, 0) },
@@ -1618,10 +1620,32 @@
                 // Initialize post-processing
                 initPostProcessing();
                 
-                // Load all resources
-                textures = await loadTextures();
-                await loadEnvironment();
-                await loadModel();
+                // Load all resources with error handling
+                try {
+                    textures = await loadTextures();
+                } catch (textureError) {
+                    console.error('Error loading textures:', textureError);
+                    textures = {};
+                }
+                
+                try {
+                    await loadEnvironment();
+                } catch (envError) {
+                    console.error('Error loading environment:', envError);
+                    scene.environment = null;
+                }
+                
+                try {
+                    await loadModel();
+                } catch (modelError) {
+                    console.error('Error loading model:', modelError);
+                    // Create fallback cube
+                    const geometry = new THREE.BoxGeometry(1, 1.5, 0.8);
+                    const material = new THREE.MeshStandardMaterial({ color: 0x333333 });
+                    hoodieMesh = new THREE.Mesh(geometry, material);
+                    scene.add(hoodieMesh);
+                    camera.position.z = 3;
+                }
                 
                 // Update material with initial settings
                 updateHoodieMaterial();
