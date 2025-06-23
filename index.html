@@ -703,18 +703,34 @@
         import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
         import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
         import { RGBELoader } from 'three/addons/loaders/RGBELoader.js';
-        import { WEBGL } from 'three/addons/WebGL.js';
         import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
         import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
         import { ShaderPass } from 'three/addons/postprocessing/ShaderPass.js';
         import { FXAAShader } from 'three/addons/shaders/FXAAShader.js';
         
-        // Check for WebGL support
-        if (!WEBGL.isWebGLAvailable()) {
-            const warning = WEBGL.getWebGLErrorMessage();
+        // Modern WebGL support check
+        if (!isWebGLAvailable()) {
+            const warning = document.createElement('div');
+            warning.innerHTML = 'WebGL not supported in your browser';
+            warning.style.color = 'white';
+            warning.style.backgroundColor = 'red';
+            warning.style.padding = '20px';
+            warning.style.fontFamily = 'sans-serif';
             document.getElementById('viewer').appendChild(warning);
             document.getElementById('statusMessage').textContent = 'WebGL not supported';
             throw new Error('WebGL not supported');
+        }
+
+        function isWebGLAvailable() {
+            try {
+                const canvas = document.createElement('canvas');
+                return !!(
+                    window.WebGLRenderingContext &&
+                    (canvas.getContext('webgl') || canvas.getContext('experimental-webgl'))
+                );
+            } catch (e) {
+                return false;
+            }
         }
 
         // Scene setup
@@ -731,6 +747,7 @@
         renderer.shadowMap.type = THREE.PCFSoftShadowMap;
         document.getElementById('viewer').appendChild(renderer.domElement);
         
+        // [Rest of your existing JavaScript code remains exactly the same...]
         // Post-processing
         let composer;
         let fxaaPass;
