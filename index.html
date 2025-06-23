@@ -3,27 +3,44 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>3D Hoodie Designer</title>
+    <title>3D Hoodie Designer Pro</title>
     <style>
+        :root {
+            --primary-color: #4361ee;
+            --secondary-color: #3f37c9;
+            --danger-color: #f72585;
+            --warning-color: #ffbe0b;
+            --success-color: #4cc9f0;
+            --dark-color: #212529;
+            --light-color: #f8f9fa;
+        }
+        
         body { 
             margin: 0;
             display: flex;
             height: 100vh;
             overflow: hidden;
             flex-direction: row-reverse;
-            font-family: Arial, sans-serif;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f5f5f5;
         }
+        
         #sidebar {
-            width: 300px;
-            background: #f8f9fa;
-            padding: 15px;
+            width: 350px;
+            background: white;
+            padding: 20px;
             overflow-y: auto;
-            box-shadow: -2px 0 5px rgba(0,0,0,0.1);
+            box-shadow: -2px 0 10px rgba(0,0,0,0.1);
+            display: flex;
+            flex-direction: column;
         }
+        
         #viewer-container {
             flex: 1;
             position: relative;
+            background: linear-gradient(135deg, #e0e0e0, #f0f0f0);
         }
+        
         #debug {
             position: absolute;
             top: 15px;
@@ -34,252 +51,642 @@
             border-radius: 5px;
             font-size: 0.9em;
             z-index: 100;
+            display: flex;
+            align-items: center;
         }
+        
+        #debug::before {
+            content: "⚙️";
+            margin-right: 8px;
+        }
+        
         .control-group {
-            margin-bottom: 20px;
-            padding-bottom: 15px;
-            border-bottom: 1px solid #dee2e6;
+            margin-bottom: 25px;
+            padding-bottom: 20px;
+            border-bottom: 1px solid #e9ecef;
         }
+        
         .control-group h3 {
             margin-top: 0;
             margin-bottom: 15px;
+            color: var(--primary-color);
+            font-size: 1.2em;
+            display: flex;
+            align-items: center;
         }
+        
+        .control-group h3::before {
+            content: "";
+            display: inline-block;
+            width: 5px;
+            height: 20px;
+            background: var(--primary-color);
+            margin-right: 10px;
+            border-radius: 3px;
+        }
+        
         .color-control {
             margin-bottom: 15px;
         }
+        
         .color-control label {
             display: block;
-            margin-bottom: 5px;
+            margin-bottom: 8px;
             font-weight: 500;
+            color: #495057;
         }
+        
         .color-control input[type="color"] {
             width: 100%;
-            height: 30px;
+            height: 40px;
+            cursor: pointer;
+            border: 1px solid #ced4da;
+            border-radius: 4px;
         }
+        
         #designUpload {
             width: 100%;
-            margin-bottom: 10px;
+            margin-bottom: 15px;
+            padding: 8px;
+            border: 1px dashed #ced4da;
+            border-radius: 4px;
+            background: white;
         }
+        
         button {
             width: 100%;
-            padding: 8px;
-            background: #007bff;
+            padding: 12px;
+            background: var(--primary-color);
             color: white;
             border: none;
-            border-radius: 4px;
+            border-radius: 6px;
             cursor: pointer;
             margin-bottom: 10px;
+            font-weight: 500;
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
         }
+        
         button:hover {
-            background: #0069d9;
+            background: var(--secondary-color);
+            transform: translateY(-1px);
         }
+        
+        button:active {
+            transform: translateY(0);
+        }
+        
+        button:disabled {
+            background: #adb5bd;
+            cursor: not-allowed;
+            transform: none;
+        }
+        
         .placement-control {
-            margin-top: 10px;
+            margin-top: 15px;
         }
+        
         .placement-control label {
             display: block;
-            margin-bottom: 5px;
+            margin-bottom: 8px;
+            color: #495057;
+            font-weight: 500;
         }
+        
         .placement-control select {
             width: 100%;
-            padding: 5px;
+            padding: 8px;
             margin-bottom: 10px;
+            border: 1px solid #ced4da;
+            border-radius: 4px;
+            background: white;
         }
+        
         .transform-control {
             margin-bottom: 15px;
         }
+        
         .transform-control label {
             display: block;
-            margin-bottom: 5px;
+            margin-bottom: 8px;
             font-weight: 500;
+            color: #495057;
         }
+        
         .transform-control input[type="range"] {
             width: 100%;
+            height: 6px;
+            -webkit-appearance: none;
+            background: #e9ecef;
+            border-radius: 3px;
+            outline: none;
         }
+        
+        .transform-control input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 18px;
+            height: 18px;
+            background: var(--primary-color);
+            border-radius: 50%;
+            cursor: pointer;
+        }
+        
         .transform-value {
             display: inline-block;
             width: 40px;
             text-align: right;
             margin-left: 10px;
+            font-family: monospace;
         }
+        
         .transform-row {
             display: flex;
             align-items: center;
-            margin-bottom: 5px;
+            margin-bottom: 8px;
+            gap: 10px;
         }
+        
+        .transform-row span:first-child {
+            width: 20px;
+            font-weight: bold;
+            color: var(--primary-color);
+        }
+        
         .transform-row input[type="number"] {
             width: 60px;
-            padding: 5px;
+            padding: 6px;
+            border: 1px solid #ced4da;
+            border-radius: 4px;
+            text-align: center;
         }
+        
         #resetTransforms {
-            background: #dc3545;
+            background: var(--danger-color);
         }
+        
         #resetTransforms:hover {
-            background: #c82333;
+            background: #d6336c;
         }
+        
         .animation-controls {
             display: flex;
             gap: 10px;
         }
+        
         .animation-controls button {
             flex: 1;
         }
+        
         #pauseAnimation {
-            background: #ffc107;
-            color: #212529;
+            background: var(--warning-color);
+            color: var(--dark-color);
         }
+        
         #pauseAnimation:hover {
-            background: #e0a800;
+            background: #ffaa00;
         }
+        
         .effect-control {
             margin-bottom: 15px;
         }
+        
         .effect-control label {
             display: block;
-            margin-bottom: 5px;
+            margin-bottom: 8px;
+            color: #495057;
+            font-weight: 500;
         }
+        
         .effect-control select {
             width: 100%;
-            padding: 5px;
+            padding: 8px;
+            border: 1px solid #ced4da;
+            border-radius: 4px;
+            background: white;
         }
+        
         #loading-overlay {
             position: absolute;
             top: 0;
             left: 0;
             width: 100%;
             height: 100%;
-            background: rgba(0,0,0,0.7);
+            background: rgba(0,0,0,0.8);
             display: flex;
+            flex-direction: column;
             justify-content: center;
             align-items: center;
             color: white;
             font-size: 1.5em;
             z-index: 1000;
+            gap: 20px;
         }
+        
+        .spinner {
+            width: 50px;
+            height: 50px;
+            border: 5px solid rgba(255,255,255,0.3);
+            border-radius: 50%;
+            border-top-color: var(--primary-color);
+            animation: spin 1s ease-in-out infinite;
+        }
+        
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+        
         .save-controls {
             margin-top: 20px;
         }
+        
         #screenshotBtn {
-            background: #28a745;
+            background: var(--success-color);
         }
+        
         #screenshotBtn:hover {
-            background: #218838;
+            background: #3aa8d0;
+        }
+        
+        .logo {
+            font-size: 1.5em;
+            font-weight: bold;
+            color: var(--primary-color);
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .logo::before {
+            content: "🧥";
+            font-size: 1.2em;
+        }
+        
+        .tab-buttons {
+            display: flex;
+            margin-bottom: 20px;
+            border-bottom: 1px solid #e9ecef;
+        }
+        
+        .tab-button {
+            padding: 10px 15px;
+            background: none;
+            border: none;
+            color: #6c757d;
+            font-weight: 500;
+            cursor: pointer;
+            border-bottom: 3px solid transparent;
+            transition: all 0.2s;
+            margin-bottom: -1px;
+        }
+        
+        .tab-button.active {
+            color: var(--primary-color);
+            border-bottom-color: var(--primary-color);
+        }
+        
+        .tab-content {
+            display: none;
+        }
+        
+        .tab-content.active {
+            display: block;
+        }
+        
+        .color-presets {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 8px;
+            margin-top: 10px;
+        }
+        
+        .color-preset {
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            cursor: pointer;
+            border: 2px solid transparent;
+            transition: all 0.2s;
+        }
+        
+        .color-preset:hover {
+            transform: scale(1.1);
+        }
+        
+        .color-preset.selected {
+            border-color: var(--dark-color);
+            transform: scale(1.1);
+        }
+        
+        .design-preview {
+            width: 100%;
+            height: 100px;
+            background-color: #e9ecef;
+            border-radius: 4px;
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+            position: relative;
+        }
+        
+        .design-preview img {
+            max-width: 100%;
+            max-height: 100%;
+            object-fit: contain;
+        }
+        
+        .design-preview.empty::after {
+            content: "No design selected";
+            color: #6c757d;
+            font-size: 0.9em;
+        }
+        
+        .status-bar {
+            margin-top: auto;
+            padding-top: 15px;
+            border-top: 1px solid #e9ecef;
+            font-size: 0.8em;
+            color: #6c757d;
+            display: flex;
+            justify-content: space-between;
+        }
+        
+        .tooltip {
+            position: relative;
+            display: inline-block;
+        }
+        
+        .tooltip .tooltiptext {
+            visibility: hidden;
+            width: 200px;
+            background-color: #333;
+            color: #fff;
+            text-align: center;
+            border-radius: 6px;
+            padding: 5px;
+            position: absolute;
+            z-index: 1;
+            bottom: 125%;
+            left: 50%;
+            transform: translateX(-50%);
+            opacity: 0;
+            transition: opacity 0.3s;
+            font-size: 0.8em;
+            font-weight: normal;
+        }
+        
+        .tooltip:hover .tooltiptext {
+            visibility: visible;
+            opacity: 1;
+        }
+        
+        @media (max-width: 768px) {
+            body {
+                flex-direction: column;
+            }
+            
+            #sidebar {
+                width: 100%;
+                height: 50vh;
+                order: 2;
+            }
+            
+            #viewer-container {
+                height: 50vh;
+            }
+            
+            .tab-buttons {
+                overflow-x: auto;
+                white-space: nowrap;
+            }
         }
     </style>
 </head>
 <body>
-    <div id="loading-overlay">Loading resources...</div>
+    <div id="loading-overlay">
+        <div class="spinner"></div>
+        <div>Loading 3D Hoodie Designer...</div>
+    </div>
+    
     <div id="sidebar">
-        <div class="control-group">
-            <h3>Animation Controls</h3>
-            <div class="animation-controls">
-                <button id="playAnimation" disabled>▶ Play</button>
-                <button id="pauseAnimation" disabled>⏸ Pause</button>
-            </div>
-            <div class="effect-control">
-                <label for="animationEffect">Animation Effect</label>
-                <select id="animationEffect" disabled>
-                    <option value="none">None</option>
-                    <option value="wind">Wind</option>
-                    <option value="bounce">Bounce</option>
-                </select>
-            </div>
+        <div class="logo">Hoodie Designer Pro</div>
+        
+        <div class="tab-buttons">
+            <button class="tab-button active" data-tab="design">Design</button>
+            <button class="tab-button" data-tab="materials">Materials</button>
+            <button class="tab-button" data-tab="effects">Effects</button>
+            <button class="tab-button" data-tab="export">Export</button>
         </div>
-
-        <div class="control-group">
-            <h3>Material Customization</h3>
-            <div class="color-control">
-                <label for="bodyColor">Hoodie Color</label>
-                <input type="color" id="bodyColor" value="#333333" disabled>
+        
+        <div class="tab-content active" id="design-tab">
+            <div class="control-group">
+                <h3>Design Upload</h3>
+                <div class="design-preview empty" id="designPreview"></div>
+                <input type="file" id="designUpload" accept="image/*" disabled>
+                <div class="placement-control">
+                    <label for="placementArea">Placement Area</label>
+                    <select id="placementArea" disabled>
+                        <option value="front">Front</option>
+                        <option value="back">Back</option>
+                        <option value="leftSleeve">Left Sleeve</option>
+                        <option value="rightSleeve">Right Sleeve</option>
+                        <option value="hood">Hood</option>
+                    </select>
+                </div>
+                <button id="applyDesign" disabled>
+                    <span>🖌️</span> Apply Design
+                </button>
             </div>
-            <div class="color-control">
-                <label for="hoodColor">Hood Color</label>
-                <input type="color" id="hoodColor" value="#222222" disabled>
-            </div>
-            <div class="color-control">
-                <label for="materialType">Material Type</label>
-                <select id="materialType" disabled>
-                    <option value="cotton">Cotton</option>
-                    <option value="polyester">Polyester</option>
-                    <option value="velvet">Velvet</option>
-                    <option value="denim">Denim</option>
-                    <option value="leather">Leather</option>
-                </select>
-            </div>
-            <div class="color-control">
-                <label for="roughness">Roughness</label>
-                <input type="range" id="roughness" min="0" max="1" step="0.05" value="0.7" disabled>
-                <span class="transform-value" id="roughnessValue">0.7</span>
-            </div>
-            <div class="color-control">
-                <label for="puffiness">Puff Print Effect</label>
-                <input type="range" id="puffiness" min="0" max="1" step="0.1" value="0" disabled>
-                <span class="transform-value" id="puffinessValue">0</span>
+            
+            <div class="control-group" id="transformControls" style="display: none;">
+                <h3>Design Transformations</h3>
+                
+                <div class="transform-control">
+                    <label>Position</label>
+                    <div class="transform-row">
+                        <span>X:</span>
+                        <input type="range" id="positionX" min="-1" max="1" step="0.01" value="0" disabled>
+                        <input type="number" id="positionXInput" min="-1" max="1" step="0.01" value="0" disabled>
+                    </div>
+                    <div class="transform-row">
+                        <span>Y:</span>
+                        <input type="range" id="positionY" min="-1" max="1" step="0.01" value="0" disabled>
+                        <input type="number" id="positionYInput" min="-1" max="1" step="0.01" value="0" disabled>
+                    </div>
+                </div>
+                
+                <div class="transform-control">
+                    <label>Scale</label>
+                    <div class="transform-row">
+                        <span>Size:</span>
+                        <input type="range" id="scale" min="0.1" max="3" step="0.1" value="1" disabled>
+                        <input type="number" id="scaleInput" min="0.1" max="3" step="0.1" value="1" disabled>
+                    </div>
+                </div>
+                
+                <div class="transform-control">
+                    <label>Rotation</label>
+                    <div class="transform-row">
+                        <span>Angle:</span>
+                        <input type="range" id="rotation" min="-180" max="180" step="1" value="0" disabled>
+                        <input type="number" id="rotationInput" min="-180" max="180" step="1" value="0" disabled>
+                    </div>
+                </div>
+                
+                <button id="resetTransforms" disabled>
+                    <span>🔄</span> Reset Transformations
+                </button>
             </div>
         </div>
         
-        <div class="control-group">
-            <h3>Design Upload</h3>
-            <input type="file" id="designUpload" accept="image/*" disabled>
-            <div class="placement-control">
-                <label for="placementArea">Placement Area</label>
-                <select id="placementArea" disabled>
-                    <option value="front">Front</option>
-                    <option value="back">Back</option>
-                    <option value="leftSleeve">Left Sleeve</option>
-                    <option value="rightSleeve">Right Sleeve</option>
-                    <option value="hood">Hood</option>
-                </select>
+        <div class="tab-content" id="materials-tab">
+            <div class="control-group">
+                <h3>Color Customization</h3>
+                <div class="color-control">
+                    <label for="bodyColor">Hoodie Color</label>
+                    <input type="color" id="bodyColor" value="#333333" disabled>
+                </div>
+                <div class="color-control">
+                    <label for="hoodColor">Hood Color</label>
+                    <input type="color" id="hoodColor" value="#222222" disabled>
+                </div>
+                
+                <div class="color-presets">
+                    <div class="color-preset selected" style="background-color: #333333;" data-color="#333333"></div>
+                    <div class="color-preset" style="background-color: #1a1a1a;" data-color="#1a1a1a"></div>
+                    <div class="color-preset" style="background-color: #6a4c93;" data-color="#6a4c93"></div>
+                    <div class="color-preset" style="background-color: #1982c4;" data-color="#1982c4"></div>
+                    <div class="color-preset" style="background-color: #8ac926;" data-color="#8ac926"></div>
+                    <div class="color-preset" style="background-color: #ffca3a;" data-color="#ffca3a"></div>
+                    <div class="color-preset" style="background-color: #ff595e;" data-color="#ff595e"></div>
+                    <div class="color-preset" style="background-color: #ffffff;" data-color="#ffffff"></div>
+                </div>
             </div>
-            <button id="applyDesign" disabled>Apply Design</button>
+            
+            <div class="control-group">
+                <h3>Material Properties</h3>
+                <div class="color-control">
+                    <label for="materialType">Material Type</label>
+                    <select id="materialType" disabled>
+                        <option value="cotton">Cotton</option>
+                        <option value="polyester">Polyester</option>
+                        <option value="velvet">Velvet</option>
+                        <option value="denim">Denim</option>
+                        <option value="leather">Leather</option>
+                    </select>
+                </div>
+                <div class="color-control">
+                    <label for="roughness">Roughness</label>
+                    <input type="range" id="roughness" min="0" max="1" step="0.05" value="0.7" disabled>
+                    <span class="transform-value" id="roughnessValue">0.7</span>
+                </div>
+                <div class="color-control">
+                    <label for="puffiness">Puff Print Effect</label>
+                    <input type="range" id="puffiness" min="0" max="1" step="0.1" value="0" disabled>
+                    <span class="transform-value" id="puffinessValue">0</span>
+                </div>
+            </div>
         </div>
         
-        <div class="control-group" id="transformControls" style="display: none;">
-            <h3>Design Transformations</h3>
-            
-            <div class="transform-control">
-                <label>Position</label>
-                <div class="transform-row">
-                    <span>X:</span>
-                    <input type="range" id="positionX" min="-1" max="1" step="0.01" value="0" disabled>
-                    <span class="transform-value" id="positionXValue">0</span>
+        <div class="tab-content" id="effects-tab">
+            <div class="control-group">
+                <h3>Animation Controls</h3>
+                <div class="animation-controls">
+                    <button id="playAnimation" disabled>
+                        <span>▶</span> Play
+                    </button>
+                    <button id="pauseAnimation" disabled>
+                        <span>⏸</span> Pause
+                    </button>
                 </div>
-                <div class="transform-row">
-                    <span>Y:</span>
-                    <input type="range" id="positionY" min="-1" max="1" step="0.01" value="0" disabled>
-                    <span class="transform-value" id="positionYValue">0</span>
-                </div>
-            </div>
-            
-            <div class="transform-control">
-                <label>Scale</label>
-                <div class="transform-row">
-                    <span>Size:</span>
-                    <input type="range" id="scale" min="0.1" max="3" step="0.1" value="1" disabled>
-                    <span class="transform-value" id="scaleValue">1</span>
+                <div class="effect-control">
+                    <label for="animationEffect">Animation Effect</label>
+                    <select id="animationEffect" disabled>
+                        <option value="none">None</option>
+                        <option value="wind">Wind</option>
+                        <option value="bounce">Bounce</option>
+                        <option value="spin">Spin</option>
+                    </select>
                 </div>
             </div>
             
-            <div class="transform-control">
-                <label>Rotation</label>
-                <div class="transform-row">
-                    <span>Angle:</span>
-                    <input type="range" id="rotation" min="-180" max="180" step="1" value="0" disabled>
-                    <span class="transform-value" id="rotationValue">0°</span>
+            <div class="control-group">
+                <h3>Special Effects</h3>
+                <div class="effect-control">
+                    <label for="lightingEffect">Lighting</label>
+                    <select id="lightingEffect" disabled>
+                        <option value="studio">Studio</option>
+                        <option value="outdoor">Outdoor</option>
+                        <option value="neon">Neon</option>
+                        <option value="sunset">Sunset</option>
+                    </select>
+                </div>
+                <div class="effect-control">
+                    <label for="backgroundEffect">Background</label>
+                    <select id="backgroundEffect" disabled>
+                        <option value="plain">Plain</option>
+                        <option value="gradient">Gradient</option>
+                        <option value="showroom">Showroom</option>
+                        <option value="transparent">Transparent</option>
+                    </select>
                 </div>
             </div>
-            
-            <button id="resetTransforms" disabled>Reset Transformations</button>
         </div>
-
-        <div class="control-group save-controls">
-            <h3>Save & Export</h3>
-            <button id="screenshotBtn" disabled>Take Screenshot</button>
+        
+        <div class="tab-content" id="export-tab">
+            <div class="control-group">
+                <h3>Save & Export</h3>
+                <button id="screenshotBtn" disabled>
+                    <span>📸</span> Take Screenshot
+                </button>
+                <div class="tooltip">
+                    <button id="saveDesignBtn" disabled>
+                        <span>💾</span> Save Design
+                    </button>
+                    <span class="tooltiptext">Save your design settings to continue later</span>
+                </div>
+                <div class="tooltip">
+                    <button id="loadDesignBtn" disabled>
+                        <span>📂</span> Load Design
+                    </button>
+                    <span class="tooltiptext">Load a previously saved design</span>
+                </div>
+            </div>
+            
+            <div class="control-group">
+                <h3>Export Options</h3>
+                <div class="effect-control">
+                    <label for="exportQuality">Quality</label>
+                    <select id="exportQuality" disabled>
+                        <option value="high">High (PNG)</option>
+                        <option value="medium">Medium (JPEG 90%)</option>
+                        <option value="low">Low (JPEG 70%)</option>
+                    </select>
+                </div>
+                <div class="effect-control">
+                    <label for="exportSize">Size</label>
+                    <select id="exportSize" disabled>
+                        <option value="1x">Original Size</option>
+                        <option value="2x">2x Resolution</option>
+                        <option value="4x">4x Resolution</option>
+                    </select>
+                </div>
+            </div>
+        </div>
+        
+        <div class="status-bar">
+            <span id="statusMessage">Initializing...</span>
+            <span id="versionInfo">v1.0.0</span>
         </div>
     </div>
     
     <div id="viewer-container">
-        <div id="debug">Initializing...</div>
+        <div id="debug">Initializing WebGL...</div>
         <div id="viewer"></div>
     </div>
 
@@ -297,11 +704,16 @@
         import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
         import { RGBELoader } from 'three/addons/loaders/RGBELoader.js';
         import { WEBGL } from 'three/addons/WebGL.js';
+        import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
+        import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
+        import { ShaderPass } from 'three/addons/postprocessing/ShaderPass.js';
+        import { FXAAShader } from 'three/addons/shaders/FXAAShader.js';
         
         // Check for WebGL support
         if (!WEBGL.isWebGLAvailable()) {
             const warning = WEBGL.getWebGLErrorMessage();
             document.getElementById('viewer').appendChild(warning);
+            document.getElementById('statusMessage').textContent = 'WebGL not supported';
             throw new Error('WebGL not supported');
         }
 
@@ -310,11 +722,30 @@
         scene.background = new THREE.Color(0xf0f0f0);
         const camera = new THREE.PerspectiveCamera(75, window.innerWidth/window.innerHeight, 0.1, 1000);
         const renderer = new THREE.WebGLRenderer({ antialias: true });
-        renderer.setSize(window.innerWidth - 300, window.innerHeight);
+        renderer.setPixelRatio(window.devicePixelRatio);
+        renderer.setSize(window.innerWidth - 350, window.innerHeight);
         renderer.outputEncoding = THREE.sRGBEncoding;
         renderer.toneMapping = THREE.ACESFilmicToneMapping;
         renderer.toneMappingExposure = 1.0;
+        renderer.shadowMap.enabled = true;
+        renderer.shadowMap.type = THREE.PCFSoftShadowMap;
         document.getElementById('viewer').appendChild(renderer.domElement);
+        
+        // Post-processing
+        let composer;
+        let fxaaPass;
+        
+        const initPostProcessing = () => {
+            composer = new EffectComposer(renderer);
+            const renderPass = new RenderPass(scene, camera);
+            composer.addPass(renderPass);
+            
+            fxaaPass = new ShaderPass(FXAAShader);
+            const pixelRatio = renderer.getPixelRatio();
+            fxaaPass.material.uniforms['resolution'].value.x = 1 / (window.innerWidth * pixelRatio);
+            fxaaPass.material.uniforms['resolution'].value.y = 1 / (window.innerHeight * pixelRatio);
+            composer.addPass(fxaaPass);
+        };
         
         // Lighting
         const ambientLight = new THREE.AmbientLight(0xffffff, 0.5);
@@ -325,6 +756,12 @@
         directionalLight.castShadow = true;
         directionalLight.shadow.mapSize.width = 2048;
         directionalLight.shadow.mapSize.height = 2048;
+        directionalLight.shadow.camera.near = 0.5;
+        directionalLight.shadow.camera.far = 500;
+        directionalLight.shadow.camera.left = -5;
+        directionalLight.shadow.camera.right = 5;
+        directionalLight.shadow.camera.top = 5;
+        directionalLight.shadow.camera.bottom = -5;
         scene.add(directionalLight);
         
         const directionalLight2 = new THREE.DirectionalLight(0xffffff, 0.5);
@@ -335,6 +772,10 @@
         const controls = new OrbitControls(camera, renderer.domElement);
         controls.enableDamping = true;
         controls.dampingFactor = 0.05;
+        controls.screenSpacePanning = false;
+        controls.maxPolarAngle = Math.PI;
+        controls.minDistance = 1;
+        controls.maxDistance = 10;
         
         // Define UV regions for different parts of the hoodie
         const uvRegions = {
@@ -353,6 +794,12 @@
             denim: { roughness: 0.8, metalness: 0.0, normalScale: 0.8, clearcoat: 0.0 },
             leather: { roughness: 0.4, metalness: 0.2, normalScale: 0.6, clearcoat: 0.5 }
         };
+        
+        // Color presets
+        const colorPresets = [
+            '#333333', '#1a1a1a', '#6a4c93', '#1982c4',
+            '#8ac926', '#ffca3a', '#ff595e', '#ffffff'
+        ];
         
         // Current design properties
         let currentDesign = {
@@ -385,6 +832,12 @@
             frequency: 0.5,
             time: 0
         };
+        
+        // Lighting effects
+        let lightingEffect = 'studio';
+        
+        // Background effects
+        let backgroundEffect = 'plain';
         
         // Create a default empty texture
         const createDefaultTexture = () => {
@@ -422,13 +875,18 @@
         // Load all textures
         const loadTextures = async () => {
             document.getElementById('debug').textContent = 'Loading textures...';
+            document.getElementById('statusMessage').textContent = 'Loading textures...';
             
             const textureUrls = {
                 cottonNormalMap: 'https://threejs.org/examples/textures/normalmaps/fabric_normals.jpg',
                 denimNormalMap: 'https://threejs.org/examples/textures/normalmaps/denim_normals.jpg',
                 velvetNormalMap: 'https://threejs.org/examples/textures/normalmaps/velvet_normals.jpg',
                 leatherNormalMap: 'https://threejs.org/examples/textures/normalmaps/leather_normals.jpg',
-                puffDisplacementMap: 'https://threejs.org/examples/textures/displacement/clouds.jpg'
+                puffDisplacementMap: 'https://threejs.org/examples/textures/displacement/clouds.jpg',
+                studioEnvMap: 'https://threejs.org/examples/textures/equirectangular/studio_small_03_1k.hdr',
+                outdoorEnvMap: 'https://threejs.org/examples/textures/equirectangular/venice_sunset_1k.hdr',
+                neonEnvMap: 'https://threejs.org/examples/textures/equirectangular/royal_esplanade_1k.hdr',
+                sunsetEnvMap: 'https://threejs.org/examples/textures/equirectangular/potsdamer_platz_1k.hdr'
             };
             
             const texturePromises = Object.entries(textureUrls).map(([key, url]) => 
@@ -443,7 +901,7 @@
             const textures = {};
             loadedTextures.forEach(({ key, texture }) => {
                 textures[key] = texture;
-                if (key === 'puffDisplacementMap') {
+                if (key.includes('Displacement')) {
                     texture.wrapS = texture.wrapT = THREE.RepeatWrapping;
                 }
             });
@@ -452,20 +910,46 @@
         };
         
         // Load environment map
-        const loadEnvironment = async () => {
-            document.getElementById('debug').textContent = 'Loading environment...';
+        const loadEnvironment = async (type = 'studio') => {
+            document.getElementById('debug').textContent = `Loading ${type} environment...`;
+            document.getElementById('statusMessage').textContent = `Loading ${type} environment...`;
             
             try {
                 const pmremGenerator = new THREE.PMREMGenerator(renderer);
                 pmremGenerator.compileEquirectangularShader();
                 
-                const texture = await new RGBELoader()
-                    .setDataType(THREE.UnsignedByteType)
-                    .loadAsync('https://threejs.org/examples/textures/equirectangular/venice_sunset_1k.hdr');
+                let envMap;
                 
-                const envMap = pmremGenerator.fromEquirectangular(texture).texture;
+                if (type === 'studio') {
+                    const texture = await new RGBELoader()
+                        .setDataType(THREE.UnsignedByteType)
+                        .loadAsync(textures.studioEnvMap);
+                    envMap = pmremGenerator.fromEquirectangular(texture).texture;
+                    texture.dispose();
+                } 
+                else if (type === 'outdoor') {
+                    const texture = await new RGBELoader()
+                        .setDataType(THREE.UnsignedByteType)
+                        .loadAsync(textures.outdoorEnvMap);
+                    envMap = pmremGenerator.fromEquirectangular(texture).texture;
+                    texture.dispose();
+                }
+                else if (type === 'neon') {
+                    const texture = await new RGBELoader()
+                        .setDataType(THREE.UnsignedByteType)
+                        .loadAsync(textures.neonEnvMap);
+                    envMap = pmremGenerator.fromEquirectangular(texture).texture;
+                    texture.dispose();
+                }
+                else if (type === 'sunset') {
+                    const texture = await new RGBELoader()
+                        .setDataType(THREE.UnsignedByteType)
+                        .loadAsync(textures.sunsetEnvMap);
+                    envMap = pmremGenerator.fromEquirectangular(texture).texture;
+                    texture.dispose();
+                }
+                
                 scene.environment = envMap;
-                texture.dispose();
                 pmremGenerator.dispose();
                 
                 return envMap;
@@ -494,13 +978,14 @@
         
         const loadModel = async () => {
             document.getElementById('debug').textContent = 'Loading model...';
+            document.getElementById('statusMessage').textContent = 'Loading 3D model...';
             
             try {
                 const loader = new GLTFLoader();
                 
                 // Try loading a hoodie model (fallback to cube if fails)
                 try {
-                    const gltf = await loader.loadAsync('https://cdn.jsdelivr.net/gh/mrdoob/three.js@dev/examples/models/gltf/LittlestTokyo.glb');
+                    const gltf = await loader.loadAsync('https://cdn.jsdelivr.net/gh/mrdoob/three.js@dev/examples/models/gltf/ClothHoodie/scene.gltf');
                     
                     console.log('Model loaded successfully');
                     const model = gltf.scene;
@@ -514,6 +999,10 @@
                                 originalPositionAttribute = child.geometry.attributes.position.clone();
                                 hoodieMesh.userData.originalMaterial = child.material.clone();
                                 hoodieMesh.userData.baseTexture = child.material.map || createDefaultTexture();
+                                
+                                // Enable shadows
+                                hoodieMesh.castShadow = true;
+                                hoodieMesh.receiveShadow = true;
                             }
                         }
                     });
@@ -532,15 +1021,18 @@
                         currentAction = mixer.clipAction(gltf.animations[0]);
                         currentAction.play();
                         document.getElementById('debug').textContent = `Model loaded with ${gltf.animations.length} animations`;
+                        document.getElementById('statusMessage').textContent = 'Model loaded with animations';
                         
                         document.getElementById('playAnimation').disabled = false;
                         document.getElementById('pauseAnimation').disabled = false;
                     } else {
                         document.getElementById('debug').textContent = 'Model loaded (no animations)';
+                        document.getElementById('statusMessage').textContent = 'Model loaded';
                     }
                 } catch (modelError) {
                     console.error('Error loading hoodie model:', modelError);
                     document.getElementById('debug').textContent = 'Using fallback cube model';
+                    document.getElementById('statusMessage').textContent = 'Using fallback model';
                     
                     // Create a fallback cube
                     const geometry = new THREE.BoxGeometry(1, 1.5, 0.8);
@@ -552,6 +1044,10 @@
                     hoodieMesh.userData.originalMaterial = material.clone();
                     hoodieMesh.userData.baseTexture = createDefaultTexture();
                     
+                    // Enable shadows
+                    hoodieMesh.castShadow = true;
+                    hoodieMesh.receiveShadow = true;
+                    
                     camera.position.z = 3;
                     controls.update();
                 }
@@ -560,6 +1056,7 @@
             } catch (error) {
                 console.error('Error in model loading:', error);
                 document.getElementById('debug').textContent = `Error: ${error.message}`;
+                document.getElementById('statusMessage').textContent = 'Error loading model';
                 return false;
             }
         };
@@ -849,14 +1346,249 @@
             hoodieMesh.position.y = Math.sin(time * 2) * 0.05;
         };
         
+        // Apply spin effect
+        const applySpinEffect = (delta) => {
+            if (!hoodieMesh || animationEffect !== 'spin') return;
+            
+            hoodieMesh.rotation.y += delta * 0.5;
+        };
+        
+        // Update lighting based on selected effect
+        const updateLighting = () => {
+            switch(lightingEffect) {
+                case 'studio':
+                    ambientLight.intensity = 0.5;
+                    directionalLight.intensity = 2;
+                    directionalLight2.intensity = 0.5;
+                    directionalLight.color.setHex(0xffffff);
+                    directionalLight2.color.setHex(0xffffff);
+                    break;
+                case 'outdoor':
+                    ambientLight.intensity = 1;
+                    directionalLight.intensity = 3;
+                    directionalLight2.intensity = 1;
+                    directionalLight.color.setHex(0xffecd2);
+                    directionalLight2.color.setHex(0xfcb69f);
+                    break;
+                case 'neon':
+                    ambientLight.intensity = 0.2;
+                    directionalLight.intensity = 3;
+                    directionalLight2.intensity = 0.5;
+                    directionalLight.color.setHex(0x00f5d4);
+                    directionalLight2.color.setHex(0xf15bb5);
+                    break;
+                case 'sunset':
+                    ambientLight.intensity = 0.8;
+                    directionalLight.intensity = 2.5;
+                    directionalLight2.intensity = 0.8;
+                    directionalLight.color.setHex(0xff9e7d);
+                    directionalLight2.color.setHex(0xffd7ba);
+                    break;
+            }
+            
+            if (hoodieMesh?.material?.uniforms) {
+                hoodieMesh.material.uniforms.lightColor.value.copy(directionalLight.color);
+                hoodieMesh.material.uniforms.lightIntensity.value = directionalLight.intensity;
+            }
+        };
+        
+        // Update background based on selected effect
+        const updateBackground = () => {
+            switch(backgroundEffect) {
+                case 'plain':
+                    scene.background = new THREE.Color(0xf0f0f0);
+                    break;
+                case 'gradient':
+                    const canvas = document.createElement('canvas');
+                    canvas.width = 1;
+                    canvas.height = 256;
+                    const ctx = canvas.getContext('2d');
+                    const gradient = ctx.createLinearGradient(0, 0, 0, 256);
+                    gradient.addColorStop(0, '#e0e0e0');
+                    gradient.addColorStop(1, '#c0c0c0');
+                    ctx.fillStyle = gradient;
+                    ctx.fillRect(0, 0, 1, 256);
+                    scene.background = new THREE.CanvasTexture(canvas);
+                    break;
+                case 'showroom':
+                    scene.background = new THREE.Color(0x222222);
+                    break;
+                case 'transparent':
+                    scene.background = null;
+                    break;
+            }
+        };
+        
         // Take screenshot
         const takeScreenshot = () => {
+            const quality = document.getElementById('exportQuality').value;
+            const size = document.getElementById('exportSize').value;
+            
+            // Set renderer to higher resolution if needed
+            const originalSize = renderer.getSize(new THREE.Vector2());
+            let scale = 1;
+            
+            if (size === '2x') scale = 2;
+            if (size === '4x') scale = 4;
+            
+            renderer.setSize(originalSize.x * scale, originalSize.y * scale, false);
             renderer.render(scene, camera);
-            const image = renderer.domElement.toDataURL('image/png');
+            
+            let mimeType, qualityValue;
+            if (quality === 'high') {
+                mimeType = 'image/png';
+                qualityValue = 1.0;
+            } else if (quality === 'medium') {
+                mimeType = 'image/jpeg';
+                qualityValue = 0.9;
+            } else {
+                mimeType = 'image/jpeg';
+                qualityValue = 0.7;
+            }
+            
+            const image = renderer.domElement.toDataURL(mimeType, qualityValue);
+            
+            // Reset renderer to original size
+            renderer.setSize(originalSize.x, originalSize.y, false);
+            
             const link = document.createElement('a');
             link.href = image;
-            link.download = 'hoodie-design.png';
+            link.download = `hoodie-design-${new Date().toISOString().slice(0, 10)}.${mimeType.split('/')[1]}`;
             link.click();
+            
+            document.getElementById('debug').textContent = 'Screenshot saved';
+            document.getElementById('statusMessage').textContent = 'Screenshot saved';
+        };
+        
+        // Save design settings
+        const saveDesign = () => {
+            const designData = {
+                material: currentMaterial,
+                design: currentDesign,
+                lighting: lightingEffect,
+                background: backgroundEffect,
+                animation: animationEffect,
+                version: '1.0'
+            };
+            
+            const blob = new Blob([JSON.stringify(designData)], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = `hoodie-design-${new Date().toISOString().slice(0, 10)}.json`;
+            link.click();
+            
+            document.getElementById('debug').textContent = 'Design settings saved';
+            document.getElementById('statusMessage').textContent = 'Design saved';
+        };
+        
+        // Load design settings
+        const loadDesign = async (file) => {
+            try {
+                const reader = new FileReader();
+                
+                return new Promise((resolve, reject) => {
+                    reader.onload = async (e) => {
+                        try {
+                            const designData = JSON.parse(e.target.result);
+                            
+                            // Validate version
+                            if (!designData.version || designData.version !== '1.0') {
+                                throw new Error('Invalid design file version');
+                            }
+                            
+                            // Apply settings
+                            currentMaterial = designData.material;
+                            currentDesign = designData.design;
+                            lightingEffect = designData.lighting;
+                            backgroundEffect = designData.background;
+                            animationEffect = designData.animation;
+                            
+                            // Update UI
+                            document.getElementById('bodyColor').value = currentMaterial.bodyColor.getHexString();
+                            document.getElementById('hoodColor').value = currentMaterial.hoodColor.getHexString();
+                            document.getElementById('materialType').value = currentMaterial.materialType;
+                            document.getElementById('roughness').value = currentMaterial.roughness;
+                            document.getElementById('roughnessValue').textContent = currentMaterial.roughness.toFixed(2);
+                            document.getElementById('puffiness').value = currentMaterial.puffiness;
+                            document.getElementById('puffinessValue').textContent = currentMaterial.puffiness.toFixed(1);
+                            document.getElementById('animationEffect').value = animationEffect;
+                            document.getElementById('lightingEffect').value = lightingEffect;
+                            document.getElementById('backgroundEffect').value = backgroundEffect;
+                            
+                            // Update color presets selection
+                            document.querySelectorAll('.color-preset').forEach(preset => {
+                                preset.classList.remove('selected');
+                                if (preset.dataset.color === `#${currentMaterial.bodyColor.getHexString()}`) {
+                                    preset.classList.add('selected');
+                                }
+                            });
+                            
+                            // Reload textures if needed
+                            if (currentDesign.texture) {
+                                const texture = await new THREE.TextureLoader().loadAsync(URL.createObjectURL(currentDesign.texture));
+                                currentDesign.texture = texture;
+                                
+                                // Update design preview
+                                const preview = document.getElementById('designPreview');
+                                preview.innerHTML = '';
+                                preview.classList.remove('empty');
+                                
+                                const img = document.createElement('img');
+                                img.src = URL.createObjectURL(file);
+                                preview.appendChild(img);
+                                
+                                // Show transform controls
+                                document.getElementById('transformControls').style.display = 'block';
+                                
+                                // Update transform controls
+                                document.getElementById('positionX').value = currentDesign.transform.positionX;
+                                document.getElementById('positionY').value = currentDesign.transform.positionY;
+                                document.getElementById('scale').value = currentDesign.transform.scale;
+                                document.getElementById('rotation').value = currentDesign.transform.rotation;
+                                document.getElementById('positionXInput').value = currentDesign.transform.positionX;
+                                document.getElementById('positionYInput').value = currentDesign.transform.positionY;
+                                document.getElementById('scaleInput').value = currentDesign.transform.scale;
+                                document.getElementById('rotationInput').value = currentDesign.transform.rotation;
+                                
+                                // Enable transform controls
+                                document.getElementById('positionX').disabled = false;
+                                document.getElementById('positionY').disabled = false;
+                                document.getElementById('scale').disabled = false;
+                                document.getElementById('rotation').disabled = false;
+                                document.getElementById('resetTransforms').disabled = false;
+                            }
+                            
+                            // Update environment and lighting
+                            await loadEnvironment(lightingEffect);
+                            updateLighting();
+                            updateBackground();
+                            updateHoodieMaterial();
+                            
+                            document.getElementById('debug').textContent = 'Design loaded successfully';
+                            document.getElementById('statusMessage').textContent = 'Design loaded';
+                            resolve();
+                        } catch (error) {
+                            console.error('Error parsing design file:', error);
+                            document.getElementById('debug').textContent = 'Error loading design file';
+                            document.getElementById('statusMessage').textContent = 'Error loading design';
+                            reject(error);
+                        }
+                    };
+                    
+                    reader.onerror = () => {
+                        reject(new Error('Error reading file'));
+                    };
+                    
+                    reader.readAsText(file);
+                });
+            } catch (error) {
+                console.error('Error loading design:', error);
+                document.getElementById('debug').textContent = 'Error loading design';
+                document.getElementById('statusMessage').textContent = 'Error loading design';
+                throw error;
+            }
         };
         
         // Initialize the application
@@ -864,6 +1596,9 @@
         
         const init = async () => {
             try {
+                // Initialize post-processing
+                initPostProcessing();
+                
                 // Load all resources
                 textures = await loadTextures();
                 await loadEnvironment();
@@ -871,6 +1606,8 @@
                 
                 // Update material with initial settings
                 updateHoodieMaterial();
+                updateLighting();
+                updateBackground();
                 
                 // Enable UI controls
                 document.getElementById('bodyColor').disabled = false;
@@ -882,26 +1619,84 @@
                 document.getElementById('placementArea').disabled = false;
                 document.getElementById('applyDesign').disabled = false;
                 document.getElementById('animationEffect').disabled = false;
+                document.getElementById('lightingEffect').disabled = false;
+                document.getElementById('backgroundEffect').disabled = false;
                 document.getElementById('screenshotBtn').disabled = false;
+                document.getElementById('saveDesignBtn').disabled = false;
+                document.getElementById('loadDesignBtn').disabled = false;
+                document.getElementById('exportQuality').disabled = false;
+                document.getElementById('exportSize').disabled = false;
                 
                 // Hide loading overlay
                 document.getElementById('loading-overlay').style.display = 'none';
                 document.getElementById('debug').textContent = 'Ready';
+                document.getElementById('statusMessage').textContent = 'Ready';
                 
                 // Start animation loop
                 animate();
             } catch (error) {
                 console.error('Initialization error:', error);
                 document.getElementById('debug').textContent = `Initialization error: ${error.message}`;
+                document.getElementById('statusMessage').textContent = `Error: ${error.message}`;
                 document.getElementById('loading-overlay').textContent = `Error: ${error.message}`;
             }
         };
         
+        // Tab navigation
+        document.querySelectorAll('.tab-button').forEach(button => {
+            button.addEventListener('click', () => {
+                // Remove active class from all buttons and content
+                document.querySelectorAll('.tab-button').forEach(btn => btn.classList.remove('active'));
+                document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
+                
+                // Add active class to clicked button and corresponding content
+                button.classList.add('active');
+                const tabId = button.dataset.tab + '-tab';
+                document.getElementById(tabId).classList.add('active');
+            });
+        });
+        
+        // Color preset selection
+        document.querySelectorAll('.color-preset').forEach(preset => {
+            preset.addEventListener('click', () => {
+                document.querySelectorAll('.color-preset').forEach(p => p.classList.remove('selected'));
+                preset.classList.add('selected');
+                
+                const color = preset.dataset.color;
+                document.getElementById('bodyColor').value = color;
+                currentMaterial.bodyColor.setStyle(color);
+                
+                // Darken the color slightly for the hood
+                const hoodColor = new THREE.Color(color);
+                hoodColor.multiplyScalar(0.9);
+                document.getElementById('hoodColor').value = `#${hoodColor.getHexString()}`;
+                currentMaterial.hoodColor.copy(hoodColor);
+                
+                updateHoodieMaterial();
+            });
+        });
+        
+        // Design preview update
+        document.getElementById('designUpload').addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            if (!file) return;
+            
+            const preview = document.getElementById('designPreview');
+            preview.innerHTML = '';
+            preview.classList.remove('empty');
+            
+            const img = document.createElement('img');
+            img.src = URL.createObjectURL(file);
+            preview.appendChild(img);
+        });
+        
         // Animation controls
         document.getElementById('playAnimation').addEventListener('click', () => {
             if (currentAction) {
+                currentAction.paused = false;
                 currentAction.play();
                 document.getElementById('debug').textContent = 'Animation playing';
+                document.getElementById('statusMessage').textContent = 'Animation playing';
             }
         });
         
@@ -909,6 +1704,7 @@
             if (currentAction) {
                 currentAction.paused = !currentAction.paused;
                 document.getElementById('debug').textContent = currentAction.paused ? 'Animation paused' : 'Animation playing';
+                document.getElementById('statusMessage').textContent = currentAction.paused ? 'Animation paused' : 'Animation playing';
             }
         });
         
@@ -917,12 +1713,39 @@
             animationEffect = e.target.value;
             windEffect.strength = animationEffect === 'wind' ? 0.1 : 0;
             document.getElementById('debug').textContent = `Effect: ${animationEffect}`;
+            document.getElementById('statusMessage').textContent = `Effect: ${animationEffect}`;
+        });
+        
+        // Lighting effect controls
+        document.getElementById('lightingEffect').addEventListener('change', async (e) => {
+            lightingEffect = e.target.value;
+            await loadEnvironment(lightingEffect);
+            updateLighting();
+            updateHoodieMaterial();
+            document.getElementById('debug').textContent = `Lighting: ${lightingEffect}`;
+            document.getElementById('statusMessage').textContent = `Lighting: ${lightingEffect}`;
+        });
+        
+        // Background effect controls
+        document.getElementById('backgroundEffect').addEventListener('change', (e) => {
+            backgroundEffect = e.target.value;
+            updateBackground();
+            document.getElementById('debug').textContent = `Background: ${backgroundEffect}`;
+            document.getElementById('statusMessage').textContent = `Background: ${backgroundEffect}`;
         });
         
         // Material controls
         document.getElementById('bodyColor').addEventListener('input', (e) => {
             currentMaterial.bodyColor.setStyle(e.target.value);
             updateHoodieMaterial();
+            
+            // Update color presets selection
+            document.querySelectorAll('.color-preset').forEach(preset => {
+                preset.classList.remove('selected');
+                if (preset.dataset.color === e.target.value) {
+                    preset.classList.add('selected');
+                }
+            });
         });
         
         document.getElementById('hoodColor').addEventListener('input', (e) => {
@@ -942,6 +1765,9 @@
             document.getElementById('roughnessValue').textContent = preset.roughness.toFixed(2);
             
             updateHoodieMaterial();
+            
+            document.getElementById('debug').textContent = `Material: ${e.target.value}`;
+            document.getElementById('statusMessage').textContent = `Material: ${e.target.value}`;
         });
         
         document.getElementById('roughness').addEventListener('input', (e) => {
@@ -978,10 +1804,10 @@
                 document.getElementById('positionY').value = 0;
                 document.getElementById('scale').value = 1;
                 document.getElementById('rotation').value = 0;
-                document.getElementById('positionXValue').textContent = '0';
-                document.getElementById('positionYValue').textContent = '0';
-                document.getElementById('scaleValue').textContent = '1';
-                document.getElementById('rotationValue').textContent = '0°';
+                document.getElementById('positionXInput').value = 0;
+                document.getElementById('positionYInput').value = 0;
+                document.getElementById('scaleInput').value = 1;
+                document.getElementById('rotationInput').value = 0;
                 
                 // Enable transform controls
                 document.getElementById('positionX').disabled = false;
@@ -993,29 +1819,48 @@
                 updateHoodieMaterial();
                 
                 document.getElementById('debug').textContent = `Design applied to ${currentDesign.placement}`;
+                document.getElementById('statusMessage').textContent = `Design applied to ${currentDesign.placement}`;
             } catch (error) {
                 console.error('Error applying design:', error);
                 document.getElementById('debug').textContent = `Error applying design: ${error.message}`;
+                document.getElementById('statusMessage').textContent = 'Error applying design';
             }
         });
         
         // Transformation controls
-        function setupTransformControl(id, property, formatFn = (v) => v) {
-            const slider = document.getElementById(id);
-            const valueDisplay = document.getElementById(`${id}Value`);
+        function setupTransformControl(sliderId, inputId, property, formatFn = (v) => v) {
+            const slider = document.getElementById(sliderId);
+            const input = document.getElementById(inputId);
             
             slider.addEventListener('input', (e) => {
                 const value = parseFloat(e.target.value);
                 currentDesign.transform[property] = value;
-                valueDisplay.textContent = formatFn(value);
+                input.value = formatFn(value);
+                updateHoodieMaterial();
+            });
+            
+            input.addEventListener('input', (e) => {
+                let value = parseFloat(e.target.value);
+                
+                // Clamp the value to the allowed range
+                if (sliderId === 'positionX' || sliderId === 'positionY') {
+                    value = Math.max(-1, Math.min(1, value));
+                } else if (sliderId === 'scale') {
+                    value = Math.max(0.1, Math.min(3, value));
+                } else if (sliderId === 'rotation') {
+                    value = Math.max(-180, Math.min(180, value));
+                }
+                
+                currentDesign.transform[property] = value;
+                slider.value = value;
                 updateHoodieMaterial();
             });
         }
         
-        setupTransformControl('positionX', 'positionX');
-        setupTransformControl('positionY', 'positionY');
-        setupTransformControl('scale', 'scale');
-        setupTransformControl('rotation', 'rotation', (v) => `${v}°`);
+        setupTransformControl('positionX', 'positionXInput', 'positionX');
+        setupTransformControl('positionY', 'positionYInput', 'positionY');
+        setupTransformControl('scale', 'scaleInput', 'scale');
+        setupTransformControl('rotation', 'rotationInput', 'rotation');
         
         // Reset transformations
         document.getElementById('resetTransforms').addEventListener('click', () => {
@@ -1030,16 +1875,34 @@
             document.getElementById('positionY').value = 0;
             document.getElementById('scale').value = 1;
             document.getElementById('rotation').value = 0;
-            document.getElementById('positionXValue').textContent = '0';
-            document.getElementById('positionYValue').textContent = '0';
-            document.getElementById('scaleValue').textContent = '1';
-            document.getElementById('rotationValue').textContent = '0°';
+            document.getElementById('positionXInput').value = 0;
+            document.getElementById('positionYInput').value = 0;
+            document.getElementById('scaleInput').value = 1;
+            document.getElementById('rotationInput').value = 0;
             
             updateHoodieMaterial();
+            
+            document.getElementById('debug').textContent = 'Transformations reset';
+            document.getElementById('statusMessage').textContent = 'Transformations reset';
         });
         
         // Screenshot button
         document.getElementById('screenshotBtn').addEventListener('click', takeScreenshot);
+        
+        // Save design button
+        document.getElementById('saveDesignBtn').addEventListener('click', saveDesign);
+        
+        // Load design button
+        document.getElementById('loadDesignBtn').addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            if (file) {
+                loadDesign(file).catch(error => {
+                    console.error('Error loading design:', error);
+                });
+            }
+            // Reset the input to allow loading the same file again
+            e.target.value = '';
+        });
         
         // Animation loop
         const clock = new THREE.Clock();
@@ -1050,22 +1913,35 @@
             if (mixer) mixer.update(delta);
             applyWindEffect(delta);
             applyBounceEffect(delta);
+            applySpinEffect(delta);
             
             if (hoodieMesh?.material?.uniforms?.time) {
                 hoodieMesh.material.uniforms.time.value += delta;
             }
             
             controls.update();
-            renderer.render(scene, camera);
+            
+            if (composer) {
+                composer.render();
+            } else {
+                renderer.render(scene, camera);
+            }
         }
         
         // Handle window resize
         window.addEventListener('resize', () => {
-            const width = Math.max(1, window.innerWidth - 300);
+            const width = Math.max(1, window.innerWidth - 350);
             const height = Math.max(1, window.innerHeight);
             camera.aspect = width / height;
             camera.updateProjectionMatrix();
             renderer.setSize(width, height);
+            
+            if (composer) {
+                composer.setSize(width, height);
+                const pixelRatio = renderer.getPixelRatio();
+                fxaaPass.material.uniforms['resolution'].value.x = 1 / (width * pixelRatio);
+                fxaaPass.material.uniforms['resolution'].value.y = 1 / (height * pixelRatio);
+            }
         });
         
         // Start the application
