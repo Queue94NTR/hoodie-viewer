@@ -3,113 +3,146 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>3D Hoodie Customizer</title>
+    <title>3D Hoodie Designer</title>
     <style>
         body { 
             margin: 0;
+            overflow: hidden;
+            font-family: Arial, sans-serif;
             display: flex;
             height: 100vh;
-            overflow: hidden;
-            flex-direction: row-reverse;
         }
-        #sidebar {
-            width: 250px;
-            background: #f8f9fa;
-            padding: 15px;
-            overflow-y: auto;
-            box-shadow: -2px 0 5px rgba(0,0,0,0.1);
-        }
+        
         #viewer-container {
             flex: 1;
+            background: #f0f0f0;
             position: relative;
         }
-        #debug {
+        
+        #sidebar {
+            width: 300px;
+            min-width: 300px;
+            background: white;
+            padding: 20px;
+            overflow-y: auto;
+            box-shadow: -2px 0 10px rgba(0,0,0,0.1);
+        }
+        
+        #loading-overlay {
             position: absolute;
-            top: 15px;
-            left: 15px;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.8);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            color: white;
+            font-size: 1.5em;
+            z-index: 1000;
+        }
+        
+        #info-panel {
+            position: absolute;
+            top: 10px;
+            left: 10px;
             background: rgba(0,0,0,0.7);
             color: white;
-            padding: 10px 15px;
+            padding: 10px;
             border-radius: 5px;
             font-size: 0.9em;
             z-index: 100;
         }
+        
+        .spinner {
+            width: 50px;
+            height: 50px;
+            border: 5px solid rgba(255,255,255,0.3);
+            border-radius: 50%;
+            border-top-color: #4361ee;
+            animation: spin 1s ease-in-out infinite;
+        }
+        
         .control-group {
             margin-bottom: 20px;
             padding-bottom: 15px;
-            border-bottom: 1px solid #dee2e6;
+            border-bottom: 1px solid #eee;
         }
+        
         .control-group h3 {
             margin-top: 0;
-            margin-bottom: 15px;
+            color: #4361ee;
         }
+        
         .color-control {
             margin-bottom: 15px;
         }
+        
         .color-control label {
             display: block;
             margin-bottom: 5px;
-            font-weight: 500;
+            font-weight: bold;
         }
+        
         .color-control input[type="color"] {
             width: 100%;
-            height: 30px;
-        }
-        #designUpload {
-            width: 100%;
-            margin-bottom: 10px;
-        }
-        #applyDesign {
-            width: 100%;
-            padding: 8px;
-            background: #007bff;
-            color: white;
-            border: none;
-            border-radius: 4px;
+            height: 40px;
             cursor: pointer;
         }
-        #applyDesign:hover {
-            background: #0069d9;
-        }
-        select {
+        
+        #apply-colors {
+            background-color: #4361ee;
+            color: white;
+            border: none;
+            padding: 12px 20px;
+            font-size: 16px;
+            border-radius: 5px;
+            cursor: pointer;
             width: 100%;
-            padding: 8px;
-            margin-bottom: 10px;
-            border: 1px solid #ddd;
-            border-radius: 4px;
+            margin-top: 20px;
+            transition: background-color 0.3s;
+        }
+        
+        #apply-colors:hover {
+            background-color: #3a56d4;
+        }
+        
+        #apply-colors:disabled {
+            background-color: #cccccc;
+            cursor: not-allowed;
+        }
+        
+        @keyframes spin {
+            to { transform: rotate(360deg); }
         }
     </style>
 </head>
 <body>
+    <div id="loading-overlay">
+        <div class="spinner"></div>
+        <div>Loading 3D Hoodie...</div>
+    </div>
+    
+    <div id="info-panel">Loading model info...</div>
+    
+    <div id="viewer-container">
+        <div id="viewer"></div>
+    </div>
+    
     <div id="sidebar">
+        <h2>Hoodie Customizer</h2>
+        
         <div class="control-group">
-            <h3>Color Customization</h3>
+            <h3>Hoodie Color</h3>
             <div class="color-control">
-                <label for="bodyColor">Body Color</label>
-                <input type="color" id="bodyColor" value="#333333">
-            </div>
-            <div class="color-control">
-                <label for="hoodColor">Hood Color</label>
-                <input type="color" id="hoodColor" value="#222222">
+                <label for="hoodieColor">Color:</label>
+                <input type="color" id="hoodieColor" value="#333333">
             </div>
         </div>
         
-        <div class="control-group">
-            <h3>Design Upload</h3>
-            <input type="file" id="designUpload" accept="image/*">
-            <select id="placementArea">
-                <option value="front">Front</option>
-                <option value="back">Back</option>
-                <option value="leftSleeve">Left Sleeve</option>
-                <option value="rightSleeve">Right Sleeve</option>
-            </select>
-            <button id="applyDesign">Apply Design</button>
-        </div>
-    </div>
-    
-    <div id="viewer-container">
-        <div id="debug">Loading model...</div>
-        <div id="viewer"></div>
+        <button id="apply-colors">Apply Color</button>
     </div>
 
     <script type="importmap">
@@ -125,247 +158,236 @@
         import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
         import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
         
-        // Scene setup
-        const scene = new THREE.Scene();
-        scene.background = new THREE.Color(0xf0f0f0);
-        const camera = new THREE.PerspectiveCamera(75, window.innerWidth/window.innerHeight, 0.1, 1000);
-        const renderer = new THREE.WebGLRenderer({ 
-            antialias: true,
-            preserveDrawingBuffer: true
-        });
-        renderer.setSize(window.innerWidth - 250, window.innerHeight);
-        document.getElementById('viewer').appendChild(renderer.domElement);
-        
-        // Lighting
-        const ambientLight = new THREE.AmbientLight(0xffffff, 0.5);
-        scene.add(ambientLight);
-        
-        const directionalLight = new THREE.DirectionalLight(0xffffff, 1);
-        directionalLight.position.set(1, 1, 1);
-        scene.add(directionalLight);
-        
-        // Add additional lights for better visualization
-        const light1 = new THREE.DirectionalLight(0xffffff, 0.5);
-        light1.position.set(-1, 1, 1);
-        scene.add(light1);
-        
-        const light2 = new THREE.HemisphereLight(0xffffff, 0x444444, 0.3);
-        scene.add(light2);
-        
-        // Controls
-        const controls = new OrbitControls(camera, renderer.domElement);
-        controls.enableDamping = true;
-        controls.dampingFactor = 0.05;
-        controls.minDistance = 1;
-        controls.maxDistance = 10;
-        
-        // Model loading
-        const loader = new GLTFLoader();
-        let mixer;
-        let hoodieModel;
-        
-        // Material mapping system with fallback
-        const materialMap = {
-            front: null,
-            back: null,
-            leftSleeve: null,
-            rightSleeve: null,
-            hood: null,
-            body: null
-        };
-        
-        // Load base fabric texture
-        const textureLoader = new THREE.TextureLoader();
-        const fabricTexture = textureLoader.load('https://raw.githubusercontent.com/mrdoob/three.js/dev/examples/textures/terrain/grasslight-big.jpg');
-        fabricTexture.wrapS = fabricTexture.wrapT = THREE.RepeatWrapping;
-        fabricTexture.repeat.set(4, 4);
-        
-        loader.load(
-            'Hoodie_Walking_Animated.glb',
-            (gltf) => {
+        // Main variables
+        let scene, camera, renderer, controls, mixer, clock, hoodieModel;
+        let hoodieMaterial = null;
+
+        // Initialize the application
+        function init() {
+            // Check WebGL support
+            if (!isWebGLAvailable()) {
+                showWebGLError();
+                return;
+            }
+
+            setupScene();
+            setupControls();
+            setupColorControls();
+            loadModel();
+            animate();
+        }
+
+        // Check WebGL support
+        function isWebGLAvailable() {
+            try {
+                const canvas = document.createElement('canvas');
+                return !!(
+                    window.WebGLRenderingContext &&
+                    (canvas.getContext('webgl') || canvas.getContext('experimental-webgl'))
+                );
+            } catch (e) {
+                return false;
+            }
+        }
+
+        function showWebGLError() {
+            const warning = document.createElement('div');
+            warning.innerHTML = 'WebGL not supported in your browser';
+            warning.style.color = 'white';
+            warning.style.backgroundColor = 'red';
+            warning.style.padding = '20px';
+            warning.style.fontFamily = 'sans-serif';
+            document.getElementById('viewer').appendChild(warning);
+            throw new Error('WebGL not supported');
+        }
+
+        // Setup Three.js scene
+        function setupScene() {
+            scene = new THREE.Scene();
+            scene.background = new THREE.Color(0xf0f0f0);
+            
+            // Calculate initial dimensions
+            const { width, height } = getSafeDimensions();
+            
+            camera = new THREE.PerspectiveCamera(75, width / height, 0.1, 1000);
+            camera.position.z = 5;
+            
+            renderer = new THREE.WebGLRenderer({ 
+                antialias: true,
+                powerPreference: "high-performance"
+            });
+            renderer.setSize(width, height);
+            document.getElementById('viewer').appendChild(renderer.domElement);
+            
+            // Lighting
+            const ambientLight = new THREE.AmbientLight(0xffffff, 0.5);
+            scene.add(ambientLight);
+            
+            const directionalLight = new THREE.DirectionalLight(0xffffff, 1);
+            directionalLight.position.set(1, 1, 1);
+            scene.add(directionalLight);
+            
+            const backLight = new THREE.DirectionalLight(0xffffff, 0.5);
+            backLight.position.set(-1, -1, -1);
+            scene.add(backLight);
+            
+            clock = new THREE.Clock();
+        }
+
+        // Calculate safe dimensions that prevent negative values
+        function getSafeDimensions() {
+            const sidebarWidth = 300; // Should match your CSS
+            let width = window.innerWidth - sidebarWidth;
+            let height = window.innerHeight;
+            
+            // Ensure minimum dimensions of 1px
+            width = Math.max(1, width);
+            height = Math.max(1, height);
+            
+            return { width, height };
+        }
+
+        // Setup orbit controls
+        function setupControls() {
+            controls = new OrbitControls(camera, renderer.domElement);
+            controls.enableDamping = true;
+            controls.dampingFactor = 0.05;
+        }
+
+        // Update info panel with model details
+        function updateModelInfo(gltf) {
+            let info = `Model loaded: ${gltf.scene.name || 'Unnamed'}<br>`;
+            
+            // Count meshes
+            let meshCount = 0;
+            gltf.scene.traverse((child) => {
+                if (child.isMesh) meshCount++;
+            });
+            info += `Meshes: ${meshCount}<br>`;
+            
+            // Animation info
+            if (gltf.animations && gltf.animations.length > 0) {
+                info += `Animations: ${gltf.animations.length}<br>`;
+                info += `Playing animation: ${gltf.animations[0].name || 'Unnamed'}`;
+            } else {
+                info += 'No animations found';
+            }
+            
+            document.getElementById('info-panel').innerHTML = info;
+        }
+
+        // Apply color to the hoodie
+        function applyColor() {
+            const colorValue = document.getElementById('hoodieColor').value;
+            if (hoodieMaterial) {
+                hoodieMaterial.color.set(colorValue);
+                hoodieMaterial.needsUpdate = true;
+                console.log("Color applied to hoodie:", colorValue);
+            }
+        }
+
+        // Load the model
+        async function loadModel() {
+            try {
+                const loader = new GLTFLoader();
+                
+                // Load your hoodie model
+                const modelUrl = 'Hoodie_Walking_Animated.glb'; // Make sure this path is correct
+                
+                const gltf = await loader.loadAsync(modelUrl);
+                
+                console.log('Model loaded successfully:', gltf);
                 hoodieModel = gltf.scene;
                 scene.add(hoodieModel);
                 
-                // First pass: Try to map materials by name
+                // Get the material reference
                 hoodieModel.traverse((child) => {
-                    if (child.isMesh) {
-                        // Clone material to allow individual changes
-                        child.material = child.material.clone();
-                        
-                        // Apply fabric texture as base
-                        child.material.map = fabricTexture;
-                        child.material.needsUpdate = true;
-                        
-                        const name = child.name.toLowerCase();
-                        
-                        // More flexible name matching
-                        if (name.includes('front') || name.includes('chest') || name.includes('shirt_front')) {
-                            materialMap.front = child.material;
-                        } 
-                        else if (name.includes('back') || name.includes('shirt_back')) {
-                            materialMap.back = child.material;
-                        }
-                        else if ((name.includes('left') && name.includes('sleeve')) || name.includes('sleeve_l')) {
-                            materialMap.leftSleeve = child.material;
-                        }
-                        else if ((name.includes('right') && name.includes('sleeve')) || name.includes('sleeve_r')) {
-                            materialMap.rightSleeve = child.material;
-                        }
-                        else if (name.includes('hood')) {
-                            materialMap.hood = child.material;
-                        }
-                        else if (name.includes('body') || name.includes('main') || name.includes('torso')) {
-                            materialMap.body = child.material;
-                        }
+                    if (child.isMesh && child.material) {
+                        hoodieMaterial = child.material;
+                        console.log("Found hoodie material:", hoodieMaterial);
                     }
                 });
                 
-                // Second pass: Fallback to index-based assignment if names didn't match
-                if (!materialMap.front && hoodieModel.children.length > 0) {
-                    materialMap.front = hoodieModel.children[0].material;
-                }
-                if (!materialMap.back && hoodieModel.children.length > 1) {
-                    materialMap.back = hoodieModel.children[1].material;
+                // Check for animations
+                if (gltf.animations && gltf.animations.length > 0) {
+                    mixer = new THREE.AnimationMixer(hoodieModel);
+                    const action = mixer.clipAction(gltf.animations[0]);
+                    action.play();
+                    console.log(`Playing animation: ${gltf.animations[0].name}`);
                 }
                 
-                // Debug: Log found materials
-                console.log('Material mapping:', materialMap);
-                console.log('Model children:', hoodieModel.children);
-                
-                // Set initial colors
-                if (materialMap.body) materialMap.body.color.setStyle(document.getElementById('bodyColor').value);
-                if (materialMap.hood) materialMap.hood.color.setStyle(document.getElementById('hoodColor').value);
+                // Update model info
+                updateModelInfo(gltf);
                 
                 // Center model
                 const box = new THREE.Box3().setFromObject(hoodieModel);
                 const center = box.getCenter(new THREE.Vector3());
                 hoodieModel.position.sub(center);
                 
-                // Adjust camera position based on model size
+                // Adjust camera distance based on model size
                 const size = box.getSize(new THREE.Vector3()).length();
                 camera.position.z = size * 1.5;
                 controls.update();
                 
-                // Handle animations
-                if (gltf.animations?.length) {
-                    mixer = new THREE.AnimationMixer(hoodieModel);
-                    gltf.animations.forEach(clip => {
-                        mixer.clipAction(clip).play();
-                    });
-                    document.getElementById('debug').textContent = `Model loaded with ${gltf.animations.length} animations`;
-                } else {
-                    document.getElementById('debug').textContent = 'Model loaded (no animations)';
-                }
-            },
-            undefined,
-            (error) => {
-                console.error(error);
-                document.getElementById('debug').textContent = `Error: ${error.message}`;
-            }
-        );
-        
-        // Color controls
-        document.getElementById('bodyColor').addEventListener('input', (e) => {
-            if (materialMap.body) materialMap.body.color.setStyle(e.target.value);
-        });
-        
-        document.getElementById('hoodColor').addEventListener('input', (e) => {
-            if (materialMap.hood) materialMap.hood.color.setStyle(e.target.value);
-        });
-        
-        // Enhanced design upload functionality with texture blending
-        document.getElementById('applyDesign').addEventListener('click', async () => {
-            const file = document.getElementById('designUpload').files[0];
-            const placement = document.getElementById('placementArea').value;
-            
-            if (!file) {
-                document.getElementById('debug').textContent = 'Please select an image first';
-                return;
-            }
-            
-            try {
-                // Find target material with fallback
-                let targetMaterial = materialMap[placement];
+                // Hide loading overlay
+                document.getElementById('loading-overlay').style.display = 'none';
                 
-                // If specific placement not found, try to find a suitable fallback
-                if (!targetMaterial) {
-                    if (placement === 'front' || placement === 'back') {
-                        targetMaterial = materialMap.body;
-                    } else if (placement.includes('Sleeve')) {
-                        targetMaterial = materialMap.body; // Fallback to body material
-                    }
-                }
-                
-                if (!targetMaterial) {
-                    document.getElementById('debug').textContent = `No material found for ${placement}. Trying default material...`;
-                    console.warn(`No material mapped for ${placement}. Current mapping:`, materialMap);
-                    
-                    // Last resort: apply to first found material
-                    for (const key in materialMap) {
-                        if (materialMap[key]) {
-                            targetMaterial = materialMap[key];
-                            break;
-                        }
-                    }
-                    
-                    if (!targetMaterial && hoodieModel) {
-                        hoodieModel.traverse(child => {
-                            if (child.isMesh && !targetMaterial) {
-                                targetMaterial = child.material;
-                            }
-                        });
-                    }
-                }
-                
-                if (!targetMaterial) {
-                    throw new Error("No suitable material found");
-                }
-                
-                // Load new design texture
-                const designTexture = await new THREE.TextureLoader().loadAsync(URL.createObjectURL(file));
-                designTexture.encoding = THREE.sRGBEncoding;
-                
-                // Create a simple blended material
-                targetMaterial.map = designTexture;
-                targetMaterial.needsUpdate = true;
-                
-                document.getElementById('debug').textContent = `Design applied to ${placement}`;
             } catch (error) {
-                console.error('Error applying design:', error);
-                document.getElementById('debug').textContent = `Error: ${error.message}`;
+                console.error('Error loading model:', error);
                 
-                // Fallback: apply to all materials
-                if (hoodieModel) {
-                    hoodieModel.traverse(child => {
-                        if (child.isMesh) {
-                            new THREE.TextureLoader().load(URL.createObjectURL(file), texture => {
-                                child.material.map = texture;
-                                child.material.needsUpdate = true;
-                            });
-                        }
-                    });
-                    document.getElementById('debug').textContent = 'Design applied to all parts (fallback)';
-                }
+                // Update info panel
+                document.getElementById('info-panel').innerHTML = 
+                    `Failed to load model: ${error.message}`;
+                
+                // Hide loading overlay
+                document.getElementById('loading-overlay').style.display = 'none';
             }
-        });
-        
+        }
+
+        // Setup color controls
+        function setupColorControls() {
+            // Apply button
+            document.getElementById('apply-colors').addEventListener('click', applyColor);
+            
+            // Live update if desired
+            document.getElementById('hoodieColor').addEventListener('input', (e) => {
+                // Optional: You can add live preview here if needed
+            });
+        }
+
         // Animation loop
-        const clock = new THREE.Clock();
         function animate() {
             requestAnimationFrame(animate);
+            
             const delta = clock.getDelta();
             if (mixer) mixer.update(delta);
+            
             controls.update();
             renderer.render(scene, camera);
         }
-        animate();
-        
-        // Handle window resize
-        window.addEventListener('resize', () => {
-            camera.aspect = (window.innerWidth - 250) / window.innerHeight;
-            camera.updateProjectionMatrix();
-            renderer.setSize(window.innerWidth - 250, window.innerHeight);
-        });
+
+        // Improved resize handler with debouncing
+        let resizeTimeout;
+        function handleResize() {
+            // Debounce resize events
+            clearTimeout(resizeTimeout);
+            resizeTimeout = setTimeout(() => {
+                const { width, height } = getSafeDimensions();
+                
+                // Only update if dimensions are valid
+                if (width > 0 && height > 0) {
+                    camera.aspect = width / height;
+                    camera.updateProjectionMatrix();
+                    renderer.setSize(width, height);
+                }
+            }, 100); // 100ms debounce time
+        }
+
+        // Event listeners
+        window.addEventListener('resize', handleResize);
+
+        // Start the application
+        init();
     </script>
 </body>
 </html>
