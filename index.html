@@ -3,18 +3,27 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>3D Hoodie Viewer</title>
+    <title>3D Hoodie Designer</title>
     <style>
         body { 
             margin: 0;
             overflow: hidden;
             font-family: Arial, sans-serif;
+            display: flex;
+            height: 100vh;
         }
         
         #viewer-container {
-            width: 100vw;
-            height: 100vh;
+            flex: 1;
             background: #f0f0f0;
+        }
+        
+        #sidebar {
+            width: 300px;
+            background: white;
+            padding: 20px;
+            overflow-y: auto;
+            box-shadow: -2px 0 10px rgba(0,0,0,0.1);
         }
         
         #loading-overlay {
@@ -54,6 +63,33 @@
             animation: spin 1s ease-in-out infinite;
         }
         
+        .control-group {
+            margin-bottom: 20px;
+            padding-bottom: 15px;
+            border-bottom: 1px solid #eee;
+        }
+        
+        .control-group h3 {
+            margin-top: 0;
+            color: #4361ee;
+        }
+        
+        .color-control {
+            margin-bottom: 15px;
+        }
+        
+        .color-control label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+        
+        .color-control input[type="color"] {
+            width: 100%;
+            height: 40px;
+            cursor: pointer;
+        }
+        
         @keyframes spin {
             to { transform: rotate(360deg); }
         }
@@ -69,6 +105,50 @@
     
     <div id="viewer-container">
         <div id="viewer"></div>
+    </div>
+    
+    <div id="sidebar">
+        <h2>Hoodie Customizer</h2>
+        
+        <div class="control-group">
+            <h3>Front Color</h3>
+            <div class="color-control">
+                <label for="frontColor">Color:</label>
+                <input type="color" id="frontColor" value="#333333" disabled>
+            </div>
+        </div>
+        
+        <div class="control-group">
+            <h3>Back Color</h3>
+            <div class="color-control">
+                <label for="backColor">Color:</label>
+                <input type="color" id="backColor" value="#222222" disabled>
+            </div>
+        </div>
+        
+        <div class="control-group">
+            <h3>Left Sleeve</h3>
+            <div class="color-control">
+                <label for="leftSleeveColor">Color:</label>
+                <input type="color" id="leftSleeveColor" value="#333333" disabled>
+            </div>
+        </div>
+        
+        <div class="control-group">
+            <h3>Right Sleeve</h3>
+            <div class="color-control">
+                <label for="rightSleeveColor">Color:</label>
+                <input type="color" id="rightSleeveColor" value="#333333" disabled>
+            </div>
+        </div>
+        
+        <div class="control-group">
+            <h3>Hood Color</h3>
+            <div class="color-control">
+                <label for="hoodColor">Color:</label>
+                <input type="color" id="hoodColor" value="#222222" disabled>
+            </div>
+        </div>
     </div>
 
     <script type="importmap">
@@ -116,7 +196,7 @@
         camera.position.z = 5;
         
         const renderer = new THREE.WebGLRenderer({ antialias: true });
-        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.setSize(window.innerWidth - 300, window.innerHeight);
         document.getElementById('viewer').appendChild(renderer.domElement);
         
         // Lighting
@@ -136,50 +216,14 @@
         let mixer = null;
         let clock = new THREE.Clock();
         
-        // Create a simple hoodie-like shape
-        function createSimpleHoodie() {
-            // Main body
-            const bodyGeometry = new THREE.BoxGeometry(1.5, 2, 0.5);
-            const bodyMaterial = new THREE.MeshStandardMaterial({ 
-                color: 0x333333,
-                roughness: 0.7,
-                metalness: 0.0
-            });
-            const body = new THREE.Mesh(bodyGeometry, bodyMaterial);
-            
-            // Hood
-            const hoodGeometry = new THREE.ConeGeometry(0.8, 0.8, 4);
-            hoodGeometry.rotateX(Math.PI);
-            hoodGeometry.translate(0, 1.2, 0.25);
-            const hoodMaterial = new THREE.MeshStandardMaterial({ 
-                color: 0x222222,
-                roughness: 0.7,
-                metalness: 0.0
-            });
-            const hood = new THREE.Mesh(hoodGeometry, hoodMaterial);
-            
-            // Sleeves
-            const sleeveGeometry = new THREE.CylinderGeometry(0.2, 0.2, 1.2, 8);
-            
-            // Left sleeve
-            const leftSleeve = new THREE.Mesh(sleeveGeometry, bodyMaterial);
-            leftSleeve.position.set(-0.9, 0, 0);
-            leftSleeve.rotateZ(Math.PI/2);
-            
-            // Right sleeve
-            const rightSleeve = new THREE.Mesh(sleeveGeometry, bodyMaterial);
-            rightSleeve.position.set(0.9, 0, 0);
-            rightSleeve.rotateZ(Math.PI/2);
-            
-            // Combine all parts
-            const hoodie = new THREE.Group();
-            hoodie.add(body);
-            hoodie.add(hood);
-            hoodie.add(leftSleeve);
-            hoodie.add(rightSleeve);
-            
-            return hoodie;
-        }
+        // Store references to each part's material
+        const hoodieParts = {
+            front: { color: new THREE.Color(0x333333), material: null },
+            back: { color: new THREE.Color(0x222222), material: null },
+            leftSleeve: { color: new THREE.Color(0x333333), material: null },
+            rightSleeve: { color: new THREE.Color(0x333333), material: null },
+            hood: { color: new THREE.Color(0x222222), material: null }
+        };
         
         // Update info panel with model details
         function updateModelInfo(gltf) {
@@ -203,6 +247,50 @@
             document.getElementById('info-panel').innerHTML = info;
         }
         
+        // Assign materials to each part based on naming convention
+        function setupHoodieMaterials(model) {
+            model.traverse((child) => {
+                if (child.isMesh) {
+                    // Check the name to determine which part this is
+                    const name = child.name.toLowerCase();
+                    
+                    // Create a new material for this part
+                    const material = new THREE.MeshStandardMaterial({
+                        color: 0x333333,
+                        roughness: 0.7,
+                        metalness: 0.0
+                    });
+                    
+                    // Assign to appropriate part based on name
+                    if (name.includes('front')) {
+                        material.color.copy(hoodieParts.front.color);
+                        hoodieParts.front.material = material;
+                    } else if (name.includes('back')) {
+                        material.color.copy(hoodieParts.back.color);
+                        hoodieParts.back.material = material;
+                    } else if (name.includes('left') && name.includes('sleeve')) {
+                        material.color.copy(hoodieParts.leftSleeve.color);
+                        hoodieParts.leftSleeve.material = material;
+                    } else if (name.includes('right') && name.includes('sleeve')) {
+                        material.color.copy(hoodieParts.rightSleeve.color);
+                        hoodieParts.rightSleeve.material = material;
+                    } else if (name.includes('hood')) {
+                        material.color.copy(hoodieParts.hood.color);
+                        hoodieParts.hood.material = material;
+                    }
+                    
+                    child.material = material;
+                }
+            });
+            
+            // Enable color controls
+            document.getElementById('frontColor').disabled = false;
+            document.getElementById('backColor').disabled = false;
+            document.getElementById('leftSleeveColor').disabled = false;
+            document.getElementById('rightSleeveColor').disabled = false;
+            document.getElementById('hoodColor').disabled = false;
+        }
+        
         // Load the model
         const loadModel = async () => {
             try {
@@ -216,6 +304,9 @@
                 console.log('Model loaded successfully:', gltf);
                 const model = gltf.scene;
                 scene.add(model);
+                
+                // Setup materials for each part
+                setupHoodieMaterials(model);
                 
                 // Check for animations
                 if (gltf.animations && gltf.animations.length > 0) {
@@ -245,16 +336,9 @@
             } catch (error) {
                 console.error('Error loading model:', error);
                 
-                // Create a simple hoodie if model fails to load
-                const hoodie = createSimpleHoodie();
-                scene.add(hoodie);
-                
-                camera.position.z = 3;
-                controls.update();
-                
                 // Update info panel
                 document.getElementById('info-panel').innerHTML = 
-                    `Failed to load model: ${error.message}<br>Using fallback hoodie`;
+                    `Failed to load model: ${error.message}`;
                 
                 // Hide loading overlay
                 document.getElementById('loading-overlay').style.display = 'none';
@@ -262,6 +346,49 @@
                 return false;
             }
         };
+        
+        // Setup color change event listeners
+        function setupColorControls() {
+            document.getElementById('frontColor').addEventListener('input', (e) => {
+                const color = new THREE.Color(e.target.value);
+                hoodieParts.front.color.copy(color);
+                if (hoodieParts.front.material) {
+                    hoodieParts.front.material.color.copy(color);
+                }
+            });
+            
+            document.getElementById('backColor').addEventListener('input', (e) => {
+                const color = new THREE.Color(e.target.value);
+                hoodieParts.back.color.copy(color);
+                if (hoodieParts.back.material) {
+                    hoodieParts.back.material.color.copy(color);
+                }
+            });
+            
+            document.getElementById('leftSleeveColor').addEventListener('input', (e) => {
+                const color = new THREE.Color(e.target.value);
+                hoodieParts.leftSleeve.color.copy(color);
+                if (hoodieParts.leftSleeve.material) {
+                    hoodieParts.leftSleeve.material.color.copy(color);
+                }
+            });
+            
+            document.getElementById('rightSleeveColor').addEventListener('input', (e) => {
+                const color = new THREE.Color(e.target.value);
+                hoodieParts.rightSleeve.color.copy(color);
+                if (hoodieParts.rightSleeve.material) {
+                    hoodieParts.rightSleeve.material.color.copy(color);
+                }
+            });
+            
+            document.getElementById('hoodColor').addEventListener('input', (e) => {
+                const color = new THREE.Color(e.target.value);
+                hoodieParts.hood.color.copy(color);
+                if (hoodieParts.hood.material) {
+                    hoodieParts.hood.material.color.copy(color);
+                }
+            });
+        }
         
         // Animation loop
         function animate() {
@@ -276,12 +403,13 @@
         
         // Handle window resize
         window.addEventListener('resize', () => {
-            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.aspect = (window.innerWidth - 300) / window.innerHeight;
             camera.updateProjectionMatrix();
-            renderer.setSize(window.innerWidth, window.innerHeight);
+            renderer.setSize(window.innerWidth - 300, window.innerHeight);
         });
         
         // Start the application
+        setupColorControls();
         loadModel().then(() => {
             animate();
         });
