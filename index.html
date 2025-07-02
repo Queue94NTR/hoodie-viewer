@@ -7,228 +7,251 @@
     <style>
         body { 
             margin: 0;
-            overflow: hidden;
-            font-family: Arial, sans-serif;
             display: flex;
             height: 100vh;
+            overflow: hidden;
+            flex-direction: row-reverse;
+            font-family: Arial, sans-serif;
         }
-        
-        #viewer-container {
-            flex: 1;
-            background: #f0f0f0;
-            position: relative;
-        }
-        
         #sidebar {
             width: 300px;
-            min-width: 300px;
-            background: white;
-            padding: 20px;
+            background: #f8f9fa;
+            padding: 15px;
             overflow-y: auto;
-            box-shadow: -2px 0 10px rgba(0,0,0,0.1);
+            box-shadow: -2px 0 5px rgba(0,0,0,0.1);
         }
-        
-        #loading-overlay {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(0,0,0,0.8);
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-            align-items: center;
-            color: white;
-            font-size: 1.5em;
-            z-index: 1000;
+        #viewer-container {
+            flex: 1;
+            position: relative;
         }
-        
-        #info-panel {
+        #debug {
             position: absolute;
-            top: 10px;
-            left: 10px;
+            top: 15px;
+            left: 15px;
             background: rgba(0,0,0,0.7);
             color: white;
-            padding: 10px;
+            padding: 10px 15px;
             border-radius: 5px;
             font-size: 0.9em;
             z-index: 100;
         }
-        
-        .spinner {
-            width: 50px;
-            height: 50px;
-            border: 5px solid rgba(255,255,255,0.3);
-            border-radius: 50%;
-            border-top-color: #4361ee;
-            animation: spin 1s ease-in-out infinite;
-        }
-        
         .control-group {
             margin-bottom: 20px;
             padding-bottom: 15px;
-            border-bottom: 1px solid #eee;
+            border-bottom: 1px solid #dee2e6;
         }
-        
         .control-group h3 {
             margin-top: 0;
-            color: #4361ee;
+            margin-bottom: 15px;
         }
-        
         .color-control {
             margin-bottom: 15px;
         }
-        
         .color-control label {
             display: block;
             margin-bottom: 5px;
-            font-weight: bold;
+            font-weight: 500;
         }
-        
         .color-control input[type="color"] {
             width: 100%;
-            height: 40px;
-            cursor: pointer;
+            height: 30px;
         }
-
-        .button-group {
-            display: flex;
-            gap: 10px;
-            margin-top: 15px;
-        }
-        
-        .button-group button {
-            flex: 1;
-            padding: 10px;
-            border: none;
-            border-radius: 5px;
-            cursor: pointer;
-            background-color: #4361ee;
-            color: white;
-            transition: background-color 0.3s;
-        }
-        
-        .button-group button:hover {
-            background-color: #3a56d4;
-        }
-        
-        .button-group button:disabled {
-            background-color: #cccccc;
-            cursor: not-allowed;
-        }
-        
-        #apply-colors {
-            background-color: #4361ee;
-            color: white;
-            border: none;
-            padding: 12px 20px;
-            font-size: 16px;
-            border-radius: 5px;
-            cursor: pointer;
+        #designUpload {
             width: 100%;
-            margin-top: 20px;
-            transition: background-color 0.3s;
-        }
-        
-        #apply-colors:hover {
-            background-color: #3a56d4;
-        }
-        
-        #apply-colors:disabled {
-            background-color: #cccccc;
-            cursor: not-allowed;
-        }
-
-        #design-upload {
-            margin-top: 15px;
-            width: 100%;
-        }
-
-        .decal-controls {
-            margin-top: 15px;
-            display: none;
-        }
-
-        .decal-controls.active {
-            display: block;
-        }
-
-        .slider-control {
             margin-bottom: 10px;
         }
-
-        .slider-control label {
+        button {
+            width: 100%;
+            padding: 8px;
+            background: #007bff;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            margin-bottom: 10px;
+        }
+        button:hover {
+            background: #0069d9;
+        }
+        .placement-control {
+            margin-top: 10px;
+        }
+        .placement-control label {
             display: block;
             margin-bottom: 5px;
-            font-weight: bold;
         }
-
-        .slider-control input[type="range"] {
+        .placement-control select {
+            width: 100%;
+            padding: 5px;
+            margin-bottom: 10px;
+        }
+        .transform-control {
+            margin-bottom: 15px;
+        }
+        .transform-control label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: 500;
+        }
+        .transform-control input[type="range"] {
             width: 100%;
         }
-        
-        @keyframes spin {
-            to { transform: rotate(360deg); }
+        .transform-value {
+            display: inline-block;
+            width: 40px;
+            text-align: right;
+            margin-left: 10px;
+        }
+        .transform-row {
+            display: flex;
+            align-items: center;
+            margin-bottom: 5px;
+        }
+        .transform-row input[type="number"] {
+            width: 60px;
+            padding: 5px;
+        }
+        #resetTransforms {
+            background: #dc3545;
+        }
+        #resetTransforms:hover {
+            background: #c82333;
+        }
+        .animation-controls {
+            display: flex;
+            gap: 10px;
+        }
+        .animation-controls button {
+            flex: 1;
+        }
+        #pauseAnimation {
+            background: #ffc107;
+            color: #212529;
+        }
+        #pauseAnimation:hover {
+            background: #e0a800;
+        }
+        .effect-control {
+            margin-bottom: 15px;
+        }
+        .effect-control label {
+            display: block;
+            margin-bottom: 5px;
+        }
+        .effect-control select {
+            width: 100%;
+            padding: 5px;
         }
     </style>
 </head>
 <body>
-    <div id="loading-overlay">
-        <div class="spinner"></div>
-        <div>Loading 3D Hoodie...</div>
-    </div>
-    
-    <div id="info-panel">Loading model info...</div>
-    
-    <div id="viewer-container">
-        <div id="viewer"></div>
-    </div>
-    
     <div id="sidebar">
-        <h2>Hoodie Customizer</h2>
-        
         <div class="control-group">
             <h3>Animation Controls</h3>
-            <div class="button-group">
-                <button id="play-animation" disabled>Play</button>
-                <button id="pause-animation" disabled>Pause</button>
-                <button id="reset-animation" disabled>Reset</button>
+            <div class="animation-controls">
+                <button id="playAnimation">▶ Play</button>
+                <button id="pauseAnimation">⏸ Pause</button>
             </div>
-        </div>
-        
-        <div class="control-group">
-            <h3>Hoodie Color</h3>
-            <div class="color-control">
-                <label for="hoodieColor">Color:</label>
-                <input type="color" id="hoodieColor" value="#FFFFFF">
+            <div class="effect-control">
+                <label for="animationEffect">Animation Effect</label>
+                <select id="animationEffect">
+                    <option value="none">None</option>
+                    <option value="wind">Wind</option>
+                    <option value="bounce">Bounce</option>
+                </select>
             </div>
-            <button id="apply-colors">Apply Color</button>
         </div>
 
         <div class="control-group">
-            <h3>Add Design</h3>
-            <input type="file" id="design-upload" accept="image/*">
-            <div class="decal-controls" id="decal-controls">
-                <div class="slider-control">
-                    <label for="decal-x">Position X:</label>
-                    <input type="range" id="decal-x" min="-2" max="2" step="0.1" value="0">
-                </div>
-                <div class="slider-control">
-                    <label for="decal-y">Position Y:</label>
-                    <input type="range" id="decal-y" min="-2" max="2" step="0.1" value="1">
-                </div>
-                <div class="slider-control">
-                    <label for="decal-z">Position Z:</label>
-                    <input type="range" id="decal-z" min="-2" max="2" step="0.1" value="0">
-                </div>
-                <div class="slider-control">
-                    <label for="decal-scale">Scale:</label>
-                    <input type="range" id="decal-scale" min="0.1" max="2" step="0.1" value="0.5">
-                </div>
-                <button id="apply-decal">Apply Design</button>
+            <h3>Material Customization</h3>
+            <div class="color-control">
+                <label for="bodyColor">Hoodie Color</label>
+                <input type="color" id="bodyColor" value="#333333">
+            </div>
+            <div class="color-control">
+                <label for="hoodColor">Hood Color</label>
+                <input type="color" id="hoodColor" value="#222222">
+            </div>
+            <div class="color-control">
+                <label for="materialType">Material Type</label>
+                <select id="materialType">
+                    <option value="cotton">Cotton</option>
+                    <option value="polyester">Polyester</option>
+                    <option value="velvet">Velvet</option>
+                    <option value="denim">Denim</option>
+                    <option value="leather">Leather</option>
+                </select>
+            </div>
+            <div class="color-control">
+                <label for="roughness">Roughness</label>
+                <input type="range" id="roughness" min="0" max="1" step="0.05" value="0.7">
+                <span class="transform-value" id="roughnessValue">0.7</span>
+            </div>
+            <div class="color-control">
+                <label for="puffiness">Puff Print Effect</label>
+                <input type="range" id="puffiness" min="0" max="1" step="0.1" value="0">
+                <span class="transform-value" id="puffinessValue">0</span>
             </div>
         </div>
+        
+        <div class="control-group">
+            <h3>Design Upload</h3>
+            <input type="file" id="designUpload" accept="image/*">
+            <div class="placement-control">
+                <label for="placementArea">Placement Area</label>
+                <select id="placementArea">
+                    <option value="front">Front</option>
+                    <option value="back">Back</option>
+                    <option value="leftSleeve">Left Sleeve</option>
+                    <option value="rightSleeve">Right Sleeve</option>
+                    <option value="hood">Hood</option>
+                </select>
+            </div>
+            <button id="applyDesign">Apply Design</button>
+        </div>
+        
+        <div class="control-group" id="transformControls" style="display: none;">
+            <h3>Design Transformations</h3>
+            
+            <div class="transform-control">
+                <label>Position</label>
+                <div class="transform-row">
+                    <span>X:</span>
+                    <input type="range" id="positionX" min="-1" max="1" step="0.01" value="0">
+                    <span class="transform-value" id="positionXValue">0</span>
+                </div>
+                <div class="transform-row">
+                    <span>Y:</span>
+                    <input type="range" id="positionY" min="-1" max="1" step="0.01" value="0">
+                    <span class="transform-value" id="positionYValue">0</span>
+                </div>
+            </div>
+            
+            <div class="transform-control">
+                <label>Scale</label>
+                <div class="transform-row">
+                    <span>Size:</span>
+                    <input type="range" id="scale" min="0.1" max="3" step="0.1" value="1">
+                    <span class="transform-value" id="scaleValue">1</span>
+                </div>
+            </div>
+            
+            <div class="transform-control">
+                <label>Rotation</label>
+                <div class="transform-row">
+                    <span>Angle:</span>
+                    <input type="range" id="rotation" min="-180" max="180" step="1" value="0">
+                    <span class="transform-value" id="rotationValue">0°</span>
+                </div>
+            </div>
+            
+            <button id="resetTransforms">Reset Transformations</button>
+        </div>
+    </div>
+    
+    <div id="viewer-container">
+        <div id="debug">Loading model...</div>
+        <div id="viewer"></div>
     </div>
 
     <script type="importmap">
@@ -243,353 +266,652 @@
         import * as THREE from 'three';
         import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
         import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+        import { RGBELoader } from 'three/addons/loaders/RGBELoader.js';
         
-        // Main variables
-        let scene, camera, renderer, controls, mixer, clock, hoodieModel;
-        let hoodieMaterial = null;
-        let currentAction = null;
-        let decalMesh = null;
-        let decalTexture = null;
-
-        // Initialize the application
-        function init() {
-            // Check WebGL support
-            if (!isWebGLAvailable()) {
-                showWebGLError();
-                return;
-            }
-
-            setupScene();
-            setupControls();
-            setupUI();
-            loadModel();
-            animate();
-        }
-
-        // Check WebGL support
-        function isWebGLAvailable() {
-            try {
-                const canvas = document.createElement('canvas');
-                return !!(
-                    window.WebGLRenderingContext &&
-                    (canvas.getContext('webgl') || canvas.getContext('experimental-webgl'))
-                );
-            } catch (e) {
-                return false;
-            }
-        }
-
-        function showWebGLError() {
-            const warning = document.createElement('div');
-            warning.innerHTML = 'WebGL not supported in your browser';
-            warning.style.color = 'white';
-            warning.style.backgroundColor = 'red';
-            warning.style.padding = '20px';
-            warning.style.fontFamily = 'sans-serif';
-            document.getElementById('viewer').appendChild(warning);
-            throw new Error('WebGL not supported');
-        }
-
-        // Setup Three.js scene
-        function setupScene() {
-            scene = new THREE.Scene();
-            scene.background = new THREE.Color(0xf0f0f0);
-            
-            // Calculate initial dimensions
-            const { width, height } = getSafeDimensions();
-            
-            camera = new THREE.PerspectiveCamera(75, width / height, 0.1, 1000);
-            camera.position.z = 5;
-            
-            renderer = new THREE.WebGLRenderer({ 
-                antialias: true,
-                powerPreference: "high-performance"
+        // Scene setup
+        const scene = new THREE.Scene();
+        scene.background = new THREE.Color(0xf0f0f0);
+        const camera = new THREE.PerspectiveCamera(75, window.innerWidth/window.innerHeight, 0.1, 1000);
+        const renderer = new THREE.WebGLRenderer({ antialias: true });
+        renderer.setSize(window.innerWidth - 300, window.innerHeight);
+        renderer.outputEncoding = THREE.sRGBEncoding;
+        renderer.toneMapping = THREE.ACESFilmicToneMapping;
+        renderer.toneMappingExposure = 1.0;
+        document.getElementById('viewer').appendChild(renderer.domElement);
+        
+        // Lighting - using more realistic lighting for PBR
+        const ambientLight = new THREE.AmbientLight(0xffffff, 0.5);
+        scene.add(ambientLight);
+        
+        const directionalLight = new THREE.DirectionalLight(0xffffff, 2);
+        directionalLight.position.set(1, 1, 1);
+        directionalLight.castShadow = true;
+        directionalLight.shadow.mapSize.width = 2048;
+        directionalLight.shadow.mapSize.height = 2048;
+        scene.add(directionalLight);
+        
+        const directionalLight2 = new THREE.DirectionalLight(0xffffff, 0.5);
+        directionalLight2.position.set(-1, -1, -1);
+        scene.add(directionalLight2);
+        
+        // Environment map
+        const pmremGenerator = new THREE.PMREMGenerator(renderer);
+        pmremGenerator.compileEquirectangularShader();
+        
+        new RGBELoader()
+            .setDataType(THREE.UnsignedByteType)
+            .load('https://dl.polyhaven.org/file/ph-assets/HDRIs/hdr/1k/peppermint_powerplant_1k.hdr', (texture) => {
+                const envMap = pmremGenerator.fromEquirectangular(texture).texture;
+                scene.environment = envMap;
+                texture.dispose();
+                pmremGenerator.dispose();
             });
-            renderer.setSize(width, height);
-            document.getElementById('viewer').appendChild(renderer.domElement);
-            
-            // Lighting
-            const ambientLight = new THREE.AmbientLight(0xffffff, 0.5);
-            scene.add(ambientLight);
-            
-            const directionalLight = new THREE.DirectionalLight(0xffffff, 1);
-            directionalLight.position.set(1, 1, 1);
-            scene.add(directionalLight);
-            
-            const backLight = new THREE.DirectionalLight(0xffffff, 0.5);
-            backLight.position.set(-1, -1, -1);
-            scene.add(backLight);
-            
-            clock = new THREE.Clock();
-        }
-
-        // Calculate safe dimensions that prevent negative values
-        function getSafeDimensions() {
-            const sidebarWidth = 300; // Should match your CSS
-            let width = window.innerWidth - sidebarWidth;
-            let height = window.innerHeight;
-            
-            // Ensure minimum dimensions of 1px
-            width = Math.max(1, width);
-            height = Math.max(1, height);
-            
-            return { width, height };
-        }
-
-        // Setup orbit controls
-        function setupControls() {
-            controls = new OrbitControls(camera, renderer.domElement);
-            controls.enableDamping = true;
-            controls.dampingFactor = 0.05;
-        }
-
-        // Setup UI event listeners
-        function setupUI() {
-            // Animation controls
-            document.getElementById('play-animation').addEventListener('click', playAnimation);
-            document.getElementById('pause-animation').addEventListener('click', pauseAnimation);
-            document.getElementById('reset-animation').addEventListener('click', resetAnimation);
-            
-            // Color controls
-            document.getElementById('apply-colors').addEventListener('click', applyColor);
-            
-            // Design upload
-            document.getElementById('design-upload').addEventListener('change', handleDesignUpload);
-            document.getElementById('apply-decal').addEventListener('click', applyDecal);
-        }
-
-        // Update info panel with model details
-        function updateModelInfo(gltf) {
-            let info = `Model loaded: ${gltf.scene.name || 'Unnamed'}<br>`;
-            
-            // Count meshes
-            let meshCount = 0;
-            gltf.scene.traverse((child) => {
-                if (child.isMesh) meshCount++;
-            });
-            info += `Meshes: ${meshCount}<br>`;
-            
-            // Animation info
-            if (gltf.animations && gltf.animations.length > 0) {
-                info += `Animations: ${gltf.animations.length}<br>`;
-                info += `Playing animation: ${gltf.animations[0].name || 'Unnamed'}`;
-            } else {
-                info += 'No animations found';
+        
+        // Controls
+        const controls = new OrbitControls(camera, renderer.domElement);
+        controls.enableDamping = true;
+        controls.dampingFactor = 0.05;
+        
+        // Model loading
+        const loader = new GLTFLoader();
+        let mixer;
+        let currentAction;
+        let hoodieMesh; // Reference to the main hoodie mesh
+        let originalPositionAttribute;
+        
+        // Define UV regions for different parts of the hoodie
+        const uvRegions = {
+            front: { min: new THREE.Vector2(0.2, 0.5), max: new THREE.Vector2(0.8, 0.9), center: new THREE.Vector2(0.5, 0.7) },
+            back: { min: new THREE.Vector2(0.2, 0.1), max: new THREE.Vector2(0.8, 0.5), center: new THREE.Vector2(0.5, 0.3) },
+            leftSleeve: { min: new THREE.Vector2(0.0, 0.2), max: new THREE.Vector2(0.2, 0.8), center: new THREE.Vector2(0.1, 0.5) },
+            rightSleeve: { min: new THREE.Vector2(0.8, 0.2), max: new THREE.Vector2(1.0, 0.8), center: new THREE.Vector2(0.9, 0.5) },
+            hood: { min: new THREE.Vector2(0.3, 0.9), max: new THREE.Vector2(0.7, 1.0), center: new THREE.Vector2(0.5, 0.95) }
+        };
+        
+        // Material properties
+        const materialPresets = {
+            cotton: { roughness: 0.7, metalness: 0.0, normalScale: 0.5, clearcoat: 0.0 },
+            polyester: { roughness: 0.3, metalness: 0.0, normalScale: 0.3, clearcoat: 0.3 },
+            velvet: { roughness: 0.9, metalness: 0.0, normalScale: 1.0, clearcoat: 0.0 },
+            denim: { roughness: 0.8, metalness: 0.0, normalScale: 0.8, clearcoat: 0.0 },
+            leather: { roughness: 0.4, metalness: 0.2, normalScale: 0.6, clearcoat: 0.5 }
+        };
+        
+        // Current design properties
+        let currentDesign = {
+            texture: null,
+            placement: 'front',
+            transform: {
+                positionX: 0,
+                positionY: 0,
+                scale: 1,
+                rotation: 0
             }
-            
-            document.getElementById('info-panel').innerHTML = info;
-        }
-
-        // Create a new white base material
-        function createBaseMaterial() {
-            return new THREE.MeshStandardMaterial({
-                color: 0xFFFFFF, // White base
-                roughness: 0.7,
-                metalness: 0.0,
-                side: THREE.DoubleSide
-            });
-        }
-
-        // Apply color to the hoodie
-        function applyColor() {
-            const colorValue = document.getElementById('hoodieColor').value;
-            if (hoodieMaterial) {
-                hoodieMaterial.color.set(colorValue);
-                hoodieMaterial.needsUpdate = true;
-                console.log("Color applied to hoodie:", colorValue);
-            }
-        }
-
-        // Animation controls
-        function playAnimation() {
-            if (currentAction) {
-                currentAction.play();
-            }
-        }
-
-        function pauseAnimation() {
-            if (currentAction) {
-                currentAction.pause();
-            }
-        }
-
-        function resetAnimation() {
-            if (currentAction) {
-                currentAction.stop();
-                currentAction.play();
-            }
-        }
-
-        // Handle design upload
-        function handleDesignUpload(event) {
-            const file = event.target.files[0];
-            if (!file) return;
-
-            const reader = new FileReader();
-            reader.onload = function(e) {
-                const image = new Image();
-                image.onload = function() {
-                    // Create texture from the image
-                    decalTexture = new THREE.Texture(image);
-                    decalTexture.needsUpdate = true;
-                    
-                    // Show decal controls
-                    document.getElementById('decal-controls').classList.add('active');
-                };
-                image.src = e.target.result;
-            };
-            reader.readAsDataURL(file);
-        }
-
-        // Apply decal to the hoodie
-        function applyDecal() {
-            if (!decalTexture || !hoodieModel) return;
-
-            // Remove existing decal if any
-            if (decalMesh) {
-                scene.remove(decalMesh);
-            }
-
-            // Get position from sliders
-            const x = parseFloat(document.getElementById('decal-x').value);
-            const y = parseFloat(document.getElementById('decal-y').value);
-            const z = parseFloat(document.getElementById('decal-z').value);
-            const scale = parseFloat(document.getElementById('decal-scale').value);
-
-            // Create decal material
-            const decalMaterial = new THREE.MeshBasicMaterial({
-                map: decalTexture,
-                transparent: true,
-                depthTest: true,
-                depthWrite: false,
-                polygonOffset: true,
-                polygonOffsetFactor: -4
-            });
-
-            // Find the hoodie mesh
-            let hoodieMesh = null;
-            hoodieModel.traverse(child => {
-                if (child.isMesh && !hoodieMesh) {
-                    hoodieMesh = child;
-                }
-            });
-
-            if (!hoodieMesh) return;
-
-            // Create decal geometry
-            const decalGeometry = new THREE.PlaneGeometry(scale, scale);
-            
-            // Create decal mesh
-            decalMesh = new THREE.Mesh(decalGeometry, decalMaterial);
-            decalMesh.position.set(x, y, z);
-            decalMesh.lookAt(hoodieMesh.position);
-            
-            // Add to scene
-            scene.add(decalMesh);
-        }
-
-        // Load the model
-        async function loadModel() {
-            try {
-                const loader = new GLTFLoader();
+        };
+        
+        // Current material properties
+        let currentMaterial = {
+            bodyColor: new THREE.Color(0x333333),
+            hoodColor: new THREE.Color(0x222222),
+            roughness: 0.7,
+            metalness: 0.0,
+            normalScale: 0.5,
+            clearcoat: 0.0,
+            puffiness: 0.0,
+            materialType: 'cotton'
+        };
+        
+        // Animation effects
+        let animationEffect = 'none';
+        let windEffect = {
+            strength: 0,
+            frequency: 0.5,
+            time: 0
+        };
+        
+        // Load fabric normal maps
+        const normalMapLoader = new THREE.TextureLoader();
+        const cottonNormalMap = normalMapLoader.load('https://threejs.org/examples/textures/normalmaps/fabric_normals.jpg');
+        const denimNormalMap = normalMapLoader.load('https://threejs.org/examples/textures/normalmaps/denim_normals.jpg');
+        const velvetNormalMap = normalMapLoader.load('https://threejs.org/examples/textures/normalmaps/velvet_normals.jpg');
+        const leatherNormalMap = normalMapLoader.load('https://threejs.org/examples/textures/normalmaps/leather_normals.jpg');
+        
+        // Load fabric displacement maps
+        const displacementMapLoader = new THREE.TextureLoader();
+        const puffDisplacementMap = displacementMapLoader.load('https://threejs.org/examples/textures/displacement/clouds.jpg');
+        puffDisplacementMap.wrapS = puffDisplacementMap.wrapT = THREE.RepeatWrapping;
+        
+        loader.load(
+            'Hoodie_Walking_Animated.glb',
+            (gltf) => {
+                const model = gltf.scene;
+                scene.add(model);
                 
-                // Load your hoodie model
-                const modelUrl = 'Hoodie_Walking_Animated.glb'; // Make sure this path is correct
-                
-                const gltf = await loader.loadAsync(modelUrl);
-                
-                console.log('Model loaded successfully:', gltf);
-                hoodieModel = gltf.scene;
-                scene.add(hoodieModel);
-                
-                // Replace all materials with our base material
-                const baseMaterial = createBaseMaterial();
-                hoodieModel.traverse((child) => {
+                // Find and store the main hoodie mesh
+                model.traverse((child) => {
                     if (child.isMesh) {
-                        // Store reference to the material we'll be modifying
-                        hoodieMaterial = baseMaterial;
-                        child.material = baseMaterial;
-                        console.log("Replaced material for:", child.name);
+                        // Store reference to the main hoodie mesh
+                        if (child.name.toLowerCase().includes('body') || !hoodieMesh) {
+                            hoodieMesh = child;
+                            // Store original position attribute for wind effect
+                            originalPositionAttribute = child.geometry.attributes.position.clone();
+                            
+                            // Store original material for reset
+                            hoodieMesh.userData.originalMaterial = child.material.clone();
+                            // Store original texture
+                            hoodieMesh.userData.baseTexture = child.material.map;
+                            
+                            // Initialize with our custom material
+                            updateHoodieMaterial();
+                        }
                     }
                 });
                 
-                // Check for animations
-                if (gltf.animations && gltf.animations.length > 0) {
-                    mixer = new THREE.AnimationMixer(hoodieModel);
-                    currentAction = mixer.clipAction(gltf.animations[0]);
-                    currentAction.play();
-                    console.log(`Playing animation: ${gltf.animations[0].name}`);
-                    
-                    // Enable animation controls
-                    document.getElementById('play-animation').disabled = false;
-                    document.getElementById('pause-animation').disabled = false;
-                    document.getElementById('reset-animation').disabled = false;
-                }
-                
-                // Update model info
-                updateModelInfo(gltf);
-                
                 // Center model
-                const box = new THREE.Box3().setFromObject(hoodieModel);
+                const box = new THREE.Box3().setFromObject(model);
                 const center = box.getCenter(new THREE.Vector3());
-                hoodieModel.position.sub(center);
+                model.position.sub(center);
                 
-                // Adjust camera distance based on model size
-                const size = box.getSize(new THREE.Vector3()).length();
-                camera.position.z = size * 1.5;
+                camera.position.z = box.getSize(new THREE.Vector3()).length() * 1.5;
                 controls.update();
                 
-                // Enable apply button
-                document.getElementById('apply-colors').disabled = false;
-                
-                // Hide loading overlay
-                document.getElementById('loading-overlay').style.display = 'none';
-                
-            } catch (error) {
-                console.error('Error loading model:', error);
-                
-                // Update info panel
-                document.getElementById('info-panel').innerHTML = 
-                    `Failed to load model: ${error.message}`;
-                
-                // Hide loading overlay
-                document.getElementById('loading-overlay').style.display = 'none';
+                // Handle animations
+                if (gltf.animations?.length) {
+                    mixer = new THREE.AnimationMixer(model);
+                    currentAction = mixer.clipAction(gltf.animations[0]);
+                    currentAction.play();
+                    document.getElementById('debug').textContent = `Model loaded with ${gltf.animations.length} animations`;
+                    
+                    // Enable animation controls
+                    document.getElementById('playAnimation').disabled = false;
+                    document.getElementById('pauseAnimation').disabled = false;
+                } else {
+                    document.getElementById('debug').textContent = 'Model loaded (no animations)';
+                    document.getElementById('playAnimation').disabled = true;
+                    document.getElementById('pauseAnimation').disabled = true;
+                }
+            },
+            undefined,
+            (error) => {
+                console.error(error);
+                document.getElementById('debug').textContent = `Error: ${error.message}`;
+                document.getElementById('playAnimation').disabled = true;
+                document.getElementById('pauseAnimation').disabled = true;
+            }
+        );
+        
+        // Animation controls
+        document.getElementById('playAnimation').addEventListener('click', () => {
+            if (currentAction) {
+                currentAction.play();
+                document.getElementById('debug').textContent = 'Animation playing';
+            }
+        });
+        
+        document.getElementById('pauseAnimation').addEventListener('click', () => {
+            if (currentAction) {
+                currentAction.paused = !currentAction.paused;
+                document.getElementById('debug').textContent = currentAction.paused ? 'Animation paused' : 'Animation playing';
+            }
+        });
+        
+        // Animation effect controls
+        document.getElementById('animationEffect').addEventListener('change', (e) => {
+            animationEffect = e.target.value;
+            windEffect.strength = animationEffect === 'wind' ? 0.1 : 0;
+            document.getElementById('debug').textContent = `Effect: ${animationEffect}`;
+        });
+        
+        // Material controls
+        document.getElementById('bodyColor').addEventListener('input', (e) => {
+            currentMaterial.bodyColor.setStyle(e.target.value);
+            updateHoodieMaterial();
+        });
+        
+        document.getElementById('hoodColor').addEventListener('input', (e) => {
+            currentMaterial.hoodColor.setStyle(e.target.value);
+            updateHoodieMaterial();
+        });
+        
+        document.getElementById('materialType').addEventListener('change', (e) => {
+            const preset = materialPresets[e.target.value];
+            currentMaterial.materialType = e.target.value;
+            currentMaterial.roughness = preset.roughness;
+            currentMaterial.metalness = preset.metalness;
+            currentMaterial.normalScale = preset.normalScale;
+            currentMaterial.clearcoat = preset.clearcoat;
+            
+            // Update UI
+            document.getElementById('roughness').value = preset.roughness;
+            document.getElementById('roughnessValue').textContent = preset.roughness.toFixed(2);
+            
+            updateHoodieMaterial();
+        });
+        
+        document.getElementById('roughness').addEventListener('input', (e) => {
+            currentMaterial.roughness = parseFloat(e.target.value);
+            document.getElementById('roughnessValue').textContent = currentMaterial.roughness.toFixed(2);
+            updateHoodieMaterial();
+        });
+        
+        document.getElementById('puffiness').addEventListener('input', (e) => {
+            currentMaterial.puffiness = parseFloat(e.target.value);
+            document.getElementById('puffinessValue').textContent = currentMaterial.puffiness.toFixed(1);
+            updateHoodieMaterial();
+        });
+        
+        // Design upload functionality
+        document.getElementById('applyDesign').addEventListener('click', async () => {
+            const file = document.getElementById('designUpload').files[0];
+            if (!file || !hoodieMesh) return;
+            
+            currentDesign.placement = document.getElementById('placementArea').value;
+            currentDesign.texture = await new THREE.TextureLoader().loadAsync(URL.createObjectURL(file));
+            
+            // Show transform controls
+            document.getElementById('transformControls').style.display = 'block';
+            
+            // Reset transformations
+            currentDesign.transform = {
+                positionX: 0,
+                positionY: 0,
+                scale: 1,
+                rotation: 0
+            };
+            
+            // Update UI sliders
+            document.getElementById('positionX').value = 0;
+            document.getElementById('positionY').value = 0;
+            document.getElementById('scale').value = 1;
+            document.getElementById('rotation').value = 0;
+            document.getElementById('positionXValue').textContent = '0';
+            document.getElementById('positionYValue').textContent = '0';
+            document.getElementById('scaleValue').textContent = '1';
+            document.getElementById('rotationValue').textContent = '0°';
+            
+            // Apply design
+            updateHoodieMaterial();
+            
+            document.getElementById('debug').textContent = `Design applied to ${currentDesign.placement}`;
+        });
+        
+        // Transformation controls
+        function setupTransformControl(id, property, formatFn = (v) => v) {
+            const slider = document.getElementById(id);
+            const valueDisplay = document.getElementById(`${id}Value`);
+            
+            slider.addEventListener('input', (e) => {
+                const value = parseFloat(e.target.value);
+                currentDesign.transform[property] = value;
+                valueDisplay.textContent = formatFn(value);
+                updateHoodieMaterial();
+            });
+        }
+        
+        setupTransformControl('positionX', 'positionX');
+        setupTransformControl('positionY', 'positionY');
+        setupTransformControl('scale', 'scale');
+        setupTransformControl('rotation', 'rotation', (v) => `${v}°');
+        
+        // Reset transformations
+        document.getElementById('resetTransforms').addEventListener('click', () => {
+            currentDesign.transform = {
+                positionX: 0,
+                positionY: 0,
+                scale: 1,
+                rotation: 0
+            };
+            
+            document.getElementById('positionX').value = 0;
+            document.getElementById('positionY').value = 0;
+            document.getElementById('scale').value = 1;
+            document.getElementById('rotation').value = 0;
+            document.getElementById('positionXValue').textContent = '0';
+            document.getElementById('positionYValue').textContent = '0';
+            document.getElementById('scaleValue').textContent = '1';
+            document.getElementById('rotationValue').textContent = '0°';
+            
+            updateHoodieMaterial();
+        });
+        
+        // Get the appropriate normal map for the current material type
+        function getNormalMap() {
+            switch(currentMaterial.materialType) {
+                case 'denim': return denimNormalMap;
+                case 'velvet': return velvetNormalMap;
+                case 'leather': return leatherNormalMap;
+                case 'cotton': 
+                default: return cottonNormalMap;
             }
         }
-
+        
+        // Apply wind effect to the hoodie
+        function applyWindEffect(delta) {
+            if (!hoodieMesh || !originalPositionAttribute || animationEffect !== 'wind') return;
+            
+            windEffect.time += delta;
+            
+            const positionAttribute = hoodieMesh.geometry.attributes.position;
+            const originalPositions = originalPositionAttribute.array;
+            const positions = positionAttribute.array;
+            
+            for (let i = 0; i < positions.length; i += 3) {
+                const x = originalPositions[i];
+                const y = originalPositions[i + 1];
+                const z = originalPositions[i + 2];
+                
+                // Apply wind effect based on vertex position
+                const windStrength = windEffect.strength * Math.sin(windEffect.time * 2 + y * 5) * (1 + Math.sin(windEffect.time * 0.5 + x * 3)) * 0.5;
+                
+                positions[i] = x + windStrength;
+                positions[i + 2] = z + windStrength * 0.3;
+            }
+            
+            positionAttribute.needsUpdate = true;
+            hoodieMesh.geometry.computeVertexNormals();
+        }
+        
+        // Apply bounce effect
+        function applyBounceEffect(delta) {
+            if (!hoodieMesh || animationEffect !== 'bounce') return;
+            
+            const time = Date.now() * 0.001;
+            hoodieMesh.position.y = Math.sin(time * 2) * 0.05;
+        }
+        
+        // Update the hoodie material with current properties
+        function updateHoodieMaterial() {
+            if (!hoodieMesh) return;
+            
+            const uvRegion = currentDesign.texture ? uvRegions[currentDesign.placement] : null;
+            const transform = currentDesign.transform;
+            const normalMap = getNormalMap();
+            
+            // Create a custom PBR shader material that combines all our elements
+            hoodieMesh.material = new THREE.ShaderMaterial({
+                uniforms: {
+                    // Base material properties
+                    bodyColor: { value: currentMaterial.bodyColor },
+                    hoodColor: { value: currentMaterial.hoodColor },
+                    roughness: { value: currentMaterial.roughness },
+                    metalness: { value: currentMaterial.metalness },
+                    clearcoat: { value: currentMaterial.clearcoat },
+                    puffiness: { value: currentMaterial.puffiness },
+                    
+                    // Textures
+                    baseTexture: { value: hoodieMesh.userData.baseTexture || new THREE.Texture() },
+                    normalMap: { value: normalMap },
+                    decalTexture: { value: currentDesign.texture || new THREE.Texture() },
+                    puffDisplacementMap: { value: puffDisplacementMap },
+                    
+                    // Decal properties
+                    hasDecal: { value: !!currentDesign.texture },
+                    uvMin: { value: uvRegion ? uvRegion.min : new THREE.Vector2(0, 0) },
+                    uvMax: { value: uvRegion ? uvRegion.max : new THREE.Vector2(1, 1) },
+                    uvCenter: { value: uvRegion ? uvRegion.center : new THREE.Vector2(0.5, 0.5) },
+                    decalPosition: { value: new THREE.Vector2(transform.positionX, transform.positionY) },
+                    decalScale: { value: transform.scale },
+                    decalRotation: { value: THREE.MathUtils.degToRad(transform.rotation) },
+                    
+                    // Lighting and environment
+                    envMap: { value: scene.environment },
+                    lightDirection: { value: directionalLight.position.clone().normalize() },
+                    lightColor: { value: new THREE.Color(directionalLight.color) },
+                    lightIntensity: { value: directionalLight.intensity },
+                    time: { value: 0 }
+                },
+                vertexShader: `
+                    uniform float puffiness;
+                    uniform sampler2D puffDisplacementMap;
+                    uniform float time;
+                    
+                    varying vec2 vUv;
+                    varying vec3 vPosition;
+                    varying vec3 vNormal;
+                    varying vec3 vViewPosition;
+                    
+                    void main() {
+                        vUv = uv;
+                        vNormal = normalize(normalMatrix * normal);
+                        
+                        // Apply puff print effect if enabled
+                        vec3 newPosition = position;
+                        if (puffiness > 0.0) {
+                            vec4 disp = texture2D(puffDisplacementMap, uv * 2.0 + vec2(time * 0.1));
+                            float displacement = disp.r * puffiness * 0.1;
+                            newPosition += normal * displacement;
+                        }
+                        
+                        vec4 mvPosition = modelViewMatrix * vec4(newPosition, 1.0);
+                        vViewPosition = -mvPosition.xyz;
+                        vPosition = newPosition;
+                        
+                        gl_Position = projectionMatrix * mvPosition;
+                    }
+                `,
+                fragmentShader: `
+                    uniform vec3 bodyColor;
+                    uniform vec3 hoodColor;
+                    uniform float roughness;
+                    uniform float metalness;
+                    uniform float clearcoat;
+                    uniform float puffiness;
+                    
+                    uniform sampler2D baseTexture;
+                    uniform sampler2D normalMap;
+                    uniform sampler2D decalTexture;
+                    uniform bool hasDecal;
+                    uniform vec2 uvMin;
+                    uniform vec2 uvMax;
+                    uniform vec2 uvCenter;
+                    uniform vec2 decalPosition;
+                    uniform float decalScale;
+                    uniform float decalRotation;
+                    
+                    uniform sampler2D envMap;
+                    uniform vec3 lightDirection;
+                    uniform vec3 lightColor;
+                    uniform float lightIntensity;
+                    
+                    varying vec2 vUv;
+                    varying vec3 vPosition;
+                    varying vec3 vNormal;
+                    varying vec3 vViewPosition;
+                    
+                    // Normal map unpacking
+                    vec3 unpackNormal(vec4 normalMapValue) {
+                        vec3 normal = normalize(normalMapValue.xyz * 2.0 - 1.0);
+                        return normal;
+                    }
+                    
+                    // GGX/Trowbridge-Reitz normal distribution function
+                    float ndfGGX(float NdotH, float roughness) {
+                        float a = roughness * roughness;
+                        float a2 = a * a;
+                        float NdotH2 = NdotH * NdotH;
+                        
+                        float denom = (NdotH2 * (a2 - 1.0) + 1.0);
+                        denom = 3.14159265359 * denom * denom;
+                        
+                        return a2 / denom;
+                    }
+                    
+                    // Schlick-GGX geometry function
+                    float gaSchlickGGX(float NdotV, float roughness) {
+                        float r = roughness + 1.0;
+                        float k = (r * r) / 8.0;
+                        
+                        float denom = NdotV * (1.0 - k) + k;
+                        
+                        return NdotV / denom;
+                    }
+                    
+                    // Smith geometry function
+                    float gSmith(float NdotV, float NdotL, float roughness) {
+                        return gaSchlickGGX(NdotV, roughness) * gaSchlickGGX(NdotL, roughness);
+                    }
+                    
+                    // Fresnel-Schlick approximation
+                    vec3 fSchlick(float cosTheta, vec3 F0) {
+                        return F0 + (1.0 - F0) * pow(1.0 - cosTheta, 5.0);
+                    }
+                    
+                    // Clearcoat Fresnel
+                    float fSchlickClearcoat(float cosTheta, float F0) {
+                        return F0 + (1.0 - F0) * pow(1.0 - cosTheta, 5.0);
+                    }
+                    
+                    void main() {
+                        // Determine base color based on position (hood or body)
+                        vec3 baseColor = vPosition.z > 0.0 ? hoodColor : bodyColor;
+                        
+                        // Get fabric texture (grayscale) and apply to color
+                        float fabric = texture2D(baseTexture, vUv).r;
+                        baseColor *= mix(1.0, fabric, 0.7); // Blend with texture
+                        
+                        // Get normal from normal map
+                        vec3 normal = unpackNormal(texture2D(normalMap, vUv * 2.0));
+                        normal = normalize(vNormal + normal * currentMaterial.normalScale); // Blend with vertex normal
+                        
+                        // View direction
+                        vec3 viewDir = normalize(vViewPosition);
+                        
+                        // Light calculation
+                        vec3 lightDir = normalize(-lightDirection);
+                        vec3 halfDir = normalize(viewDir + lightDir);
+                        
+                        float NdotV = max(dot(normal, viewDir), 0.0001);
+                        float NdotL = max(dot(normal, lightDir), 0.0);
+                        float NdotH = max(dot(normal, halfDir), 0.0);
+                        float HdotV = max(dot(halfDir, viewDir), 0.0);
+                        
+                        // Fresnel (F0 for dielectrics)
+                        vec3 F0 = vec3(0.04);
+                        F0 = mix(F0, baseColor, metalness);
+                        vec3 F = fSchlick(HdotV, F0);
+                        
+                        // Normal distribution
+                        float NDF = ndfGGX(NdotH, roughness);
+                        
+                        // Geometry
+                        float G = gSmith(NdotV, NdotL, roughness);
+                        
+                        // Specular
+                        vec3 numerator = NDF * G * F;
+                        float denominator = 4.0 * NdotV * NdotL;
+                        vec3 specular = numerator / max(denominator, 0.001);
+                        
+                        // Diffuse
+                        vec3 kD = vec3(1.0) - F;
+                        kD *= 1.0 - metalness;
+                        vec3 diffuse = kD * baseColor / 3.14159265359;
+                        
+                        // Combine lighting
+                        vec3 radiance = lightColor * lightIntensity;
+                        vec3 color = (diffuse + specular) * radiance * NdotL;
+                        
+                        // Clearcoat layer (for materials like leather)
+                        if (clearcoat > 0.0) {
+                            float clearcoatRoughness = 0.1;
+                            float clearcoatF0 = 0.04;
+                            
+                            float clearcoatNDF = ndfGGX(NdotH, clearcoatRoughness);
+                            float clearcoatG = gSmith(NdotV, NdotL, clearcoatRoughness);
+                            float clearcoatF = fSchlickClearcoat(HdotV, clearcoatF0);
+                            
+                            vec3 clearcoatSpecular = vec3(clearcoatNDF * clearcoatG * clearcoatF / (4.0 * NdotV * NdotL));
+                            color = mix(color, color + clearcoatSpecular * radiance * NdotL, clearcoat);
+                        }
+                        
+                        // Apply ambient lighting with environment map
+                        vec3 reflectDir = reflect(-viewDir, normal);
+                        vec3 envColor = texture2D(envMap, reflectDir).rgb;
+                        vec3 ambient = mix(vec3(0.03), envColor * 0.5, metalness) * baseColor;
+                        color += ambient;
+                        
+                        // Apply decal if exists and in the right region
+                        if (hasDecal && vUv.x >= uvMin.x && vUv.x <= uvMax.x && 
+                            vUv.y >= uvMin.y && vUv.y <= uvMax.y) {
+                            
+                            // Calculate normalized UVs within the decal region (0-1)
+                            vec2 decalUV = (vUv - uvMin) / (uvMax - uvMin);
+                            
+                            // Transform coordinates for rotation and scale
+                            // Move origin to center
+                            decalUV -= 0.5;
+                            
+                            // Apply rotation
+                            float cosAngle = cos(decalRotation);
+                            float sinAngle = sin(decalRotation);
+                            decalUV = vec2(
+                                decalUV.x * cosAngle - decalUV.y * sinAngle,
+                                decalUV.x * sinAngle + decalUV.y * cosAngle
+                            );
+                            
+                            // Apply scale
+                            decalUV /= decalScale;
+                            
+                            // Apply position offset
+                            decalUV -= decalPosition;
+                            
+                            // Move origin back
+                            decalUV += 0.5;
+                            
+                            // Only render if within the 0-1 UV space after transformations
+                            if (decalUV.x >= 0.0 && decalUV.x <= 1.0 && 
+                                decalUV.y >= 0.0 && decalUV.y <= 1.0) {
+                                vec4 decal = texture2D(decalTexture, decalUV);
+                                
+                                // Blend the decal with the base texture
+                                if (decal.a > 0.1) {
+                                    // Apply puff print effect to decal
+                                    if (puffiness > 0.0) {
+                                        float puffFactor = texture2D(puffDisplacementMap, vUv * 2.0).r * puffiness;
+                                        decal.rgb *= 1.0 + puffFactor * 0.5;
+                                    }
+                                    
+                                    color = mix(color, decal.rgb, decal.a);
+                                }
+                            }
+                        }
+                        
+                        // Gamma correction
+                        color = pow(color, vec3(1.0/2.2));
+                        
+                        gl_FragColor = vec4(color, 1.0);
+                    }
+                `,
+                lights: true
+            });
+        }
+        
         // Animation loop
+        const clock = new THREE.Clock();
         function animate() {
             requestAnimationFrame(animate);
-            
             const delta = clock.getDelta();
+            
             if (mixer) mixer.update(delta);
+            
+            // Apply effects
+            applyWindEffect(delta);
+            applyBounceEffect(delta);
+            
+            // Update time uniform for shader animations
+            if (hoodieMesh?.material?.uniforms?.time) {
+                hoodieMesh.material.uniforms.time.value += delta;
+            }
             
             controls.update();
             renderer.render(scene, camera);
         }
-
-        // Improved resize handler with debouncing
-        let resizeTimeout;
-        function handleResize() {
-            // Debounce resize events
-            clearTimeout(resizeTimeout);
-            resizeTimeout = setTimeout(() => {
-                const { width, height } = getSafeDimensions();
-                
-                // Only update if dimensions are valid
-                if (width > 0 && height > 0) {
-                    camera.aspect = width / height;
-                    camera.updateProjectionMatrix();
-                    renderer.setSize(width, height);
-                }
-            }, 100); // 100ms debounce time
-        }
-
-        // Event listeners
-        window.addEventListener('resize', handleResize);
-
-        // Start the application
-        init();
+        animate();
+        
+        window.addEventListener('resize', () => {
+            camera.aspect = (window.innerWidth - 300) / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth - 300, window.innerHeight);
+        });
     </script>
 </body>
 </html>
