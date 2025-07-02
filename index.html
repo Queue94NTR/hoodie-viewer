@@ -286,11 +286,19 @@
             document.getElementById('info-panel').innerHTML = info;
         }
 
-        // Assign materials to each part based on naming convention
+        // Improved material assignment function
         function setupHoodieMaterials(model) {
+            // First pass: Count materials and log mesh names for debugging
+            console.log("Model parts found:");
             model.traverse((child) => {
                 if (child.isMesh) {
-                    // Check the name to determine which part this is
+                    console.log(`- ${child.name} (${child.material?.name || 'no material'})`);
+                }
+            });
+
+            // Second pass: Assign materials based on more flexible naming
+            model.traverse((child) => {
+                if (child.isMesh) {
                     const name = child.name.toLowerCase();
                     
                     // Create a new material for this part
@@ -300,34 +308,58 @@
                         metalness: 0.0
                     });
                     
-                    // Assign to appropriate part based on name
-                    if (name.includes('front')) {
+                    // More flexible naming detection
+                    if (name.includes('front') || name.includes('chest') || name.includes('torso')) {
                         material.color.copy(hoodieParts.front.color);
                         hoodieParts.front.material = material;
-                    } else if (name.includes('back')) {
+                        console.log(`Assigned FRONT material to: ${child.name}`);
+                    } 
+                    else if (name.includes('back') || name.includes('rear')) {
                         material.color.copy(hoodieParts.back.color);
                         hoodieParts.back.material = material;
-                    } else if (name.includes('left') && name.includes('sleeve')) {
+                        console.log(`Assigned BACK material to: ${child.name}`);
+                    } 
+                    else if ((name.includes('left') && name.includes('sleeve')) || name.includes('l_sleeve')) {
                         material.color.copy(hoodieParts.leftSleeve.color);
                         hoodieParts.leftSleeve.material = material;
-                    } else if (name.includes('right') && name.includes('sleeve')) {
+                        console.log(`Assigned LEFT SLEEVE material to: ${child.name}`);
+                    } 
+                    else if ((name.includes('right') && name.includes('sleeve')) || name.includes('r_sleeve')) {
                         material.color.copy(hoodieParts.rightSleeve.color);
                         hoodieParts.rightSleeve.material = material;
-                    } else if (name.includes('hood')) {
+                        console.log(`Assigned RIGHT SLEEVE material to: ${child.name}`);
+                    } 
+                    else if (name.includes('hood') || name.includes('head')) {
                         material.color.copy(hoodieParts.hood.color);
                         hoodieParts.hood.material = material;
+                        console.log(`Assigned HOOD material to: ${child.name}`);
+                    }
+                    else {
+                        console.log(`No part matched for: ${child.name} - using default material`);
                     }
                     
                     child.material = material;
+                    child.material.needsUpdate = true;
                 }
             });
             
             // Enable color controls
+            enableColorControls();
+        }
+
+        function enableColorControls() {
             document.getElementById('frontColor').disabled = false;
             document.getElementById('backColor').disabled = false;
             document.getElementById('leftSleeveColor').disabled = false;
             document.getElementById('rightSleeveColor').disabled = false;
             document.getElementById('hoodColor').disabled = false;
+            
+            // Set initial color values
+            document.getElementById('frontColor').value = `#${hoodieParts.front.color.getHexString()}`;
+            document.getElementById('backColor').value = `#${hoodieParts.back.color.getHexString()}`;
+            document.getElementById('leftSleeveColor').value = `#${hoodieParts.leftSleeve.color.getHexString()}`;
+            document.getElementById('rightSleeveColor').value = `#${hoodieParts.rightSleeve.color.getHexString()}`;
+            document.getElementById('hoodColor').value = `#${hoodieParts.hood.color.getHexString()}`;
         }
 
         // Load the model
@@ -390,6 +422,7 @@
                 hoodieParts.front.color.copy(color);
                 if (hoodieParts.front.material) {
                     hoodieParts.front.material.color.copy(color);
+                    hoodieParts.front.material.needsUpdate = true;
                 }
             });
             
@@ -398,6 +431,7 @@
                 hoodieParts.back.color.copy(color);
                 if (hoodieParts.back.material) {
                     hoodieParts.back.material.color.copy(color);
+                    hoodieParts.back.material.needsUpdate = true;
                 }
             });
             
@@ -406,6 +440,7 @@
                 hoodieParts.leftSleeve.color.copy(color);
                 if (hoodieParts.leftSleeve.material) {
                     hoodieParts.leftSleeve.material.color.copy(color);
+                    hoodieParts.leftSleeve.material.needsUpdate = true;
                 }
             });
             
@@ -414,6 +449,7 @@
                 hoodieParts.rightSleeve.color.copy(color);
                 if (hoodieParts.rightSleeve.material) {
                     hoodieParts.rightSleeve.material.color.copy(color);
+                    hoodieParts.rightSleeve.material.needsUpdate = true;
                 }
             });
             
@@ -422,6 +458,7 @@
                 hoodieParts.hood.color.copy(color);
                 if (hoodieParts.hood.material) {
                     hoodieParts.hood.material.color.copy(color);
+                    hoodieParts.hood.material.needsUpdate = true;
                 }
             });
         }
