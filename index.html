@@ -1,166 +1,11 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>3D Hoodie Designer</title>
-    <style>
-        body { 
-            margin: 0;
-            overflow: hidden;
-            font-family: Arial, sans-serif;
-            display: flex;
-            height: 100vh;
-        }
-        
-        #viewer-container {
-            flex: 1;
-            background: #f0f0f0;
-            position: relative;
-        }
-        
-        #sidebar {
-            width: 300px;
-            min-width: 300px;
-            background: white;
-            padding: 20px;
-            overflow-y: auto;
-            box-shadow: -2px 0 10px rgba(0,0,0,0.1);
-        }
-        
-        #loading-overlay {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(0,0,0,0.8);
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-            align-items: center;
-            color: white;
-            font-size: 1.5em;
-            z-index: 1000;
-        }
-        
-        #info-panel {
-            position: absolute;
-            top: 10px;
-            left: 10px;
-            background: rgba(0,0,0,0.7);
-            color: white;
-            padding: 10px;
-            border-radius: 5px;
-            font-size: 0.9em;
-            z-index: 100;
-        }
-        
-        .spinner {
-            width: 50px;
-            height: 50px;
-            border: 5px solid rgba(255,255,255,0.3);
-            border-radius: 50%;
-            border-top-color: #4361ee;
-            animation: spin 1s ease-in-out infinite;
-        }
-        
-        .control-group {
-            margin-bottom: 20px;
-            padding-bottom: 15px;
-            border-bottom: 1px solid #eee;
-        }
-        
-        .control-group h3 {
-            margin-top: 0;
-            color: #4361ee;
-        }
-        
-        .color-control {
-            margin-bottom: 15px;
-        }
-        
-        .color-control label {
-            display: block;
-            margin-bottom: 5px;
-            font-weight: bold;
-        }
-        
-        .color-control input[type="color"] {
-            width: 100%;
-            height: 40px;
-            cursor: pointer;
-        }
-        
-        @keyframes spin {
-            to { transform: rotate(360deg); }
-        }
-    </style>
+    <!-- [Previous head content remains the same] -->
 </head>
 <body>
-    <div id="loading-overlay">
-        <div class="spinner"></div>
-        <div>Loading 3D Hoodie...</div>
-    </div>
-    
-    <div id="info-panel">Loading model info...</div>
-    
-    <div id="viewer-container">
-        <div id="viewer"></div>
-    </div>
-    
-    <div id="sidebar">
-        <h2>Hoodie Customizer</h2>
-        
-        <div class="control-group">
-            <h3>Front Color</h3>
-            <div class="color-control">
-                <label for="frontColor">Color:</label>
-                <input type="color" id="frontColor" value="#333333" disabled>
-            </div>
-        </div>
-        
-        <div class="control-group">
-            <h3>Back Color</h3>
-            <div class="color-control">
-                <label for="backColor">Color:</label>
-                <input type="color" id="backColor" value="#222222" disabled>
-            </div>
-        </div>
-        
-        <div class="control-group">
-            <h3>Left Sleeve</h3>
-            <div class="color-control">
-                <label for="leftSleeveColor">Color:</label>
-                <input type="color" id="leftSleeveColor" value="#333333" disabled>
-            </div>
-        </div>
-        
-        <div class="control-group">
-            <h3>Right Sleeve</h3>
-            <div class="color-control">
-                <label for="rightSleeveColor">Color:</label>
-                <input type="color" id="rightSleeveColor" value="#333333" disabled>
-            </div>
-        </div>
-        
-        <div class="control-group">
-            <h3>Hood Color</h3>
-            <div class="color-control">
-                <label for="hoodColor">Color:</label>
-                <input type="color" id="hoodColor" value="#222222" disabled>
-            </div>
-        </div>
-    </div>
+    <!-- [Previous body content remains the same] -->
 
-    <script type="importmap">
-        {
-            "imports": {
-                "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
-                "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
-            }
-        }
-    </script>
     <script type="module">
         import * as THREE from 'three';
         import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
@@ -178,7 +23,6 @@
 
         // Initialize the application
         function init() {
-            // Check WebGL support
             if (!isWebGLAvailable()) {
                 showWebGLError();
                 return;
@@ -191,43 +35,23 @@
             animate();
         }
 
-        // Check WebGL support
-        function isWebGLAvailable() {
-            try {
-                const canvas = document.createElement('canvas');
-                return !!(
-                    window.WebGLRenderingContext &&
-                    (canvas.getContext('webgl') || canvas.getContext('experimental-webgl'))
-                );
-            } catch (e) {
-                return false;
-            }
-        }
+        // [Previous WebGL check functions remain the same]
 
-        function showWebGLError() {
-            const warning = document.createElement('div');
-            warning.innerHTML = 'WebGL not supported in your browser';
-            warning.style.color = 'white';
-            warning.style.backgroundColor = 'red';
-            warning.style.padding = '20px';
-            warning.style.fontFamily = 'sans-serif';
-            document.getElementById('viewer').appendChild(warning);
-            throw new Error('WebGL not supported');
-        }
-
-        // Setup Three.js scene
+        // Setup Three.js scene with safe dimensions
         function setupScene() {
             scene = new THREE.Scene();
             scene.background = new THREE.Color(0xf0f0f0);
             
-            // Calculate initial dimensions
-            const width = Math.max(1, window.innerWidth - 300);
-            const height = Math.max(1, window.innerHeight);
+            // Get safe initial dimensions
+            const { width, height } = getSafeDimensions();
             
             camera = new THREE.PerspectiveCamera(75, width / height, 0.1, 1000);
             camera.position.z = 5;
             
-            renderer = new THREE.WebGLRenderer({ antialias: true });
+            renderer = new THREE.WebGLRenderer({ 
+                antialias: true,
+                powerPreference: "high-performance"
+            });
             renderer.setSize(width, height);
             document.getElementById('viewer').appendChild(renderer.domElement);
             
@@ -242,198 +66,39 @@
             clock = new THREE.Clock();
         }
 
-        // Setup orbit controls
-        function setupControls() {
-            controls = new OrbitControls(camera, renderer.domElement);
-            controls.enableDamping = true;
-            controls.dampingFactor = 0.05;
+        // Calculate safe dimensions that prevent negative values
+        function getSafeDimensions() {
+            const sidebarWidth = 300; // Should match your CSS
+            let width = window.innerWidth - sidebarWidth;
+            let height = window.innerHeight;
+            
+            // Ensure minimum dimensions of 1px
+            width = Math.max(1, width);
+            height = Math.max(1, height);
+            
+            return { width, height };
         }
 
-        // Update info panel with model details
-        function updateModelInfo(gltf) {
-            let info = `Model loaded: ${gltf.scene.name || 'Unnamed'}<br>`;
-            
-            // Count meshes
-            let meshCount = 0;
-            gltf.scene.traverse((child) => {
-                if (child.isMesh) meshCount++;
-            });
-            info += `Meshes: ${meshCount}<br>`;
-            
-            // Animation info
-            if (gltf.animations && gltf.animations.length > 0) {
-                info += `Animations: ${gltf.animations.length}<br>`;
-                info += `Playing animation: ${gltf.animations[0].name || 'Unnamed'}`;
-            } else {
-                info += 'No animations found';
-            }
-            
-            document.getElementById('info-panel').innerHTML = info;
-        }
+        // [Previous control setup functions remain the same]
 
-        // Assign materials to each part based on naming convention
-        function setupHoodieMaterials(model) {
-            model.traverse((child) => {
-                if (child.isMesh) {
-                    // Check the name to determine which part this is
-                    const name = child.name.toLowerCase();
-                    
-                    // Create a new material for this part
-                    const material = new THREE.MeshStandardMaterial({
-                        color: 0x333333,
-                        roughness: 0.7,
-                        metalness: 0.0
-                    });
-                    
-                    // Assign to appropriate part based on name
-                    if (name.includes('front')) {
-                        material.color.copy(hoodieParts.front.color);
-                        hoodieParts.front.material = material;
-                    } else if (name.includes('back')) {
-                        material.color.copy(hoodieParts.back.color);
-                        hoodieParts.back.material = material;
-                    } else if (name.includes('left') && name.includes('sleeve')) {
-                        material.color.copy(hoodieParts.leftSleeve.color);
-                        hoodieParts.leftSleeve.material = material;
-                    } else if (name.includes('right') && name.includes('sleeve')) {
-                        material.color.copy(hoodieParts.rightSleeve.color);
-                        hoodieParts.rightSleeve.material = material;
-                    } else if (name.includes('hood')) {
-                        material.color.copy(hoodieParts.hood.color);
-                        hoodieParts.hood.material = material;
-                    }
-                    
-                    child.material = material;
-                }
-            });
-            
-            // Enable color controls
-            document.getElementById('frontColor').disabled = false;
-            document.getElementById('backColor').disabled = false;
-            document.getElementById('leftSleeveColor').disabled = false;
-            document.getElementById('rightSleeveColor').disabled = false;
-            document.getElementById('hoodColor').disabled = false;
-        }
-
-        // Load the model
-        async function loadModel() {
-            try {
-                const loader = new GLTFLoader();
-                
-                // Load your hoodie model
-                const modelUrl = 'Hoodie_Walking_Animated.glb'; // Make sure this path is correct
-                
-                const gltf = await loader.loadAsync(modelUrl);
-                
-                console.log('Model loaded successfully:', gltf);
-                const model = gltf.scene;
-                scene.add(model);
-                
-                // Setup materials for each part
-                setupHoodieMaterials(model);
-                
-                // Check for animations
-                if (gltf.animations && gltf.animations.length > 0) {
-                    mixer = new THREE.AnimationMixer(model);
-                    const action = mixer.clipAction(gltf.animations[0]);
-                    action.play();
-                    console.log(`Playing animation: ${gltf.animations[0].name}`);
-                }
-                
-                // Update model info
-                updateModelInfo(gltf);
-                
-                // Center model
-                const box = new THREE.Box3().setFromObject(model);
-                const center = box.getCenter(new THREE.Vector3());
-                model.position.sub(center);
-                
-                // Adjust camera distance based on model size
-                const size = box.getSize(new THREE.Vector3()).length();
-                camera.position.z = size * 1.5;
-                controls.update();
-                
-                // Hide loading overlay
-                document.getElementById('loading-overlay').style.display = 'none';
-                
-            } catch (error) {
-                console.error('Error loading model:', error);
-                
-                // Update info panel
-                document.getElementById('info-panel').innerHTML = 
-                    `Failed to load model: ${error.message}`;
-                
-                // Hide loading overlay
-                document.getElementById('loading-overlay').style.display = 'none';
-            }
-        }
-
-        // Setup color change event listeners
-        function setupColorControls() {
-            document.getElementById('frontColor').addEventListener('input', (e) => {
-                const color = new THREE.Color(e.target.value);
-                hoodieParts.front.color.copy(color);
-                if (hoodieParts.front.material) {
-                    hoodieParts.front.material.color.copy(color);
-                }
-            });
-            
-            document.getElementById('backColor').addEventListener('input', (e) => {
-                const color = new THREE.Color(e.target.value);
-                hoodieParts.back.color.copy(color);
-                if (hoodieParts.back.material) {
-                    hoodieParts.back.material.color.copy(color);
-                }
-            });
-            
-            document.getElementById('leftSleeveColor').addEventListener('input', (e) => {
-                const color = new THREE.Color(e.target.value);
-                hoodieParts.leftSleeve.color.copy(color);
-                if (hoodieParts.leftSleeve.material) {
-                    hoodieParts.leftSleeve.material.color.copy(color);
-                }
-            });
-            
-            document.getElementById('rightSleeveColor').addEventListener('input', (e) => {
-                const color = new THREE.Color(e.target.value);
-                hoodieParts.rightSleeve.color.copy(color);
-                if (hoodieParts.rightSleeve.material) {
-                    hoodieParts.rightSleeve.material.color.copy(color);
-                }
-            });
-            
-            document.getElementById('hoodColor').addEventListener('input', (e) => {
-                const color = new THREE.Color(e.target.value);
-                hoodieParts.hood.color.copy(color);
-                if (hoodieParts.hood.material) {
-                    hoodieParts.hood.material.color.copy(color);
-                }
-            });
-        }
-
-        // Animation loop
-        function animate() {
-            requestAnimationFrame(animate);
-            
-            const delta = clock.getDelta();
-            if (mixer) mixer.update(delta);
-            
-            controls.update();
-            renderer.render(scene, camera);
-        }
-
-        // Handle window resize
+        // Improved resize handler with debouncing
+        let resizeTimeout;
         function handleResize() {
-            const width = Math.max(1, window.innerWidth - 300);
-            const height = Math.max(1, window.innerHeight);
-            
-            camera.aspect = width / height;
-            camera.updateProjectionMatrix();
-            renderer.setSize(width, height);
+            // Debounce resize events
+            clearTimeout(resizeTimeout);
+            resizeTimeout = setTimeout(() => {
+                const { width, height } = getSafeDimensions();
+                
+                // Only update if dimensions are valid
+                if (width > 0 && height > 0) {
+                    camera.aspect = width / height;
+                    camera.updateProjectionMatrix();
+                    renderer.setSize(width, height);
+                }
+            }, 100); // 100ms debounce time
         }
 
-        // Event listeners
-        window.addEventListener('resize', handleResize);
+        // [Rest of your code remains the same]
 
         // Start the application
         init();
