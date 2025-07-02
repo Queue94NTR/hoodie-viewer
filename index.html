@@ -138,7 +138,7 @@
             <h3>Hoodie Color</h3>
             <div class="color-control">
                 <label for="hoodieColor">Color:</label>
-                <input type="color" id="hoodieColor" value="#333333">
+                <input type="color" id="hoodieColor" value="#FFFFFF">
             </div>
         </div>
         
@@ -276,6 +276,16 @@
             document.getElementById('info-panel').innerHTML = info;
         }
 
+        // Create a new white base material
+        function createBaseMaterial() {
+            return new THREE.MeshStandardMaterial({
+                color: 0xFFFFFF, // White base
+                roughness: 0.7,
+                metalness: 0.0,
+                side: THREE.DoubleSide
+            });
+        }
+
         // Apply color to the hoodie
         function applyColor() {
             const colorValue = document.getElementById('hoodieColor').value;
@@ -300,11 +310,14 @@
                 hoodieModel = gltf.scene;
                 scene.add(hoodieModel);
                 
-                // Get the material reference
+                // Replace all materials with our base material
+                const baseMaterial = createBaseMaterial();
                 hoodieModel.traverse((child) => {
-                    if (child.isMesh && child.material) {
-                        hoodieMaterial = child.material;
-                        console.log("Found hoodie material:", hoodieMaterial);
+                    if (child.isMesh) {
+                        // Store reference to the material we'll be modifying
+                        hoodieMaterial = baseMaterial;
+                        child.material = baseMaterial;
+                        console.log("Replaced material for:", child.name);
                     }
                 });
                 
@@ -329,6 +342,9 @@
                 camera.position.z = size * 1.5;
                 controls.update();
                 
+                // Enable apply button
+                document.getElementById('apply-colors').disabled = false;
+                
                 // Hide loading overlay
                 document.getElementById('loading-overlay').style.display = 'none';
                 
@@ -351,7 +367,7 @@
             
             // Live update if desired
             document.getElementById('hoodieColor').addEventListener('input', (e) => {
-                // Optional: You can add live preview here if needed
+                // Optional live preview could be added here
             });
         }
 
