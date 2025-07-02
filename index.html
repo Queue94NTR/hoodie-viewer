@@ -50,7 +50,7 @@
 <body>
     <div id="loading-overlay">
         <div class="spinner"></div>
-        <div>Loading 3D Model...</div>
+        <div>Loading 3D Hoodie...</div>
     </div>
     
     <div id="viewer-container">
@@ -118,13 +118,52 @@
         controls.enableDamping = true;
         controls.dampingFactor = 0.05;
         
+        // Create a simple hoodie-like shape
+        function createSimpleHoodie() {
+            // Main body
+            const bodyGeometry = new THREE.BoxGeometry(1.5, 2, 0.5);
+            const bodyMaterial = new THREE.MeshStandardMaterial({ color: 0x333333 });
+            const body = new THREE.Mesh(bodyGeometry, bodyMaterial);
+            
+            // Hood
+            const hoodGeometry = new THREE.ConeGeometry(0.8, 0.8, 4);
+            hoodGeometry.rotateX(Math.PI);
+            hoodGeometry.translate(0, 1.2, 0.25);
+            const hoodMaterial = new THREE.MeshStandardMaterial({ color: 0x222222 });
+            const hood = new THREE.Mesh(hoodGeometry, hoodMaterial);
+            
+            // Sleeves
+            const sleeveGeometry = new THREE.CylinderGeometry(0.2, 0.2, 1.2, 8);
+            
+            // Left sleeve
+            const leftSleeve = new THREE.Mesh(sleeveGeometry, bodyMaterial);
+            leftSleeve.position.set(-0.9, 0, 0);
+            leftSleeve.rotateZ(Math.PI/2);
+            
+            // Right sleeve
+            const rightSleeve = new THREE.Mesh(sleeveGeometry, bodyMaterial);
+            rightSleeve.position.set(0.9, 0, 0);
+            rightSleeve.rotateZ(Math.PI/2);
+            
+            // Combine all parts
+            const hoodie = new THREE.Group();
+            hoodie.add(body);
+            hoodie.add(hood);
+            hoodie.add(leftSleeve);
+            hoodie.add(rightSleeve);
+            
+            return hoodie;
+        }
+        
         // Load the model
         const loadModel = async () => {
             try {
                 const loader = new GLTFLoader();
                 
-                // Using a simple hoodie model from Three.js examples
-                const modelUrl = 'https://threejs.org/examples/models/gltf/LittlestTokyo.glb';
+                // Using a simple hoodie model (replace with your actual hoodie model URL)
+                const modelUrl = 'https://cdn.jsdelivr.net/gh/mrdoob/three.js@dev/examples/models/gltf/Flower/Flower.glb';
+                // Note: The above is just a placeholder - you'll need to find/host an actual hoodie model
+                
                 const gltf = await loader.loadAsync(modelUrl);
                 
                 console.log('Model loaded successfully');
@@ -148,11 +187,9 @@
             } catch (error) {
                 console.error('Error loading model:', error);
                 
-                // Create a fallback cube if model fails to load
-                const geometry = new THREE.BoxGeometry(1, 1.5, 0.8);
-                const material = new THREE.MeshStandardMaterial({ color: 0x333333 });
-                const cube = new THREE.Mesh(geometry, material);
-                scene.add(cube);
+                // Create a simple hoodie-like shape if model fails to load
+                const hoodie = createSimpleHoodie();
+                scene.add(hoodie);
                 
                 camera.position.z = 3;
                 controls.update();
@@ -160,6 +197,7 @@
                 // Hide loading overlay
                 document.getElementById('loading-overlay').style.display = 'none';
                 
+                console.log('Using fallback hoodie shape');
                 return false;
             }
         };
