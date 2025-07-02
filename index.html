@@ -91,6 +91,32 @@
             height: 40px;
             cursor: pointer;
         }
+
+        .button-group {
+            display: flex;
+            gap: 10px;
+            margin-top: 15px;
+        }
+        
+        .button-group button {
+            flex: 1;
+            padding: 10px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            background-color: #4361ee;
+            color: white;
+            transition: background-color 0.3s;
+        }
+        
+        .button-group button:hover {
+            background-color: #3a56d4;
+        }
+        
+        .button-group button:disabled {
+            background-color: #cccccc;
+            cursor: not-allowed;
+        }
         
         #apply-colors {
             background-color: #4361ee;
@@ -112,6 +138,34 @@
         #apply-colors:disabled {
             background-color: #cccccc;
             cursor: not-allowed;
+        }
+
+        #design-upload {
+            margin-top: 15px;
+            width: 100%;
+        }
+
+        .decal-controls {
+            margin-top: 15px;
+            display: none;
+        }
+
+        .decal-controls.active {
+            display: block;
+        }
+
+        .slider-control {
+            margin-bottom: 10px;
+        }
+
+        .slider-control label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+
+        .slider-control input[type="range"] {
+            width: 100%;
         }
         
         @keyframes spin {
@@ -135,14 +189,46 @@
         <h2>Hoodie Customizer</h2>
         
         <div class="control-group">
+            <h3>Animation Controls</h3>
+            <div class="button-group">
+                <button id="play-animation" disabled>Play</button>
+                <button id="pause-animation" disabled>Pause</button>
+                <button id="reset-animation" disabled>Reset</button>
+            </div>
+        </div>
+        
+        <div class="control-group">
             <h3>Hoodie Color</h3>
             <div class="color-control">
                 <label for="hoodieColor">Color:</label>
                 <input type="color" id="hoodieColor" value="#FFFFFF">
             </div>
+            <button id="apply-colors">Apply Color</button>
         </div>
-        
-        <button id="apply-colors">Apply Color</button>
+
+        <div class="control-group">
+            <h3>Add Design</h3>
+            <input type="file" id="design-upload" accept="image/*">
+            <div class="decal-controls" id="decal-controls">
+                <div class="slider-control">
+                    <label for="decal-x">Position X:</label>
+                    <input type="range" id="decal-x" min="-2" max="2" step="0.1" value="0">
+                </div>
+                <div class="slider-control">
+                    <label for="decal-y">Position Y:</label>
+                    <input type="range" id="decal-y" min="-2" max="2" step="0.1" value="1">
+                </div>
+                <div class="slider-control">
+                    <label for="decal-z">Position Z:</label>
+                    <input type="range" id="decal-z" min="-2" max="2" step="0.1" value="0">
+                </div>
+                <div class="slider-control">
+                    <label for="decal-scale">Scale:</label>
+                    <input type="range" id="decal-scale" min="0.1" max="2" step="0.1" value="0.5">
+                </div>
+                <button id="apply-decal">Apply Design</button>
+            </div>
+        </div>
     </div>
 
     <script type="importmap">
@@ -161,6 +247,9 @@
         // Main variables
         let scene, camera, renderer, controls, mixer, clock, hoodieModel;
         let hoodieMaterial = null;
+        let currentAction = null;
+        let decalMesh = null;
+        let decalTexture = null;
 
         // Initialize the application
         function init() {
@@ -172,7 +261,7 @@
 
             setupScene();
             setupControls();
-            setupColorControls();
+            setupUI();
             loadModel();
             animate();
         }
@@ -254,6 +343,21 @@
             controls.dampingFactor = 0.05;
         }
 
+        // Setup UI event listeners
+        function setupUI() {
+            // Animation controls
+            document.getElementById('play-animation').addEventListener('click', playAnimation);
+            document.getElementById('pause-animation').addEventListener('click', pauseAnimation);
+            document.getElementById('reset-animation').addEventListener('click', resetAnimation);
+            
+            // Color controls
+            document.getElementById('apply-colors').addEventListener('click', applyColor);
+            
+            // Design upload
+            document.getElementById('design-upload').addEventListener('change', handleDesignUpload);
+            document.getElementById('apply-decal').addEventListener('click', applyDecal);
+        }
+
         // Update info panel with model details
         function updateModelInfo(gltf) {
             let info = `Model loaded: ${gltf.scene.name || 'Unnamed'}<br>`;
@@ -296,6 +400,94 @@
             }
         }
 
+        // Animation controls
+        function playAnimation() {
+            if (currentAction) {
+                currentAction.play();
+            }
+        }
+
+        function pauseAnimation() {
+            if (currentAction) {
+                currentAction.pause();
+            }
+        }
+
+        function resetAnimation() {
+            if (currentAction) {
+                currentAction.stop();
+                currentAction.play();
+            }
+        }
+
+        // Handle design upload
+        function handleDesignUpload(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const image = new Image();
+                image.onload = function() {
+                    // Create texture from the image
+                    decalTexture = new THREE.Texture(image);
+                    decalTexture.needsUpdate = true;
+                    
+                    // Show decal controls
+                    document.getElementById('decal-controls').classList.add('active');
+                };
+                image.src = e.target.result;
+            };
+            reader.readAsDataURL(file);
+        }
+
+        // Apply decal to the hoodie
+        function applyDecal() {
+            if (!decalTexture || !hoodieModel) return;
+
+            // Remove existing decal if any
+            if (decalMesh) {
+                scene.remove(decalMesh);
+            }
+
+            // Get position from sliders
+            const x = parseFloat(document.getElementById('decal-x').value);
+            const y = parseFloat(document.getElementById('decal-y').value);
+            const z = parseFloat(document.getElementById('decal-z').value);
+            const scale = parseFloat(document.getElementById('decal-scale').value);
+
+            // Create decal material
+            const decalMaterial = new THREE.MeshBasicMaterial({
+                map: decalTexture,
+                transparent: true,
+                depthTest: true,
+                depthWrite: false,
+                polygonOffset: true,
+                polygonOffsetFactor: -4
+            });
+
+            // Find the hoodie mesh
+            let hoodieMesh = null;
+            hoodieModel.traverse(child => {
+                if (child.isMesh && !hoodieMesh) {
+                    hoodieMesh = child;
+                }
+            });
+
+            if (!hoodieMesh) return;
+
+            // Create decal geometry
+            const decalGeometry = new THREE.PlaneGeometry(scale, scale);
+            
+            // Create decal mesh
+            decalMesh = new THREE.Mesh(decalGeometry, decalMaterial);
+            decalMesh.position.set(x, y, z);
+            decalMesh.lookAt(hoodieMesh.position);
+            
+            // Add to scene
+            scene.add(decalMesh);
+        }
+
         // Load the model
         async function loadModel() {
             try {
@@ -324,9 +516,14 @@
                 // Check for animations
                 if (gltf.animations && gltf.animations.length > 0) {
                     mixer = new THREE.AnimationMixer(hoodieModel);
-                    const action = mixer.clipAction(gltf.animations[0]);
-                    action.play();
+                    currentAction = mixer.clipAction(gltf.animations[0]);
+                    currentAction.play();
                     console.log(`Playing animation: ${gltf.animations[0].name}`);
+                    
+                    // Enable animation controls
+                    document.getElementById('play-animation').disabled = false;
+                    document.getElementById('pause-animation').disabled = false;
+                    document.getElementById('reset-animation').disabled = false;
                 }
                 
                 // Update model info
@@ -358,17 +555,6 @@
                 // Hide loading overlay
                 document.getElementById('loading-overlay').style.display = 'none';
             }
-        }
-
-        // Setup color controls
-        function setupColorControls() {
-            // Apply button
-            document.getElementById('apply-colors').addEventListener('click', applyColor);
-            
-            // Live update if desired
-            document.getElementById('hoodieColor').addEventListener('input', (e) => {
-                // Optional live preview could be added here
-            });
         }
 
         // Animation loop
