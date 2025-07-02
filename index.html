@@ -241,6 +241,10 @@
             directionalLight.position.set(1, 1, 1);
             scene.add(directionalLight);
             
+            const backLight = new THREE.DirectionalLight(0xffffff, 0.5);
+            backLight.position.set(-1, -1, -1);
+            scene.add(backLight);
+            
             clock = new THREE.Clock();
         }
 
@@ -288,7 +292,9 @@
 
         // Improved material assignment function
         function setupHoodieMaterials(model) {
-            // First pass: Count materials and log mesh names for debugging
+            console.log("Starting material assignment...");
+            
+            // First pass: Log all mesh names for debugging
             console.log("Model parts found:");
             model.traverse((child) => {
                 if (child.isMesh) {
@@ -296,52 +302,54 @@
                 }
             });
 
-            // Second pass: Assign materials based on more flexible naming
+            // Second pass: Assign materials
+            let assignedCount = 0;
             model.traverse((child) => {
                 if (child.isMesh) {
                     const name = child.name.toLowerCase();
-                    
-                    // Create a new material for this part
-                    const material = new THREE.MeshStandardMaterial({
-                        color: 0x333333,
-                        roughness: 0.7,
-                        metalness: 0.0
-                    });
+                    let partType = null;
                     
                     // More flexible naming detection
-                    if (name.includes('front') || name.includes('chest') || name.includes('torso')) {
-                        material.color.copy(hoodieParts.front.color);
-                        hoodieParts.front.material = material;
-                        console.log(`Assigned FRONT material to: ${child.name}`);
+                    if (name.includes('front') || name.includes('chest') || name.includes('torso') || name.includes('body')) {
+                        partType = 'front';
                     } 
                     else if (name.includes('back') || name.includes('rear')) {
-                        material.color.copy(hoodieParts.back.color);
-                        hoodieParts.back.material = material;
-                        console.log(`Assigned BACK material to: ${child.name}`);
+                        partType = 'back';
                     } 
-                    else if ((name.includes('left') && name.includes('sleeve')) || name.includes('l_sleeve')) {
-                        material.color.copy(hoodieParts.leftSleeve.color);
-                        hoodieParts.leftSleeve.material = material;
-                        console.log(`Assigned LEFT SLEEVE material to: ${child.name}`);
+                    else if ((name.includes('left') && name.includes('sleeve')) || name.includes('l_sleeve') || name.includes('sleeve_l')) {
+                        partType = 'leftSleeve';
                     } 
-                    else if ((name.includes('right') && name.includes('sleeve')) || name.includes('r_sleeve')) {
-                        material.color.copy(hoodieParts.rightSleeve.color);
-                        hoodieParts.rightSleeve.material = material;
-                        console.log(`Assigned RIGHT SLEEVE material to: ${child.name}`);
+                    else if ((name.includes('right') && name.includes('sleeve')) || name.includes('r_sleeve') || name.includes('sleeve_r')) {
+                        partType = 'rightSleeve';
                     } 
-                    else if (name.includes('hood') || name.includes('head')) {
-                        material.color.copy(hoodieParts.hood.color);
-                        hoodieParts.hood.material = material;
-                        console.log(`Assigned HOOD material to: ${child.name}`);
-                    }
-                    else {
-                        console.log(`No part matched for: ${child.name} - using default material`);
+                    else if (name.includes('hood') || name.includes('head') || name.includes('cowl')) {
+                        partType = 'hood';
                     }
                     
-                    child.material = material;
-                    child.material.needsUpdate = true;
+                    if (partType) {
+                        const material = new THREE.MeshStandardMaterial({
+                            color: hoodieParts[partType].color,
+                            roughness: 0.7,
+                            metalness: 0.0
+                        });
+                        
+                        child.material = material;
+                        hoodieParts[partType].material = material;
+                        assignedCount++;
+                        
+                        console.log(`Assigned ${partType.toUpperCase()} material to: ${child.name}`);
+                    } else {
+                        console.log(`No part matched for: ${child.name} - using default material`);
+                        child.material = new THREE.MeshStandardMaterial({
+                            color: 0x888888,
+                            roughness: 0.7,
+                            metalness: 0.0
+                        });
+                    }
                 }
             });
+            
+            console.log(`Assigned materials to ${assignedCount} parts`);
             
             // Enable color controls
             enableColorControls();
