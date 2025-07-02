@@ -135,46 +135,14 @@
         <h2>Hoodie Customizer</h2>
         
         <div class="control-group">
-            <h3>Front Color</h3>
+            <h3>Hoodie Color</h3>
             <div class="color-control">
-                <label for="frontColor">Color:</label>
-                <input type="color" id="frontColor" value="#333333">
+                <label for="hoodieColor">Color:</label>
+                <input type="color" id="hoodieColor" value="#333333">
             </div>
         </div>
         
-        <div class="control-group">
-            <h3>Back Color</h3>
-            <div class="color-control">
-                <label for="backColor">Color:</label>
-                <input type="color" id="backColor" value="#222222">
-            </div>
-        </div>
-        
-        <div class="control-group">
-            <h3>Left Sleeve</h3>
-            <div class="color-control">
-                <label for="leftSleeveColor">Color:</label>
-                <input type="color" id="leftSleeveColor" value="#333333">
-            </div>
-        </div>
-        
-        <div class="control-group">
-            <h3>Right Sleeve</h3>
-            <div class="color-control">
-                <label for="rightSleeveColor">Color:</label>
-                <input type="color" id="rightSleeveColor" value="#333333">
-            </div>
-        </div>
-        
-        <div class="control-group">
-            <h3>Hood Color</h3>
-            <div class="color-control">
-                <label for="hoodColor">Color:</label>
-                <input type="color" id="hoodColor" value="#222222">
-            </div>
-        </div>
-        
-        <button id="apply-colors" disabled>Apply Colors</button>
+        <button id="apply-colors">Apply Color</button>
     </div>
 
     <script type="importmap">
@@ -192,13 +160,7 @@
         
         // Main variables
         let scene, camera, renderer, controls, mixer, clock, hoodieModel;
-        let hoodieParts = {
-            front: { color: new THREE.Color(0x333333), material: null, elements: [] },
-            back: { color: new THREE.Color(0x222222), material: null, elements: [] },
-            leftSleeve: { color: new THREE.Color(0x333333), material: null, elements: [] },
-            rightSleeve: { color: new THREE.Color(0x333333), material: null, elements: [] },
-            hood: { color: new THREE.Color(0x222222), material: null, elements: [] }
-        };
+        let hoodieMaterial = null;
 
         // Initialize the application
         function init() {
@@ -314,116 +276,14 @@
             document.getElementById('info-panel').innerHTML = info;
         }
 
-        // Improved material assignment function
-        function setupHoodieMaterials(model) {
-            console.log("Starting material assignment...");
-            
-            // Clear any previous elements
-            for (const part in hoodieParts) {
-                hoodieParts[part].elements = [];
+        // Apply color to the hoodie
+        function applyColor() {
+            const colorValue = document.getElementById('hoodieColor').value;
+            if (hoodieMaterial) {
+                hoodieMaterial.color.set(colorValue);
+                hoodieMaterial.needsUpdate = true;
+                console.log("Color applied to hoodie:", colorValue);
             }
-            
-            // First pass: Log all mesh names for debugging
-            console.log("Model parts found:");
-            model.traverse((child) => {
-                if (child.isMesh) {
-                    console.log(`- ${child.name} (${child.material?.name || 'no material'})`);
-                }
-            });
-
-            // Second pass: Assign materials and collect elements
-            let assignedCount = 0;
-            model.traverse((child) => {
-                if (child.isMesh) {
-                    const name = child.name.toLowerCase();
-                    let partType = null;
-                    
-                    // More flexible naming detection
-                    if (name.includes('front') || name.includes('chest') || name.includes('torso') || name.includes('body')) {
-                        partType = 'front';
-                    } 
-                    else if (name.includes('back') || name.includes('rear')) {
-                        partType = 'back';
-                    } 
-                    else if ((name.includes('left') && name.includes('sleeve')) || name.includes('l_sleeve') || name.includes('sleeve_l')) {
-                        partType = 'leftSleeve';
-                    } 
-                    else if ((name.includes('right') && name.includes('sleeve')) || name.includes('r_sleeve') || name.includes('sleeve_r')) {
-                        partType = 'rightSleeve';
-                    } 
-                    else if (name.includes('hood') || name.includes('head') || name.includes('cowl')) {
-                        partType = 'hood';
-                    }
-                    
-                    if (partType) {
-                        // Store reference to this mesh
-                        hoodieParts[partType].elements.push(child);
-                        
-                        // Create material if it doesn't exist
-                        if (!hoodieParts[partType].material) {
-                            hoodieParts[partType].material = new THREE.MeshStandardMaterial({
-                                color: hoodieParts[partType].color,
-                                roughness: 0.7,
-                                metalness: 0.0
-                            });
-                        }
-                        
-                        child.material = hoodieParts[partType].material;
-                        assignedCount++;
-                        
-                        console.log(`Assigned ${partType.toUpperCase()} material to: ${child.name}`);
-                    } else {
-                        console.log(`No part matched for: ${child.name} - using default material`);
-                        child.material = new THREE.MeshStandardMaterial({
-                            color: 0x888888,
-                            roughness: 0.7,
-                            metalness: 0.0
-                        });
-                    }
-                }
-            });
-            
-            console.log(`Assigned materials to ${assignedCount} parts`);
-            
-            // Enable controls
-            document.getElementById('apply-colors').disabled = false;
-            
-            // Set initial color values
-            document.getElementById('frontColor').value = `#${hoodieParts.front.color.getHexString()}`;
-            document.getElementById('backColor').value = `#${hoodieParts.back.color.getHexString()}`;
-            document.getElementById('leftSleeveColor').value = `#${hoodieParts.leftSleeve.color.getHexString()}`;
-            document.getElementById('rightSleeveColor').value = `#${hoodieParts.rightSleeve.color.getHexString()}`;
-            document.getElementById('hoodColor').value = `#${hoodieParts.hood.color.getHexString()}`;
-        }
-
-        // Apply all colors at once
-        function applyColors() {
-            console.log("Applying all colors...");
-            
-            // Update colors from inputs
-            hoodieParts.front.color.set(document.getElementById('frontColor').value);
-            hoodieParts.back.color.set(document.getElementById('backColor').value);
-            hoodieParts.leftSleeve.color.set(document.getElementById('leftSleeveColor').value);
-            hoodieParts.rightSleeve.color.set(document.getElementById('rightSleeveColor').value);
-            hoodieParts.hood.color.set(document.getElementById('hoodColor').value);
-            
-            // Update all materials
-            for (const part in hoodieParts) {
-                if (hoodieParts[part].material) {
-                    hoodieParts[part].material.color.copy(hoodieParts[part].color);
-                    hoodieParts[part].material.needsUpdate = true;
-                }
-                
-                // Also update individual elements directly (in case material sharing isn't working)
-                hoodieParts[part].elements.forEach(mesh => {
-                    if (mesh.material) {
-                        mesh.material.color.copy(hoodieParts[part].color);
-                        mesh.material.needsUpdate = true;
-                    }
-                });
-            }
-            
-            console.log("Colors applied successfully");
         }
 
         // Load the model
@@ -440,8 +300,13 @@
                 hoodieModel = gltf.scene;
                 scene.add(hoodieModel);
                 
-                // Setup materials for each part
-                setupHoodieMaterials(hoodieModel);
+                // Get the material reference
+                hoodieModel.traverse((child) => {
+                    if (child.isMesh && child.material) {
+                        hoodieMaterial = child.material;
+                        console.log("Found hoodie material:", hoodieMaterial);
+                    }
+                });
                 
                 // Check for animations
                 if (gltf.animations && gltf.animations.length > 0) {
@@ -482,27 +347,11 @@
         // Setup color controls
         function setupColorControls() {
             // Apply button
-            document.getElementById('apply-colors').addEventListener('click', applyColors);
+            document.getElementById('apply-colors').addEventListener('click', applyColor);
             
-            // You can still keep the live updates if you want
-            document.getElementById('frontColor').addEventListener('input', (e) => {
-                hoodieParts.front.color.set(e.target.value);
-            });
-            
-            document.getElementById('backColor').addEventListener('input', (e) => {
-                hoodieParts.back.color.set(e.target.value);
-            });
-            
-            document.getElementById('leftSleeveColor').addEventListener('input', (e) => {
-                hoodieParts.leftSleeve.color.set(e.target.value);
-            });
-            
-            document.getElementById('rightSleeveColor').addEventListener('input', (e) => {
-                hoodieParts.rightSleeve.color.set(e.target.value);
-            });
-            
-            document.getElementById('hoodColor').addEventListener('input', (e) => {
-                hoodieParts.hood.color.set(e.target.value);
+            // Live update if desired
+            document.getElementById('hoodieColor').addEventListener('input', (e) => {
+                // Optional: You can add live preview here if needed
             });
         }
 
