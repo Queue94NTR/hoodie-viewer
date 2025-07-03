@@ -52,31 +52,23 @@
             font-size: 0.9em;
             z-index: 100;
             display: none;
-            max-width: 300px;
             cursor: pointer;
-            transition: opacity 0.3s ease;
-        }
-        
-        #info-panel.visible {
-            display: block;
+            max-width: 300px;
+            max-height: 200px;
+            overflow-y: auto;
         }
         
         #info-panel-toggle {
             position: absolute;
             top: 15px;
             left: 15px;
-            width: 30px;
-            height: 30px;
             background: rgba(0,0,0,0.7);
             color: white;
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            z-index: 101;
+            padding: 10px 15px;
+            border-radius: 5px;
+            font-size: 0.9em;
+            z-index: 100;
             cursor: pointer;
-            font-weight: bold;
-            font-size: 1.2em;
         }
         
         .control-group {
@@ -501,7 +493,7 @@
         <div>Loading 3D Hoodie Designer...</div>
     </div>
     
-    <div id="info-panel-toggle">i</div>
+    <div id="info-panel-toggle">ℹ️ Info</div>
     <div id="info-panel">Loading model info...</div>
     
     <div id="viewer-container">
@@ -791,10 +783,9 @@
         function isWebGLAvailable() {
             try {
                 const canvas = document.createElement('canvas');
-                return !!(
-                    window.WebGLRenderingContext &&
-                    (canvas.getContext('webgl') || canvas.getContext('experimental-webgl'))
-                );
+                canvas.width = canvas.height = 2;
+                const ctx = canvas.getContext('webgl') || canvas.getContext('experimental-webgl');
+                return !!(window.WebGLRenderingContext && ctx);
             } catch (e) {
                 return false;
             }
@@ -902,18 +893,19 @@
         // Setup UI event listeners
         function setupUI() {
             // Info panel toggle
-            const infoPanel = document.getElementById('info-panel');
-            const infoToggle = document.getElementById('info-panel-toggle');
-            
-            infoToggle.addEventListener('click', (e) => {
+            document.getElementById('info-panel-toggle').addEventListener('click', (e) => {
                 e.stopPropagation();
-                infoPanel.classList.toggle('visible');
+                const infoPanel = document.getElementById('info-panel');
+                infoPanel.style.display = infoPanel.style.display === 'block' ? 'none' : 'block';
             });
             
-            // Close panel when clicking outside
+            // Close info panel when clicking outside
             document.addEventListener('click', (e) => {
-                if (!infoPanel.contains(e.target) {
-                    infoPanel.classList.remove('visible');
+                const infoPanel = document.getElementById('info-panel');
+                const toggleButton = document.getElementById('info-panel-toggle');
+                
+                if (e.target !== infoPanel && e.target !== toggleButton && !infoPanel.contains(e.target)) {
+                    infoPanel.style.display = 'none';
                 }
             });
             
@@ -923,7 +915,7 @@
                     isAnimationPaused = false;
                     currentAction.paused = false;
                     currentAction.play();
-                    updateInfoPanel('Animation playing');
+                    document.getElementById('info-panel').innerHTML += '<br>Animation playing';
                     document.getElementById('statusMessage').textContent = 'Animation playing';
                 }
             });
@@ -932,7 +924,9 @@
                 if (currentAction) {
                     isAnimationPaused = !isAnimationPaused;
                     currentAction.paused = isAnimationPaused;
-                    updateInfoPanel(isAnimationPaused ? 'Animation paused' : 'Animation playing');
+                    document.getElementById('info-panel').innerHTML += isAnimationPaused 
+                        ? '<br>Animation paused' 
+                        : '<br>Animation playing';
                     document.getElementById('statusMessage').textContent = isAnimationPaused 
                         ? 'Animation paused' 
                         : 'Animation playing';
@@ -967,7 +961,8 @@
                 document.getElementById('roughnessValue').textContent = preset.roughness.toFixed(2);
                 
                 updateHoodieMaterial();
-                updateInfoPanel(`Material: ${e.target.value}`);
+                
+                document.getElementById('info-panel').innerHTML += `<br>Material: ${e.target.value}`;
                 document.getElementById('statusMessage').textContent = `Material: ${e.target.value}`;
             });
             
@@ -981,7 +976,7 @@
             document.getElementById('animationEffect').addEventListener('change', (e) => {
                 animationEffect = e.target.value;
                 windEffect.strength = animationEffect === 'wind' ? 0.1 : 0;
-                updateInfoPanel(`Effect: ${animationEffect}`);
+                document.getElementById('info-panel').innerHTML += `<br>Effect: ${animationEffect}`;
                 document.getElementById('statusMessage').textContent = `Effect: ${animationEffect}`;
             });
             
@@ -990,7 +985,7 @@
                 lightingEffect = e.target.value;
                 await loadEnvironment(lightingEffect);
                 updateLighting();
-                updateInfoPanel(`Lighting: ${lightingEffect}`);
+                document.getElementById('info-panel').innerHTML += `<br>Lighting: ${lightingEffect}`;
                 document.getElementById('statusMessage').textContent = `Lighting: ${lightingEffect}`;
             });
             
@@ -998,7 +993,7 @@
             document.getElementById('backgroundEffect').addEventListener('change', (e) => {
                 backgroundEffect = e.target.value;
                 updateBackground();
-                updateInfoPanel(`Background: ${backgroundEffect}`);
+                document.getElementById('info-panel').innerHTML += `<br>Background: ${backgroundEffect}`;
                 document.getElementById('statusMessage').textContent = `Background: ${backgroundEffect}`;
             });
             
@@ -1041,7 +1036,8 @@
                 document.getElementById('decal-rotation-input').value = 0;
                 
                 applyDecal();
-                updateInfoPanel('Transformations reset');
+                
+                document.getElementById('info-panel').innerHTML += '<br>Transformations reset';
                 document.getElementById('statusMessage').textContent = 'Transformations reset';
             });
             
@@ -1062,13 +1058,6 @@
                 // Reset the input to allow loading the same file again
                 e.target.value = '';
             });
-        }
-        
-        // Update info panel with new message
-        function updateInfoPanel(message) {
-            const infoPanel = document.getElementById('info-panel');
-            infoPanel.innerHTML += `<br>${message}`;
-            infoPanel.scrollTop = infoPanel.scrollHeight;
         }
         
         // Setup transform control
@@ -1111,7 +1100,7 @@
         // Load all resources
         async function loadResources() {
             try {
-                updateInfoPanel('Loading resources...');
+                document.getElementById('info-panel').innerHTML = 'Loading resources...';
                 document.getElementById('statusMessage').textContent = 'Loading resources...';
                 
                 // Load textures
@@ -1138,7 +1127,7 @@
                 document.getElementById('statusMessage').textContent = 'Ready';
             } catch (error) {
                 console.error('Error loading resources:', error);
-                updateInfoPanel(`Error: ${error.message}`);
+                document.getElementById('info-panel').innerHTML = `Error: ${error.message}`;
                 document.getElementById('statusMessage').textContent = `Error: ${error.message}`;
                 document.getElementById('loading-overlay').textContent = `Error: ${error.message}`;
             }
@@ -1146,7 +1135,7 @@
         
         // Load textures
         async function loadTextures() {
-            updateInfoPanel('Loading textures...');
+            document.getElementById('info-panel').innerHTML = 'Loading textures...';
             document.getElementById('statusMessage').textContent = 'Loading textures...';
             
             const textureUrls = {
@@ -1218,7 +1207,7 @@
         
         // Load environment map
         async function loadEnvironment(type = 'studio') {
-            updateInfoPanel(`Loading ${type} environment...`);
+            document.getElementById('info-panel').innerHTML = `Loading ${type} environment...`;
             document.getElementById('statusMessage').textContent = `Loading ${type} environment...`;
             
             try {
@@ -1317,7 +1306,7 @@
             if (hoodieMaterial) {
                 hoodieMaterial.color.set(colorValue);
                 hoodieMaterial.needsUpdate = true;
-                updateInfoPanel(`Color applied: ${colorValue}`);
+                document.getElementById('info-panel').innerHTML += `<br>Color applied: ${colorValue}`;
                 document.getElementById('statusMessage').textContent = `Color applied: ${colorValue}`;
             }
         }
@@ -1362,7 +1351,7 @@
                     
                     // Show decal controls
                     document.getElementById('decal-controls').classList.add('active');
-                    updateInfoPanel('Design loaded');
+                    document.getElementById('info-panel').innerHTML += '<br>Design loaded';
                     document.getElementById('statusMessage').textContent = 'Design loaded';
                 };
                 image.src = e.target.result;
@@ -1416,7 +1405,7 @@
             
             // Add to scene
             scene.add(decalMesh);
-            updateInfoPanel('Design applied');
+            document.getElementById('info-panel').innerHTML += '<br>Design applied';
             document.getElementById('statusMessage').textContent = 'Design applied';
         }
 
@@ -1459,7 +1448,7 @@
                     document.getElementById('play-animation').disabled = false;
                     document.getElementById('pause-animation').disabled = false;
                     
-                    updateInfoPanel('Animation ready');
+                    document.getElementById('info-panel').innerHTML += '<br>Animation ready';
                     document.getElementById('statusMessage').textContent = 'Animation ready';
                 }
                 
@@ -1604,7 +1593,7 @@
             link.download = `hoodie-design-${new Date().toISOString().slice(0, 10)}.${mimeType.split('/')[1]}`;
             link.click();
             
-            updateInfoPanel('Screenshot saved');
+            document.getElementById('info-panel').innerHTML += '<br>Screenshot saved';
             document.getElementById('statusMessage').textContent = 'Screenshot saved';
         }
         
@@ -1627,7 +1616,7 @@
             link.download = `hoodie-design-${new Date().toISOString().slice(0, 10)}.json`;
             link.click();
             
-            updateInfoPanel('Design settings saved');
+            document.getElementById('info-panel').innerHTML += '<br>Design settings saved';
             document.getElementById('statusMessage').textContent = 'Design saved';
         }
         
