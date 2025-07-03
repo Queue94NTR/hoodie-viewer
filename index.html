@@ -477,6 +477,7 @@
                 height: auto;
                 max-height: 50vh;
                 order: 2;
+                padding: 15px;
             }
             
             #viewer-container {
@@ -488,6 +489,40 @@
             .tab-buttons {
                 overflow-x: auto;
                 white-space: nowrap;
+                padding-bottom: 5px;
+            }
+            
+            .tab-button {
+                padding: 8px 12px;
+                font-size: 0.9em;
+            }
+            
+            .control-group {
+                margin-bottom: 15px;
+                padding-bottom: 15px;
+            }
+            
+            #info-panel-toggle, #info-panel {
+                font-size: 0.8em;
+                padding: 8px 12px;
+            }
+        }
+        
+        @media (max-width: 480px) {
+            #sidebar {
+                max-height: 60vh;
+            }
+            
+            #viewer-container {
+                height: 40vh;
+            }
+            
+            .color-presets {
+                grid-template-columns: repeat(4, 1fr);
+            }
+            
+            .transform-row input[type="number"] {
+                width: 50px;
             }
         }
     </style>
