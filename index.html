@@ -615,6 +615,10 @@
                     <label for="hoodieColor">Hoodie Color</label>
                     <input type="color" id="hoodieColor" value="#FFFFFF">
                 </div>
+                <div class="color-control">
+                    <label for="hoodColor">Hood Color</label>
+                    <input type="color" id="hoodColor" value="#DDDDDD">
+                </div>
                 
                 <div class="color-presets">
                     <div class="color-preset" style="background-color: #FFFFFF;" data-color="#FFFFFF"></div>
@@ -626,7 +630,7 @@
                     <div class="color-preset" style="background-color: #ff595e;" data-color="#ff595e"></div>
                     <div class="color-preset" style="background-color: #f72585;" data-color="#f72585"></div>
                 </div>
-                <button id="apply-colors">Apply Color</button>
+                <button id="apply-colors">Apply Colors</button>
             </div>
             
             <div class="control-group">
@@ -764,12 +768,34 @@
         let scene, camera, renderer, controls, mixer, clock, hoodieModel;
         let hoodieMaterial = null;
         let currentAction = null;
+        let decalMesh = null;
+        let decalTexture = null;
         let isAnimationPaused = false;
         let composer, fxaaPass;
         let textures = {};
-        let hoodieMesh = null;
         
-        // UV Region Definitions
+        // Current design properties
+        let currentDesign = {
+            texture: null,
+            placement: 'front',
+            transform: {
+                positionX: 0,
+                positionY: 0,
+                scale: 1,
+                rotation: 0
+            }
+        };
+        
+        // Current material properties
+        let currentMaterial = {
+            color: new THREE.Color(0xFFFFFF),
+            hoodColor: new THREE.Color(0xDDDDDD),
+            roughness: 0.7,
+            metalness: 0.0,
+            materialType: 'cotton'
+        };
+        
+        // Precise UV regions based on actual UV map
         const uvRegions = {
             front: { 
                 min: new THREE.Vector2(0.25, 0.6), 
@@ -796,26 +822,6 @@
                 max: new THREE.Vector2(0.7, 0.98),
                 center: new THREE.Vector2(0.5, 0.9) 
             }
-        };
-        
-        // Current design properties
-        let currentDesign = {
-            texture: null,
-            placement: 'front',
-            transform: {
-                positionX: 0,
-                positionY: 0,
-                scale: 1,
-                rotation: 0
-            }
-        };
-        
-        // Current material properties
-        let currentMaterial = {
-            color: new THREE.Color(0xFFFFFF),
-            roughness: 0.7,
-            metalness: 0.0,
-            materialType: 'cotton'
         };
         
         // Animation effects
@@ -1004,7 +1010,7 @@
             });
             
             // Color controls
-            document.getElementById('apply-colors').addEventListener('click', applyColor);
+            document.getElementById('apply-colors').addEventListener('click', applyColors);
             
             // Color presets
             document.querySelectorAll('.color-preset').forEach(preset => {
@@ -1012,8 +1018,14 @@
                     document.querySelectorAll('.color-preset').forEach(p => p.classList.remove('selected'));
                     preset.classList.add('selected');
                     document.getElementById('hoodieColor').value = preset.dataset.color;
-                    applyColor();
+                    applyColors();
                 });
+            });
+            
+            // Hood color change
+            document.getElementById('hoodColor').addEventListener('input', (e) => {
+                currentMaterial.hoodColor.set(e.target.value);
+                updateHoodieMaterial();
             });
             
             // Design upload
@@ -1085,7 +1097,7 @@
             setupTransformControl('decal-x', 'decal-x-input', 'positionX');
             setupTransformControl('decal-y', 'decal-y-input', 'positionY');
             setupTransformControl('decal-scale', 'decal-scale-input', 'scale');
-            setupTransformControl('decal-rotation', 'decal-rotation-input', 'rotation', (v) => `${v}°`);
+            setupTransformControl('decal-rotation', 'decal-rotation-input', 'rotation');
             
             // Reset transformations
             document.getElementById('resetTransforms').addEventListener('click', () => {
@@ -1134,14 +1146,11 @@
         function setupTransformControl(sliderId, inputId, property, formatFn = (v) => v) {
             const slider = document.getElementById(sliderId);
             const input = document.getElementById(inputId);
-            const valueDisplay = document.getElementById(`${sliderId}-value`);
             
             slider.addEventListener('input', (e) => {
                 const value = parseFloat(e.target.value);
                 currentDesign.transform[property] = value;
-                input.value = value;
-                if (valueDisplay) valueDisplay.textContent = formatFn(value);
-                applyDecal();
+                input.value = formatFn(value);
             });
             
             input.addEventListener('input', (e) => {
@@ -1158,8 +1167,6 @@
                 
                 currentDesign.transform[property] = value;
                 slider.value = value;
-                if (valueDisplay) valueDisplay.textContent = formatFn(value);
-                applyDecal();
             });
         }
 
@@ -1178,11 +1185,21 @@
                 document.getElementById('info-panel').innerHTML = 'Loading resources...';
                 document.getElementById('statusMessage').textContent = 'Loading resources...';
                 
-                // Load textures with fallbacks
-                textures = await loadTextures();
+                // Load textures
+                try {
+                    textures = await loadTextures();
+                } catch (textureError) {
+                    console.error('Error loading textures:', textureError);
+                    textures = {};
+                }
                 
-                // Load environment with fallback
-                await loadEnvironment();
+                // Load environment
+                try {
+                    await loadEnvironment();
+                } catch (envError) {
+                    console.error('Error loading environment:', envError);
+                    scene.environment = null;
+                }
                 
                 // Load model
                 await loadModel();
@@ -1201,62 +1218,79 @@
             }
         }
         
-        // Load textures with fallbacks
+        // Load textures
         async function loadTextures() {
             document.getElementById('info-panel').innerHTML = 'Loading textures...';
             document.getElementById('statusMessage').textContent = 'Loading textures...';
             
-            // Simple procedural textures as fallbacks
-            const createFabricTexture = () => {
-                const canvas = document.createElement('canvas');
-                canvas.width = canvas.height = 256;
-                const ctx = canvas.getContext('2d');
-                
-                // Create a simple fabric pattern
-                ctx.fillStyle = '#f0f0f0';
-                ctx.fillRect(0, 0, 256, 256);
-                
-                ctx.strokeStyle = '#e0e0e0';
-                ctx.lineWidth = 2;
-                
-                for (let i = 0; i < 256; i += 16) {
-                    ctx.beginPath();
-                    ctx.moveTo(i, 0);
-                    ctx.lineTo(i, 256);
-                    ctx.stroke();
-                    
-                    ctx.beginPath();
-                    ctx.moveTo(0, i);
-                    ctx.lineTo(256, i);
-                    ctx.stroke();
+            const textureUrls = {
+                cottonNormalMap: 'https://cdn.jsdelivr.net/gh/mrdoob/three.js@dev/examples/textures/terrain/grasslight-big.jpg',
+                denimNormalMap: 'https://cdn.jsdelivr.net/gh/mrdoob/three.js@dev/examples/textures/normalmaps/leather/roughness.jpg',
+                velvetNormalMap: 'https://cdn.jsdelivr.net/gh/mrdoob/three.js@dev/examples/textures/normalmaps/leather/normal.jpg',
+                leatherNormalMap: 'https://cdn.jsdelivr.net/gh/mrdoob/three.js@dev/examples/textures/normalmaps/leather/normal.jpg',
+                puffDisplacementMap: 'https://cdn.jsdelivr.net/gh/mrdoob/three.js@dev/examples/textures/terrain/grasslight-big.jpg',
+                studioEnvMap: 'https://cdn.jsdelivr.net/gh/mrdoob/three.js@dev/examples/textures/equirectangular/venice_sunset_1k.hdr',
+                outdoorEnvMap: 'https://cdn.jsdelivr.net/gh/mrdoob/three.js@dev/examples/textures/equirectangular/pisa_1k.hdr',
+                neonEnvMap: 'https://cdn.jsdelivr.net/gh/mrdoob/three.js@dev/examples/textures/equirectangular/royal_esplanade_1k.hdr',
+                sunsetEnvMap: 'https://cdn.jsdelivr.net/gh/mrdoob/three.js@dev/examples/textures/equirectangular/bridge2_1k.hdr'
+            };
+            
+            const texturePromises = Object.entries(textureUrls).map(([key, url]) => 
+                loadTexture(url)
+                    .then(texture => ({ key, texture }))
+                    .catch(error => {
+                        console.warn(`Failed to load ${key}: ${error}`);
+                        return { key, texture: createDefaultTexture() };
+                    })
+            );
+            
+            const loadedTextures = await Promise.all(texturePromises);
+            
+            const textures = {};
+            loadedTextures.forEach(({ key, texture }) => {
+                textures[key] = texture;
+                if (key.includes('Displacement')) {
+                    texture.wrapS = texture.wrapT = THREE.RepeatWrapping;
                 }
-                
-                const texture = new THREE.CanvasTexture(canvas);
-                texture.needsUpdate = true;
-                return texture;
-            };
+            });
             
-            const createNormalMap = () => {
-                const canvas = document.createElement('canvas');
-                canvas.width = canvas.height = 2;
-                const ctx = canvas.getContext('2d');
-                ctx.fillStyle = '#8080ff';
-                ctx.fillRect(0, 0, 2, 2);
-                const texture = new THREE.CanvasTexture(canvas);
-                texture.needsUpdate = true;
-                return texture;
-            };
-            
-            return {
-                cottonNormalMap: createFabricTexture(),
-                denimNormalMap: createNormalMap(),
-                velvetNormalMap: createNormalMap(),
-                leatherNormalMap: createNormalMap(),
-                puffDisplacementMap: createFabricTexture()
-            };
+            return textures;
         }
         
-        // Load environment with fallback
+        // Create a default empty texture
+        function createDefaultTexture() {
+            const canvas = document.createElement('canvas');
+            canvas.width = canvas.height = 2;
+            const ctx = canvas.getContext('2d');
+            ctx.fillStyle = '#808080';
+            ctx.fillRect(0, 0, 2, 2);
+            const texture = new THREE.CanvasTexture(canvas);
+            texture.needsUpdate = true;
+            return texture;
+        }
+        
+        // Load texture with error handling
+        function loadTexture(url) {
+            try {
+                const loader = new THREE.TextureLoader();
+                return new Promise((resolve, reject) => {
+                    loader.load(
+                        url,
+                        resolve,
+                        undefined,
+                        (error) => {
+                            console.warn(`Failed to load texture: ${url}`, error);
+                            resolve(createDefaultTexture());
+                        }
+                    );
+                });
+            } catch (error) {
+                console.error('Texture loading error:', error);
+                return createDefaultTexture();
+            }
+        }
+        
+        // Load environment map
         async function loadEnvironment(type = 'studio') {
             document.getElementById('info-panel').innerHTML = `Loading ${type} environment...`;
             document.getElementById('statusMessage').textContent = `Loading ${type} environment...`;
@@ -1265,35 +1299,55 @@
                 const pmremGenerator = new THREE.PMREMGenerator(renderer);
                 pmremGenerator.compileEquirectangularShader();
                 
-                // Create a simple procedural environment as fallback
-                const scene = new THREE.Scene();
+                let envMap;
                 
-                // Add lights to simulate different environments
-                const ambientLight = new THREE.AmbientLight(0xffffff, type === 'neon' ? 0.2 : 0.5);
-                scene.add(ambientLight);
-                
-                const directionalLight = new THREE.DirectionalLight(0xffffff, type === 'neon' ? 3 : 2);
-                directionalLight.position.set(1, 1, 1);
-                
-                if (type === 'outdoor') {
-                    directionalLight.color.setHex(0xffecd2);
-                } else if (type === 'neon') {
-                    directionalLight.color.setHex(0x00f5d4);
-                } else if (type === 'sunset') {
-                    directionalLight.color.setHex(0xff9e7d);
+                if (type === 'studio') {
+                    const texture = await new RGBELoader()
+                        .setDataType(THREE.UnsignedByteType)
+                        .loadAsync(textures.studioEnvMap);
+                    envMap = pmremGenerator.fromEquirectangular(texture).texture;
+                    texture.dispose();
+                } 
+                else if (type === 'outdoor') {
+                    const texture = await new RGBELoader()
+                        .setDataType(THREE.UnsignedByteType)
+                        .loadAsync(textures.outdoorEnvMap);
+                    envMap = pmremGenerator.fromEquirectangular(texture).texture;
+                    texture.dispose();
+                }
+                else if (type === 'neon') {
+                    const texture = await new RGBELoader()
+                        .setDataType(THREE.UnsignedByteType)
+                        .loadAsync(textures.neonEnvMap);
+                    envMap = pmremGenerator.fromEquirectangular(texture).texture;
+                    texture.dispose();
+                }
+                else if (type === 'sunset') {
+                    const texture = await new RGBELoader()
+                        .setDataType(THREE.UnsignedByteType)
+                        .loadAsync(textures.sunsetEnvMap);
+                    envMap = pmremGenerator.fromEquirectangular(texture).texture;
+                    texture.dispose();
                 }
                 
-                scene.add(directionalLight);
-                
-                // Create environment map from scene
-                const cubeRenderTarget = pmremGenerator.fromScene(scene, 0.1);
-                scene.environment = cubeRenderTarget.texture;
+                scene.environment = envMap;
                 pmremGenerator.dispose();
                 
-                return scene.environment;
+                return envMap;
             } catch (error) {
-                console.error('Failed to create environment map:', error);
-                return null;
+                console.error('Failed to load environment map:', error);
+                
+                // Fallback to cube environment
+                try {
+                    const envMap = await new THREE.CubeTextureLoader()
+                        .setPath('https://cdn.jsdelivr.net/gh/mrdoob/three.js@dev/examples/textures/cube/pisa/')
+                        .loadAsync(['px.png', 'nx.png', 'py.png', 'ny.png', 'pz.png', 'nz.png']);
+                    scene.environment = envMap;
+                    return envMap;
+                } catch (cubeError) {
+                    console.error('Failed to load cube environment:', cubeError);
+                    return null;
+                }
             }
         }
 
@@ -1319,50 +1373,25 @@
             document.getElementById('info-panel').innerHTML = info;
         }
 
-        // Create a new white base material
+        // Create a new base material
         function createBaseMaterial() {
-            return new THREE.MeshStandardMaterial({
-                color: 0xFFFFFF, // White base
-                roughness: currentMaterial.roughness,
-                metalness: currentMaterial.metalness,
-                side: THREE.DoubleSide,
-                envMap: scene.environment,
-                envMapIntensity: 0.5
-            });
-        }
-
-        // Apply color to the hoodie
-        function applyColor() {
-            const colorValue = document.getElementById('hoodieColor').value;
-            currentMaterial.color.set(colorValue);
-            updateHoodieMaterial();
-            document.getElementById('info-panel').innerHTML += `<br>Color applied: ${colorValue}`;
-            document.getElementById('statusMessage').textContent = `Color applied: ${colorValue}`;
-        }
-        
-        // Update the hoodie material with current properties
-        function updateHoodieMaterial() {
-            if (!hoodieMesh) return;
-            
-            const uvRegion = uvRegions[currentDesign.placement];
-            const transform = currentDesign.transform;
-            
-            // Create shader material for the hoodie
-            hoodieMesh.material = new THREE.ShaderMaterial({
+            return new THREE.ShaderMaterial({
                 uniforms: {
-                    baseTexture: { value: textures.cottonNormalMap },
                     bodyColor: { value: currentMaterial.color },
-                    decalTexture: { value: currentDesign.texture || createDefaultTexture() },
+                    hoodColor: { value: currentMaterial.hoodColor },
+                    decalTexture: { value: currentDesign.texture || new THREE.Texture() },
                     hasDecal: { value: !!currentDesign.texture },
-                    uvMin: { value: uvRegion ? uvRegion.min : new THREE.Vector2(0, 0) },
-                    uvMax: { value: uvRegion ? uvRegion.max : new THREE.Vector2(1, 1) },
-                    uvCenter: { value: uvRegion ? uvRegion.center : new THREE.Vector2(0.5, 0.5) },
-                    decalPosition: { value: new THREE.Vector2(transform.positionX, transform.positionY) },
-                    decalScale: { value: transform.scale },
-                    decalRotation: { value: THREE.MathUtils.degToRad(transform.rotation) },
+                    uvMin: { value: uvRegions[currentDesign.placement]?.min || new THREE.Vector2(0, 0) },
+                    uvMax: { value: uvRegions[currentDesign.placement]?.max || new THREE.Vector2(1, 1) },
+                    uvCenter: { value: uvRegions[currentDesign.placement]?.center || new THREE.Vector2(0.5, 0.5) },
+                    decalPosition: { value: new THREE.Vector2(currentDesign.transform.positionX, currentDesign.transform.positionY) },
+                    decalScale: { value: currentDesign.transform.scale },
+                    decalRotation: { value: THREE.MathUtils.degToRad(currentDesign.transform.rotation) },
                     placementArea: { value: currentDesign.placement },
                     roughness: { value: currentMaterial.roughness },
-                    metalness: { value: currentMaterial.metalness }
+                    metalness: { value: currentMaterial.metalness },
+                    envMap: { value: scene.environment },
+                    envMapIntensity: { value: 0.5 }
                 },
                 vertexShader: `
                     varying vec2 vUv;
@@ -1374,8 +1403,8 @@
                     }
                 `,
                 fragmentShader: `
-                    uniform sampler2D baseTexture;
                     uniform vec3 bodyColor;
+                    uniform vec3 hoodColor;
                     uniform sampler2D decalTexture;
                     uniform bool hasDecal;
                     uniform vec2 uvMin;
@@ -1386,16 +1415,15 @@
                     uniform float decalRotation;
                     uniform float roughness;
                     uniform float metalness;
+                    uniform samplerCube envMap;
+                    uniform float envMapIntensity;
                     varying vec2 vUv;
                     varying vec3 vNormal;
                     
                     void main() {
-                        // Get base fabric texture
-                        float fabric = texture2D(baseTexture, vUv * 10.0).r; // Scale up the texture coords for better tiling
-                        
-                        // Base color
-                        vec4 base = vec4(bodyColor * fabric, 1.0);
-                        base.rgb = mix(base.rgb, base.rgb * vec3(0.9), metalness); // Simple metalness effect
+                        // Determine hood vs body based on normal
+                        vec3 color = vNormal.y > 0.3 ? hoodColor : bodyColor;
+                        vec4 base = vec4(color, 1.0);
                         
                         // Apply decal if exists
                         if (hasDecal) {
@@ -1437,20 +1465,48 @@
                                 }
                             }
                         }
-                        gl_FragColor = base;
+                        
+                        // Apply environment map for reflections
+                        vec3 viewDir = normalize(cameraPosition - (modelMatrix * vec4(position, 1.0)).xyz;
+                        vec3 reflectVec = reflect(-viewDir, normalize(vNormal));
+                        vec3 envColor = textureCube(envMap, reflectVec).rgb * envMapIntensity;
+                        
+                        // Apply roughness and metalness
+                        float fresnel = pow(1.0 - max(dot(normalize(vNormal), normalize(viewDir)), 5.0);
+                        vec3 specular = mix(vec3(0.04), base.rgb, metalness) * fresnel;
+                        vec3 diffuse = mix(base.rgb, vec3(0.0), metalness);
+                        
+                        gl_FragColor = vec4(mix(diffuse, envColor, roughness) + specular, 1.0);
                     }
                 `,
-                transparent: true,
-                defines: {
-                    "currentDesign.placement": `"${currentDesign.placement}"` // Pass placement as define
+                transparent: true
+            });
+        }
+
+        // Apply colors to the hoodie
+        function applyColors() {
+            const colorValue = document.getElementById('hoodieColor').value;
+            currentMaterial.color.set(colorValue);
+            updateHoodieMaterial();
+            document.getElementById('info-panel').innerHTML += `<br>Colors applied`;
+            document.getElementById('statusMessage').textContent = `Colors applied`;
+        }
+        
+        // Update the hoodie material with current properties
+        function updateHoodieMaterial() {
+            if (!hoodieModel) return;
+            
+            // Create new material with current properties
+            const newMaterial = createBaseMaterial();
+            
+            // Replace all materials with our base material
+            hoodieModel.traverse((child) => {
+                if (child.isMesh) {
+                    // Store reference to the material we'll be modifying
+                    hoodieMaterial = newMaterial;
+                    child.material = newMaterial;
                 }
             });
-            
-            // Set material properties
-            hoodieMesh.material.roughness = currentMaterial.roughness;
-            hoodieMesh.material.metalness = currentMaterial.metalness;
-            hoodieMesh.material.envMap = scene.environment;
-            hoodieMesh.material.needsUpdate = true;
         }
 
         // Handle design upload
@@ -1471,19 +1527,13 @@
                 const image = new Image();
                 image.onload = function() {
                     // Create texture from the image
-                    currentDesign.texture = new THREE.Texture(image);
-                    currentDesign.texture.needsUpdate = true;
+                    decalTexture = new THREE.Texture(image);
+                    decalTexture.needsUpdate = true;
                     
                     // Show decal controls
                     document.getElementById('decal-controls').classList.add('active');
                     document.getElementById('info-panel').innerHTML += '<br>Design loaded';
                     document.getElementById('statusMessage').textContent = 'Design loaded';
-                    
-                    // Update placement from dropdown
-                    currentDesign.placement = document.getElementById('placementArea').value;
-                    
-                    // Apply the design
-                    updateHoodieMaterial();
                 };
                 image.src = e.target.result;
             };
@@ -1492,12 +1542,16 @@
 
         // Apply decal to the hoodie
         function applyDecal() {
-            if (!currentDesign.texture || !hoodieMesh) return;
+            if (!decalTexture) return;
             
-            // Update placement from dropdown
             currentDesign.placement = document.getElementById('placementArea').value;
+            currentDesign.transform = {
+                positionX: parseFloat(document.getElementById('decal-x').value),
+                positionY: parseFloat(document.getElementById('decal-y').value),
+                scale: parseFloat(document.getElementById('decal-scale').value),
+                rotation: parseFloat(document.getElementById('decal-rotation').value)
+            };
             
-            // Update material with current design settings
             updateHoodieMaterial();
             
             document.getElementById('info-panel').innerHTML += '<br>Design applied';
@@ -1521,17 +1575,16 @@
                 hoodieModel = gltf.scene;
                 scene.add(hoodieModel);
                 
-                // Find the main hoodie mesh (assuming it's the first mesh we find)
-                hoodieModel.traverse(child => {
-                    if (child.isMesh && !hoodieMesh) {
-                        hoodieMesh = child;
-                        // Store original material as userData for reference
-                        hoodieMesh.userData.originalMaterial = child.material;
+                // Replace all materials with our base material
+                const baseMaterial = createBaseMaterial();
+                hoodieModel.traverse((child) => {
+                    if (child.isMesh) {
+                        // Store reference to the material we'll be modifying
+                        hoodieMaterial = baseMaterial;
+                        child.material = baseMaterial;
+                        console.log("Replaced material for:", child.name);
                     }
                 });
-                
-                // Update material with our custom shader
-                updateHoodieMaterial();
                 
                 // Check for animations
                 if (gltf.animations && gltf.animations.length > 0) {
@@ -1576,8 +1629,9 @@
                 
                 // Create a fallback cube
                 const geometry = new THREE.BoxGeometry(1, 1.5, 0.8);
-                hoodieMesh = new THREE.Mesh(geometry, createBaseMaterial());
-                scene.add(hoodieMesh);
+                const material = createBaseMaterial();
+                hoodieModel = new THREE.Mesh(geometry, material);
+                scene.add(hoodieModel);
                 
                 camera.position.z = 3;
                 controls.update();
@@ -1739,6 +1793,7 @@
                             
                             // Update UI
                             document.getElementById('hoodieColor').value = `#${currentMaterial.color.getHexString()}`;
+                            document.getElementById('hoodColor').value = `#${currentMaterial.hoodColor.getHexString()}`;
                             document.getElementById('materialType').value = currentMaterial.materialType;
                             document.getElementById('roughness').value = currentMaterial.roughness;
                             document.getElementById('roughnessValue').textContent = currentMaterial.roughness.toFixed(2);
