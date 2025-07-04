@@ -254,32 +254,32 @@
         let currentAction;
         let hoodieMesh;
         
-        // Precise UV regions based on your actual UV map
+        // Precise UV regions based on actual UV map
         const uvRegions = {
             front: { 
-                min: new THREE.Vector2(0.25, 0.55), 
-                max: new THREE.Vector2(0.75, 0.85),
-                center: new THREE.Vector2(0.5, 0.7) 
+                min: new THREE.Vector2(0.25, 0.6), 
+                max: new THREE.Vector2(0.75, 0.9),
+                center: new THREE.Vector2(0.5, 0.75) 
             },
             back: { 
-                min: new THREE.Vector2(0.25, 0.15), 
-                max: new THREE.Vector2(0.75, 0.45),
-                center: new THREE.Vector2(0.5, 0.3) 
+                min: new THREE.Vector2(0.25, 0.1), 
+                max: new THREE.Vector2(0.75, 0.4),
+                center: new THREE.Vector2(0.5, 0.25) 
             },
             leftSleeve: { 
-                min: new THREE.Vector2(0.05, 0.25), 
-                max: new THREE.Vector2(0.2, 0.75),
+                min: new THREE.Vector2(0.02, 0.2), 
+                max: new THREE.Vector2(0.23, 0.8),
                 center: new THREE.Vector2(0.125, 0.5) 
             },
             rightSleeve: { 
-                min: new THREE.Vector2(0.8, 0.25), 
-                max: new THREE.Vector2(0.95, 0.75),
+                min: new THREE.Vector2(0.77, 0.2), 
+                max: new THREE.Vector2(0.98, 0.8),
                 center: new THREE.Vector2(0.875, 0.5) 
             },
             hood: { 
-                min: new THREE.Vector2(0.35, 0.86), 
-                max: new THREE.Vector2(0.65, 0.98),
-                center: new THREE.Vector2(0.5, 0.92) 
+                min: new THREE.Vector2(0.3, 0.82), 
+                max: new THREE.Vector2(0.7, 0.98),
+                center: new THREE.Vector2(0.5, 0.9) 
             }
         };
         
@@ -473,7 +473,8 @@
                     uvCenter: { value: uvRegion ? uvRegion.center : new THREE.Vector2(0.5, 0.5) },
                     decalPosition: { value: new THREE.Vector2(transform.positionX, transform.positionY) },
                     decalScale: { value: transform.scale },
-                    decalRotation: { value: THREE.MathUtils.degToRad(transform.rotation) }
+                    decalRotation: { value: THREE.MathUtils.degToRad(transform.rotation) },
+                    placementArea: { value: currentDesign.placement }
                 },
                 vertexShader: `
                     varying vec2 vUv;
@@ -496,6 +497,7 @@
                     uniform vec2 decalPosition;
                     uniform float decalScale;
                     uniform float decalRotation;
+                    uniform string placementArea;
                     varying vec2 vUv;
                     varying vec3 vNormal;
                     
@@ -510,9 +512,18 @@
                         // Apply decal if exists
                         if (hasDecal) {
                             // First check if we're in the general region
-                            if (vUv.x >= uvMin.x && vUv.x <= uvMax.x && 
-                                vUv.y >= uvMin.y && vUv.y <= uvMax.y) {
-                                
+                            bool inTargetRegion = vUv.x >= uvMin.x && vUv.x <= uvMax.x && 
+                                                vUv.y >= uvMin.y && vUv.y <= uvMax.y;
+                            
+                            // For sleeves, we need additional checks due to their UV layout
+                            if (placementArea == 'leftSleeve' || placementArea == 'rightSleeve') {
+                                inTargetRegion = inTargetRegion && (
+                                    (placementArea == 'leftSleeve' && vUv.x < 0.25) ||
+                                    (placementArea == 'rightSleeve' && vUv.x > 0.75)
+                                );
+                            }
+                            
+                            if (inTargetRegion) {
                                 // Calculate exact placement within the region
                                 vec2 decalUV = (vUv - uvMin) / (uvMax - uvMin);
                                 
