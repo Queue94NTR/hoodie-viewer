@@ -1375,118 +1375,21 @@
 
         // Create a new base material
         function createBaseMaterial() {
-            return new THREE.ShaderMaterial({
-                uniforms: {
-                    bodyColor: { value: currentMaterial.color },
-                    hoodColor: { value: currentMaterial.hoodColor },
-                    decalTexture: { value: currentDesign.texture || new THREE.Texture() },
-                    hasDecal: { value: !!currentDesign.texture },
-                    uvMin: { value: uvRegions[currentDesign.placement]?.min || new THREE.Vector2(0, 0) },
-                    uvMax: { value: uvRegions[currentDesign.placement]?.max || new THREE.Vector2(1, 1) },
-                    uvCenter: { value: uvRegions[currentDesign.placement]?.center || new THREE.Vector2(0.5, 0.5) },
-                    decalPosition: { value: new THREE.Vector2(currentDesign.transform.positionX, currentDesign.transform.positionY) },
-                    decalScale: { value: currentDesign.transform.scale },
-                    decalRotation: { value: THREE.MathUtils.degToRad(currentDesign.transform.rotation) },
-                    placementArea: { value: currentDesign.placement },
-                    roughness: { value: currentMaterial.roughness },
-                    metalness: { value: currentMaterial.metalness },
-                    envMap: { value: scene.environment },
-                    envMapIntensity: { value: 0.5 }
-                },
-                vertexShader: `
-                    varying vec2 vUv;
-                    varying vec3 vNormal;
-                    void main() {
-                        vUv = uv;
-                        vNormal = normalize(normalMatrix * normal);
-                        gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
-                    }
-                `,
-                fragmentShader: `
-                    uniform vec3 bodyColor;
-                    uniform vec3 hoodColor;
-                    uniform sampler2D decalTexture;
-                    uniform bool hasDecal;
-                    uniform vec2 uvMin;
-                    uniform vec2 uvMax;
-                    uniform vec2 uvCenter;
-                    uniform vec2 decalPosition;
-                    uniform float decalScale;
-                    uniform float decalRotation;
-                    uniform float roughness;
-                    uniform float metalness;
-                    uniform samplerCube envMap;
-                    uniform float envMapIntensity;
-                    varying vec2 vUv;
-                    varying vec3 vNormal;
-                    
-                    void main() {
-                        // Determine hood vs body based on normal
-                        vec3 color = vNormal.y > 0.3 ? hoodColor : bodyColor;
-                        vec4 base = vec4(color, 1.0);
-                        
-                        // Apply decal if exists
-                        if (hasDecal) {
-                            // First check if we're in the general region
-                            bool inTargetRegion = vUv.x >= uvMin.x && vUv.x <= uvMax.x && 
-                                                vUv.y >= uvMin.y && vUv.y <= uvMax.y;
-                            
-                            // For sleeves, we need additional checks due to their UV layout
-                            if (currentDesign.placement == 'leftSleeve' || currentDesign.placement == 'rightSleeve') {
-                                inTargetRegion = inTargetRegion && (
-                                    (currentDesign.placement == 'leftSleeve' && vUv.x < 0.25) ||
-                                    (currentDesign.placement == 'rightSleeve' && vUv.x > 0.75)
-                                );
-                            }
-                            
-                            if (inTargetRegion) {
-                                // Calculate exact placement within the region
-                                vec2 decalUV = (vUv - uvMin) / (uvMax - uvMin);
-                                
-                                // Transform for placement controls
-                                decalUV -= 0.5;
-                                float cosAngle = cos(decalRotation);
-                                float sinAngle = sin(decalRotation);
-                                decalUV = vec2(
-                                    decalUV.x * cosAngle - decalUV.y * sinAngle,
-                                    decalUV.x * sinAngle + decalUV.y * cosAngle
-                                );
-                                decalUV /= decalScale;
-                                decalUV -= decalPosition;
-                                decalUV += 0.5;
-                                
-                                if (decalUV.x >= 0.0 && decalUV.x <= 1.0 && 
-                                    decalUV.y >= 0.0 && decalUV.y <= 1.0) {
-                                    vec4 decal = texture2D(decalTexture, decalUV);
-                                    if (decal.a > 0.1) {
-                                        gl_FragColor = mix(base, decal, decal.a);
-                                        return;
-                                    }
-                                }
-                            }
-                        }
-                        
-                        // Apply environment map for reflections
-                        vec3 viewDir = normalize(cameraPosition - (modelMatrix * vec4(position, 1.0)).xyz;
-                        vec3 reflectVec = reflect(-viewDir, normalize(vNormal));
-                        vec3 envColor = textureCube(envMap, reflectVec).rgb * envMapIntensity;
-                        
-                        // Apply roughness and metalness
-                        float fresnel = pow(1.0 - max(dot(normalize(vNormal), normalize(viewDir)), 5.0);
-                        vec3 specular = mix(vec3(0.04), base.rgb, metalness) * fresnel;
-                        vec3 diffuse = mix(base.rgb, vec3(0.0), metalness);
-                        
-                        gl_FragColor = vec4(mix(diffuse, envColor, roughness) + specular, 1.0);
-                    }
-                `,
-                transparent: true
+            return new THREE.MeshStandardMaterial({
+                color: currentMaterial.color,
+                roughness: currentMaterial.roughness,
+                metalness: currentMaterial.metalness,
+                envMap: scene.environment,
+                envMapIntensity: 0.5
             });
         }
 
         // Apply colors to the hoodie
         function applyColors() {
             const colorValue = document.getElementById('hoodieColor').value;
+            const hoodColorValue = document.getElementById('hoodColor').value;
             currentMaterial.color.set(colorValue);
+            currentMaterial.hoodColor.set(hoodColorValue);
             updateHoodieMaterial();
             document.getElementById('info-panel').innerHTML += `<br>Colors applied`;
             document.getElementById('statusMessage').textContent = `Colors applied`;
@@ -1507,6 +1410,11 @@
                     child.material = newMaterial;
                 }
             });
+            
+            // If we have a decal texture, apply it
+            if (currentDesign.texture) {
+                applyDecal();
+            }
         }
 
         // Handle design upload
@@ -1529,11 +1437,15 @@
                     // Create texture from the image
                     decalTexture = new THREE.Texture(image);
                     decalTexture.needsUpdate = true;
+                    currentDesign.texture = decalTexture;
                     
                     // Show decal controls
                     document.getElementById('decal-controls').classList.add('active');
                     document.getElementById('info-panel').innerHTML += '<br>Design loaded';
                     document.getElementById('statusMessage').textContent = 'Design loaded';
+                    
+                    // Apply the decal
+                    applyDecal();
                 };
                 image.src = e.target.result;
             };
@@ -1542,18 +1454,51 @@
 
         // Apply decal to the hoodie
         function applyDecal() {
-            if (!decalTexture) return;
+            if (!currentDesign.texture || !hoodieModel) return;
             
-            currentDesign.placement = document.getElementById('placementArea').value;
-            currentDesign.transform = {
-                positionX: parseFloat(document.getElementById('decal-x').value),
-                positionY: parseFloat(document.getElementById('decal-y').value),
-                scale: parseFloat(document.getElementById('decal-scale').value),
-                rotation: parseFloat(document.getElementById('decal-rotation').value)
-            };
+            // Remove existing decal if any
+            if (decalMesh) {
+                scene.remove(decalMesh);
+                decalMesh = null;
+            }
+
+            // Get position from sliders
+            const x = parseFloat(document.getElementById('decal-x').value);
+            const y = parseFloat(document.getElementById('decal-y').value);
+            const scale = parseFloat(document.getElementById('decal-scale').value);
+            const rotation = parseFloat(document.getElementById('decal-rotation').value);
+
+            // Create decal material
+            const decalMaterial = new THREE.MeshBasicMaterial({
+                map: currentDesign.texture,
+                transparent: true,
+                depthTest: true,
+                depthWrite: false,
+                polygonOffset: true,
+                polygonOffsetFactor: -4
+            });
+
+            // Find the hoodie mesh
+            let hoodieMesh = null;
+            hoodieModel.traverse(child => {
+                if (child.isMesh && !hoodieMesh) {
+                    hoodieMesh = child;
+                }
+            });
+
+            if (!hoodieMesh) return;
+
+            // Create decal geometry
+            const decalGeometry = new THREE.PlaneGeometry(scale, scale);
             
-            updateHoodieMaterial();
+            // Create decal mesh
+            decalMesh = new THREE.Mesh(decalGeometry, decalMaterial);
+            decalMesh.position.set(x, y + 1, 0);
+            decalMesh.rotation.y = THREE.MathUtils.degToRad(rotation);
+            decalMesh.lookAt(hoodieMesh.position);
             
+            // Add to scene
+            scene.add(decalMesh);
             document.getElementById('info-panel').innerHTML += '<br>Design applied';
             document.getElementById('statusMessage').textContent = 'Design applied';
         }
@@ -1576,15 +1521,7 @@
                 scene.add(hoodieModel);
                 
                 // Replace all materials with our base material
-                const baseMaterial = createBaseMaterial();
-                hoodieModel.traverse((child) => {
-                    if (child.isMesh) {
-                        // Store reference to the material we'll be modifying
-                        hoodieMaterial = baseMaterial;
-                        child.material = baseMaterial;
-                        console.log("Replaced material for:", child.name);
-                    }
-                });
+                updateHoodieMaterial();
                 
                 // Check for animations
                 if (gltf.animations && gltf.animations.length > 0) {
