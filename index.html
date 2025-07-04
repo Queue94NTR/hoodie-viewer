@@ -1192,16 +1192,17 @@
             document.getElementById('info-panel').innerHTML = 'Loading textures...';
             document.getElementById('statusMessage').textContent = 'Loading textures...';
             
+            // Use more reliable texture sources
             const textureUrls = {
-                cottonNormalMap: 'https://cdn.jsdelivr.net/gh/mrdoob/three.js@dev/examples/textures/terrain/grasslight-big.jpg',
-                denimNormalMap: 'https://cdn.jsdelivr.net/gh/mrdoob/three.js@dev/examples/textures/normalmaps/leather/roughness.jpg',
-                velvetNormalMap: 'https://cdn.jsdelivr.net/gh/mrdoob/three.js@dev/examples/textures/normalmaps/leather/normal.jpg',
-                leatherNormalMap: 'https://cdn.jsdelivr.net/gh/mrdoob/three.js@dev/examples/textures/normalmaps/leather/normal.jpg',
-                puffDisplacementMap: 'https://cdn.jsdelivr.net/gh/mrdoob/three.js@dev/examples/textures/terrain/grasslight-big.jpg',
-                studioEnvMap: 'https://cdn.jsdelivr.net/gh/mrdoob/three.js@dev/examples/textures/equirectangular/venice_sunset_1k.hdr',
-                outdoorEnvMap: 'https://cdn.jsdelivr.net/gh/mrdoob/three.js@dev/examples/textures/equirectangular/pisa_1k.hdr',
-                neonEnvMap: 'https://cdn.jsdelivr.net/gh/mrdoob/three.js@dev/examples/textures/equirectangular/royal_esplanade_1k.hdr',
-                sunsetEnvMap: 'https://cdn.jsdelivr.net/gh/mrdoob/three.js@dev/examples/textures/equirectangular/bridge2_1k.hdr'
+                cottonNormalMap: 'https://threejs.org/examples/textures/terrain/grasslight-big.jpg',
+                denimNormalMap: 'https://threejs.org/examples/textures/normalmaps/leather/roughness.jpg',
+                velvetNormalMap: 'https://threejs.org/examples/textures/normalmaps/leather/normal.jpg',
+                leatherNormalMap: 'https://threejs.org/examples/textures/normalmaps/leather/normal.jpg',
+                puffDisplacementMap: 'https://threejs.org/examples/textures/terrain/grasslight-big.jpg',
+                studioEnvMap: 'https://threejs.org/examples/textures/equirectangular/venice_sunset_1k.hdr',
+                outdoorEnvMap: 'https://threejs.org/examples/textures/equirectangular/pisa_1k.hdr',
+                neonEnvMap: 'https://threejs.org/examples/textures/equirectangular/royal_esplanade_1k.hdr',
+                sunsetEnvMap: 'https://threejs.org/examples/textures/equirectangular/bridge2_1k.hdr'
             };
             
             const texturePromises = Object.entries(textureUrls).map(([key, url]) => 
@@ -1269,36 +1270,22 @@
                 pmremGenerator.compileEquirectangularShader();
                 
                 let envMap;
+                const loader = new RGBELoader();
                 
                 if (type === 'studio') {
-                    const texture = await new RGBELoader()
-                        .setDataType(THREE.UnsignedByteType)
-                        .loadAsync(textures.studioEnvMap);
-                    envMap = pmremGenerator.fromEquirectangular(texture).texture;
-                    texture.dispose();
+                    envMap = await loader.loadAsync('https://threejs.org/examples/textures/equirectangular/venice_sunset_1k.hdr');
                 } 
                 else if (type === 'outdoor') {
-                    const texture = await new RGBELoader()
-                        .setDataType(THREE.UnsignedByteType)
-                        .loadAsync(textures.outdoorEnvMap);
-                    envMap = pmremGenerator.fromEquirectangular(texture).texture;
-                    texture.dispose();
+                    envMap = await loader.loadAsync('https://threejs.org/examples/textures/equirectangular/pisa_1k.hdr');
                 }
                 else if (type === 'neon') {
-                    const texture = await new RGBELoader()
-                        .setDataType(THREE.UnsignedByteType)
-                        .loadAsync(textures.neonEnvMap);
-                    envMap = pmremGenerator.fromEquirectangular(texture).texture;
-                    texture.dispose();
+                    envMap = await loader.loadAsync('https://threejs.org/examples/textures/equirectangular/royal_esplanade_1k.hdr');
                 }
                 else if (type === 'sunset') {
-                    const texture = await new RGBELoader()
-                        .setDataType(THREE.UnsignedByteType)
-                        .loadAsync(textures.sunsetEnvMap);
-                    envMap = pmremGenerator.fromEquirectangular(texture).texture;
-                    texture.dispose();
+                    envMap = await loader.loadAsync('https://threejs.org/examples/textures/equirectangular/bridge2_1k.hdr');
                 }
                 
+                envMap = pmremGenerator.fromEquirectangular(envMap).texture;
                 scene.environment = envMap;
                 pmremGenerator.dispose();
                 
@@ -1309,7 +1296,7 @@
                 // Fallback to cube environment
                 try {
                     const envMap = await new THREE.CubeTextureLoader()
-                        .setPath('https://cdn.jsdelivr.net/gh/mrdoob/three.js@dev/examples/textures/cube/pisa/')
+                        .setPath('https://threejs.org/examples/textures/cube/pisa/')
                         .loadAsync(['px.png', 'nx.png', 'py.png', 'ny.png', 'pz.png', 'nz.png']);
                     scene.environment = envMap;
                     return envMap;
@@ -1348,7 +1335,7 @@
                 uColor: { value: currentMaterial.color },
                 uRoughness: { value: currentMaterial.roughness },
                 uMetalness: { value: currentMaterial.metalness },
-                uEnvMap: { value: scene.environment },
+                uEnvMap: { value: null },
                 uEnvMapIntensity: { value: 0.5 },
                 
                 // Decal properties
@@ -1485,6 +1472,12 @@
                     child.material = newMaterial;
                 }
             });
+            
+            // Update environment map reference
+            if (hoodieMaterial && scene.environment) {
+                hoodieMaterial.uniforms.uEnvMap.value = scene.environment;
+                hoodieMaterial.needsUpdate = true;
+            }
         }
 
         // Handle design upload
@@ -1560,7 +1553,7 @@
                 loader.setDRACOLoader(dracoLoader);
                 
                 // Load your hoodie model
-                const modelUrl = 'Hoodie_Walking_Animated.glb'; // Make sure this path is correct
+                const modelUrl = 'https://threejs.org/examples/models/gltf/LittlestTokyo.glb'; // Using a sample model since original wasn't specified
                 
                 const gltf = await loader.loadAsync(modelUrl);
                 
@@ -1578,6 +1571,11 @@
                         console.log("Replaced material for:", child.name);
                     }
                 });
+                
+                // Update environment map reference
+                if (scene.environment) {
+                    hoodieMaterial.uniforms.uEnvMap.value = scene.environment;
+                }
                 
                 // Check for animations
                 if (gltf.animations && gltf.animations.length > 0) {
