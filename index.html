@@ -1178,21 +1178,11 @@
                 document.getElementById('info-panel').innerHTML = 'Loading resources...';
                 document.getElementById('statusMessage').textContent = 'Loading resources...';
                 
-                // Load textures
-                try {
-                    textures = await loadTextures();
-                } catch (textureError) {
-                    console.error('Error loading textures:', textureError);
-                    textures = {};
-                }
+                // Load textures with fallbacks
+                textures = await loadTextures();
                 
-                // Load environment
-                try {
-                    await loadEnvironment();
-                } catch (envError) {
-                    console.error('Error loading environment:', envError);
-                    scene.environment = null;
-                }
+                // Load environment with fallback
+                await loadEnvironment();
                 
                 // Load model
                 await loadModel();
@@ -1211,79 +1201,62 @@
             }
         }
         
-        // Load textures
+        // Load textures with fallbacks
         async function loadTextures() {
             document.getElementById('info-panel').innerHTML = 'Loading textures...';
             document.getElementById('statusMessage').textContent = 'Loading textures...';
             
-            const textureUrls = {
-                cottonNormalMap: 'https://cdn.jsdelivr.net/gh/mrdoob/three.js@dev/examples/textures/terrain/grasslight-big.jpg',
-                denimNormalMap: 'https://cdn.jsdelivr.net/gh/mrdoob/three.js@dev/examples/textures/normalmaps/leather/roughness.jpg',
-                velvetNormalMap: 'https://cdn.jsdelivr.net/gh/mrdoob/three.js@dev/examples/textures/normalmaps/leather/normal.jpg',
-                leatherNormalMap: 'https://cdn.jsdelivr.net/gh/mrdoob/three.js@dev/examples/textures/normalmaps/leather/normal.jpg',
-                puffDisplacementMap: 'https://cdn.jsdelivr.net/gh/mrdoob/three.js@dev/examples/textures/terrain/grasslight-big.jpg',
-                studioEnvMap: 'https://cdn.jsdelivr.net/gh/mrdoob/three.js@dev/examples/textures/equirectangular/venice_sunset_1k.hdr',
-                outdoorEnvMap: 'https://cdn.jsdelivr.net/gh/mrdoob/three.js@dev/examples/textures/equirectangular/pisa_1k.hdr',
-                neonEnvMap: 'https://cdn.jsdelivr.net/gh/mrdoob/three.js@dev/examples/textures/equirectangular/royal_esplanade_1k.hdr',
-                sunsetEnvMap: 'https://cdn.jsdelivr.net/gh/mrdoob/three.js@dev/examples/textures/equirectangular/bridge2_1k.hdr'
+            // Simple procedural textures as fallbacks
+            const createFabricTexture = () => {
+                const canvas = document.createElement('canvas');
+                canvas.width = canvas.height = 256;
+                const ctx = canvas.getContext('2d');
+                
+                // Create a simple fabric pattern
+                ctx.fillStyle = '#f0f0f0';
+                ctx.fillRect(0, 0, 256, 256);
+                
+                ctx.strokeStyle = '#e0e0e0';
+                ctx.lineWidth = 2;
+                
+                for (let i = 0; i < 256; i += 16) {
+                    ctx.beginPath();
+                    ctx.moveTo(i, 0);
+                    ctx.lineTo(i, 256);
+                    ctx.stroke();
+                    
+                    ctx.beginPath();
+                    ctx.moveTo(0, i);
+                    ctx.lineTo(256, i);
+                    ctx.stroke();
+                }
+                
+                const texture = new THREE.CanvasTexture(canvas);
+                texture.needsUpdate = true;
+                return texture;
             };
             
-            const texturePromises = Object.entries(textureUrls).map(([key, url]) => 
-                loadTexture(url)
-                    .then(texture => ({ key, texture }))
-                    .catch(error => {
-                        console.warn(`Failed to load ${key}: ${error}`);
-                        return { key, texture: createDefaultTexture() };
-                    })
-            );
+            const createNormalMap = () => {
+                const canvas = document.createElement('canvas');
+                canvas.width = canvas.height = 2;
+                const ctx = canvas.getContext('2d');
+                ctx.fillStyle = '#8080ff';
+                ctx.fillRect(0, 0, 2, 2);
+                const texture = new THREE.CanvasTexture(canvas);
+                texture.needsUpdate = true;
+                return texture;
+            };
             
-            const loadedTextures = await Promise.all(texturePromises);
-            
-            const textures = {};
-            loadedTextures.forEach(({ key, texture }) => {
-                textures[key] = texture;
-                if (key.includes('Displacement')) {
-                    texture.wrapS = texture.wrapT = THREE.RepeatWrapping;
-                }
-            });
-            
-            return textures;
+            return {
+                cottonNormalMap: createFabricTexture(),
+                denimNormalMap: createNormalMap(),
+                velvetNormalMap: createNormalMap(),
+                leatherNormalMap: createNormalMap(),
+                puffDisplacementMap: createFabricTexture()
+            };
         }
         
-        // Create a default empty texture
-        function createDefaultTexture() {
-            const canvas = document.createElement('canvas');
-            canvas.width = canvas.height = 2;
-            const ctx = canvas.getContext('2d');
-            ctx.fillStyle = '#808080';
-            ctx.fillRect(0, 0, 2, 2);
-            const texture = new THREE.CanvasTexture(canvas);
-            texture.needsUpdate = true;
-            return texture;
-        }
-        
-        // Load texture with error handling
-        function loadTexture(url) {
-            try {
-                const loader = new THREE.TextureLoader();
-                return new Promise((resolve, reject) => {
-                    loader.load(
-                        url,
-                        resolve,
-                        undefined,
-                        (error) => {
-                            console.warn(`Failed to load texture: ${url}`, error);
-                            resolve(createDefaultTexture());
-                        }
-                    );
-                });
-            } catch (error) {
-                console.error('Texture loading error:', error);
-                return createDefaultTexture();
-            }
-        }
-        
-        // Load environment map
+        // Load environment with fallback
         async function loadEnvironment(type = 'studio') {
             document.getElementById('info-panel').innerHTML = `Loading ${type} environment...`;
             document.getElementById('statusMessage').textContent = `Loading ${type} environment...`;
@@ -1292,55 +1265,35 @@
                 const pmremGenerator = new THREE.PMREMGenerator(renderer);
                 pmremGenerator.compileEquirectangularShader();
                 
-                let envMap;
+                // Create a simple procedural environment as fallback
+                const scene = new THREE.Scene();
                 
-                if (type === 'studio') {
-                    const texture = await new RGBELoader()
-                        .setDataType(THREE.UnsignedByteType)
-                        .loadAsync(textures.studioEnvMap);
-                    envMap = pmremGenerator.fromEquirectangular(texture).texture;
-                    texture.dispose();
-                } 
-                else if (type === 'outdoor') {
-                    const texture = await new RGBELoader()
-                        .setDataType(THREE.UnsignedByteType)
-                        .loadAsync(textures.outdoorEnvMap);
-                    envMap = pmremGenerator.fromEquirectangular(texture).texture;
-                    texture.dispose();
-                }
-                else if (type === 'neon') {
-                    const texture = await new RGBELoader()
-                        .setDataType(THREE.UnsignedByteType)
-                        .loadAsync(textures.neonEnvMap);
-                    envMap = pmremGenerator.fromEquirectangular(texture).texture;
-                    texture.dispose();
-                }
-                else if (type === 'sunset') {
-                    const texture = await new RGBELoader()
-                        .setDataType(THREE.UnsignedByteType)
-                        .loadAsync(textures.sunsetEnvMap);
-                    envMap = pmremGenerator.fromEquirectangular(texture).texture;
-                    texture.dispose();
+                // Add lights to simulate different environments
+                const ambientLight = new THREE.AmbientLight(0xffffff, type === 'neon' ? 0.2 : 0.5);
+                scene.add(ambientLight);
+                
+                const directionalLight = new THREE.DirectionalLight(0xffffff, type === 'neon' ? 3 : 2);
+                directionalLight.position.set(1, 1, 1);
+                
+                if (type === 'outdoor') {
+                    directionalLight.color.setHex(0xffecd2);
+                } else if (type === 'neon') {
+                    directionalLight.color.setHex(0x00f5d4);
+                } else if (type === 'sunset') {
+                    directionalLight.color.setHex(0xff9e7d);
                 }
                 
-                scene.environment = envMap;
+                scene.add(directionalLight);
+                
+                // Create environment map from scene
+                const cubeRenderTarget = pmremGenerator.fromScene(scene, 0.1);
+                scene.environment = cubeRenderTarget.texture;
                 pmremGenerator.dispose();
                 
-                return envMap;
+                return scene.environment;
             } catch (error) {
-                console.error('Failed to load environment map:', error);
-                
-                // Fallback to cube environment
-                try {
-                    const envMap = await new THREE.CubeTextureLoader()
-                        .setPath('https://cdn.jsdelivr.net/gh/mrdoob/three.js@dev/examples/textures/cube/pisa/')
-                        .loadAsync(['px.png', 'nx.png', 'py.png', 'ny.png', 'pz.png', 'nz.png']);
-                    scene.environment = envMap;
-                    return envMap;
-                } catch (cubeError) {
-                    console.error('Failed to load cube environment:', cubeError);
-                    return null;
-                }
+                console.error('Failed to create environment map:', error);
+                return null;
             }
         }
 
@@ -1397,7 +1350,7 @@
             // Create shader material for the hoodie
             hoodieMesh.material = new THREE.ShaderMaterial({
                 uniforms: {
-                    baseTexture: { value: textures.cottonNormalMap || createDefaultTexture() },
+                    baseTexture: { value: textures.cottonNormalMap },
                     bodyColor: { value: currentMaterial.color },
                     decalTexture: { value: currentDesign.texture || createDefaultTexture() },
                     hasDecal: { value: !!currentDesign.texture },
