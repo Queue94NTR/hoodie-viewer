@@ -117,10 +117,32 @@
         #resetTransforms:hover {
             background: #c82333;
         }
+        .animation-controls {
+            display: flex;
+            gap: 10px;
+        }
+        .animation-controls button {
+            flex: 1;
+        }
+        #pauseAnimation {
+            background: #ffc107;
+            color: #212529;
+        }
+        #pauseAnimation:hover {
+            background: #e0a800;
+        }
     </style>
 </head>
 <body>
     <div id="sidebar">
+        <div class="control-group">
+            <h3>Animation Controls</h3>
+            <div class="animation-controls">
+                <button id="playAnimation">▶ Play</button>
+                <button id="pauseAnimation">⏸ Pause</button>
+            </div>
+        </div>
+
         <div class="control-group">
             <h3>Color Customization</h3>
             <div class="color-control">
@@ -229,6 +251,7 @@
         // Model loading
         const loader = new GLTFLoader();
         let mixer;
+        let currentAction;
         let materials = {};
         let hoodieMesh; // Reference to the main hoodie mesh
         
@@ -288,10 +311,17 @@
                 // Handle animations
                 if (gltf.animations?.length) {
                     mixer = new THREE.AnimationMixer(model);
-                    mixer.clipAction(gltf.animations[0]).play();
+                    currentAction = mixer.clipAction(gltf.animations[0]);
+                    currentAction.play();
                     document.getElementById('debug').textContent = `Model loaded with ${gltf.animations.length} animations`;
+                    
+                    // Enable animation controls
+                    document.getElementById('playAnimation').disabled = false;
+                    document.getElementById('pauseAnimation').disabled = false;
                 } else {
                     document.getElementById('debug').textContent = 'Model loaded (no animations)';
+                    document.getElementById('playAnimation').disabled = true;
+                    document.getElementById('pauseAnimation').disabled = true;
                 }
                 
                 // Set initial colors
@@ -302,8 +332,25 @@
             (error) => {
                 console.error(error);
                 document.getElementById('debug').textContent = `Error: ${error.message}`;
+                document.getElementById('playAnimation').disabled = true;
+                document.getElementById('pauseAnimation').disabled = true;
             }
         );
+        
+        // Animation controls
+        document.getElementById('playAnimation').addEventListener('click', () => {
+            if (currentAction) {
+                currentAction.play();
+                document.getElementById('debug').textContent = 'Animation playing';
+            }
+        });
+        
+        document.getElementById('pauseAnimation').addEventListener('click', () => {
+            if (currentAction) {
+                currentAction.paused = !currentAction.paused;
+                document.getElementById('debug').textContent = currentAction.paused ? 'Animation paused' : 'Animation playing';
+            }
+        });
         
         // Color controls
         document.getElementById('bodyColor').addEventListener('input', (e) => {
