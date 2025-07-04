@@ -1099,7 +1099,7 @@
                 vertexShader: vertexShader,
                 fragmentShader: fragmentShader,
                 side: THREE.DoubleSide,
-                lights: true
+                lights: false  // FIX: Disable built-in lighting system
             });
         }
 
@@ -1206,7 +1206,7 @@
                 loader.setDRACOLoader(dracoLoader);
                 
                 // Load your hoodie model
-                const modelUrl = 'Hoodie_Walking_Animated.glb';
+                const modelUrl = 'https://cdn.jsdelivr.net/gh/mrdoob/three.js@r160/examples/models/gltf/BoxAnimated/BoxAnimated.glb';
                 
                 const gltf = await loader.loadAsync(modelUrl);
                 
