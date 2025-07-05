@@ -810,17 +810,20 @@
             logToTestPanel('Starting model load process', 'info');
             
             try {
-                const loader = new GLTFLoader();
-                const dracoLoader = new DRACOLoader();
-                dracoLoader.setDecoderPath('https://www.gstatic.com/draco/v1/decoders/');
-                loader.setDRACOLoader(dracoLoader);
-                
                 // First create the material
                 hoodieMaterial = createHoodieMaterial();
                 if (!hoodieMaterial) {
                     throw new Error('Failed to create material');
                 }
                 
+                const loader = new GLTFLoader();
+                const dracoLoader = new DRACOLoader();
+                
+                // Set the correct Draco decoder path
+                dracoLoader.setDecoderPath('https://www.gstatic.com/draco/versioned/decoders/1.5.6/');
+                loader.setDRACOLoader(dracoLoader);
+                
+                // Use a test model URL - replace with your actual model path
                 const modelUrl = 'Hoodie_Walking_Animated.glb';
                 logToTestPanel(`Loading model from: ${modelUrl}`, 'info');
                 
@@ -841,6 +844,7 @@
                 scene.add(hoodieModel);
                 modelLoaded = true;
                 
+                // Apply material to all meshes in the model
                 hoodieModel.traverse((child) => {
                     if (child.isMesh) {
                         child.material = hoodieMaterial;
@@ -857,6 +861,7 @@
                     updateStatus('Model loaded (no animations)');
                 }
                 
+                // Center and scale the model
                 const box = new THREE.Box3().setFromObject(hoodieModel);
                 const center = box.getCenter(new THREE.Vector3());
                 hoodieModel.position.sub(center);
@@ -864,15 +869,17 @@
                 controls.update();
                 
                 document.getElementById('loading-overlay').style.display = 'none';
-                animate();
                 
             } catch (error) {
                 logToTestPanel(`Error loading model: ${error.message}`, 'error');
                 updateStatus(`Failed to load model: ${error.message}`);
                 
-                // Create fallback with proper material initialization
+                // Create fallback model
                 createFallbackModel();
             }
+            
+            // Start animation loop
+            animate();
         }
 
         // Create fallback model
@@ -887,8 +894,34 @@
                 }
             }
             
-            const geometry = new THREE.BoxGeometry(1, 1.5, 0.8);
-            hoodieModel = new THREE.Mesh(geometry, hoodieMaterial);
+            // Create a simple hoodie-like shape
+            const group = new THREE.Group();
+            
+            // Body
+            const bodyGeometry = new THREE.BoxGeometry(1, 1.5, 0.5);
+            const body = new THREE.Mesh(bodyGeometry, hoodieMaterial);
+            group.add(body);
+            
+            // Sleeves
+            const sleeveGeometry = new THREE.CylinderGeometry(0.15, 0.15, 0.8, 8);
+            sleeveGeometry.rotateZ(Math.PI/2);
+            
+            const leftSleeve = new THREE.Mesh(sleeveGeometry, hoodieMaterial);
+            leftSleeve.position.set(-0.6, 0.2, 0);
+            group.add(leftSleeve);
+            
+            const rightSleeve = new THREE.Mesh(sleeveGeometry, hoodieMaterial);
+            rightSleeve.position.set(0.6, 0.2, 0);
+            group.add(rightSleeve);
+            
+            // Hood
+            const hoodGeometry = new THREE.ConeGeometry(0.5, 0.7, 4);
+            hoodGeometry.rotateX(Math.PI);
+            const hood = new THREE.Mesh(hoodGeometry, hoodieMaterial);
+            hood.position.set(0, 0.9, 0.1);
+            group.add(hood);
+            
+            hoodieModel = group;
             scene.add(hoodieModel);
             modelLoaded = true;
             
@@ -896,7 +929,6 @@
             controls.update();
             
             document.getElementById('loading-overlay').style.display = 'none';
-            animate();
         }
 
         // Animation loop
