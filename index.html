@@ -311,6 +311,16 @@
             rightSleeve: { min: new THREE.Vector2(0.5, 0.0), max: new THREE.Vector2(1.0, 0.5) },
             hood: { min: new THREE.Vector2(0.25, 0.5), max: new THREE.Vector2(0.75, 1.0) }
         };
+
+        // Create a default white texture
+        function createDefaultTexture() {
+            const canvas = document.createElement('canvas');
+            canvas.width = canvas.height = 2;
+            const ctx = canvas.getContext('2d');
+            ctx.fillStyle = 'white';
+            ctx.fillRect(0, 0, 2, 2);
+            return new THREE.CanvasTexture(canvas);
+        }
         
         // Testing and logging functions
         function logToTestPanel(message, type = 'info') {
@@ -643,7 +653,7 @@
                 const uniforms = {
                     baseColor: { value: new THREE.Color(0xFFFFFF) },
                     useSticker: { value: false },
-                    stickerTexture: { value: null },
+                    stickerTexture: { value: createDefaultTexture() },
                     stickerRegionMin: { value: new THREE.Vector2(0, 0) },
                     stickerRegionMax: { value: new THREE.Vector2(1, 1) },
                     stickerPosition: { value: new THREE.Vector2(0, 0) },
@@ -726,12 +736,18 @@
                     lights: true
                 });
 
+                // Force shader update
+                material.needsUpdate = true;
+                
                 logToTestPanel('Custom hoodie material created successfully', 'success');
                 return material;
             } catch (error) {
                 logToTestPanel(`Error creating shader material: ${error.message}`, 'error');
                 // Fallback to standard material
-                return new THREE.MeshStandardMaterial({ color: 0xFFFFFF });
+                return new THREE.MeshStandardMaterial({ 
+                    color: 0xFFFFFF,
+                    side: THREE.DoubleSide
+                });
             }
         }
 
@@ -823,7 +839,7 @@
                 dracoLoader.setDecoderPath('https://www.gstatic.com/draco/versioned/decoders/1.5.6/');
                 loader.setDRACOLoader(dracoLoader);
                 
-                // Use a test model URL - replace with your actual model path
+                // Use your model URL
                 const modelUrl = 'Hoodie_Walking_Animated.glb';
                 logToTestPanel(`Loading model from: ${modelUrl}`, 'info');
                 
@@ -890,7 +906,10 @@
             if (!hoodieMaterial) {
                 hoodieMaterial = createHoodieMaterial();
                 if (!hoodieMaterial) {
-                    hoodieMaterial = new THREE.MeshStandardMaterial({ color: 0xFFFFFF });
+                    hoodieMaterial = new THREE.MeshStandardMaterial({ 
+                        color: 0xFFFFFF,
+                        side: THREE.DoubleSide
+                    });
                 }
             }
             
