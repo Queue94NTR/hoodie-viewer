@@ -634,21 +634,21 @@
             reader.readAsDataURL(file);
         }
         
-        // Create custom shader material for the hoodie - FIXED VERSION
+        // Create custom shader material for the hoodie
         function createHoodieMaterial() {
             logToTestPanel('Creating custom hoodie material', 'info');
             
             try {
                 // Define uniforms with proper initialization
                 const uniforms = {
-                    baseColor: { type: 'c', value: new THREE.Color(0xFFFFFF) },
-                    useSticker: { type: 'b', value: false },
-                    stickerTexture: { type: 't', value: null },
-                    stickerRegionMin: { type: 'v2', value: new THREE.Vector2(0, 0) },
-                    stickerRegionMax: { type: 'v2', value: new THREE.Vector2(1, 1) },
-                    stickerPosition: { type: 'v2', value: new THREE.Vector2(0, 0) },
-                    stickerScale: { type: 'f', value: 1.0 },
-                    stickerRotation: { type: 'f', value: 0.0 }
+                    baseColor: { value: new THREE.Color(0xFFFFFF) },
+                    useSticker: { value: false },
+                    stickerTexture: { value: null },
+                    stickerRegionMin: { value: new THREE.Vector2(0, 0) },
+                    stickerRegionMax: { value: new THREE.Vector2(1, 1) },
+                    stickerPosition: { value: new THREE.Vector2(0, 0) },
+                    stickerScale: { value: 1.0 },
+                    stickerRotation: { value: 0.0 }
                 };
 
                 const vertexShader = `
@@ -804,7 +804,7 @@
             }
         }
 
-        // Load the model - FIXED VERSION
+        // Load the model
         async function loadModel() {
             updateStatus('Loading model...');
             logToTestPanel('Starting model load process', 'info');
@@ -814,6 +814,12 @@
                 const dracoLoader = new DRACOLoader();
                 dracoLoader.setDecoderPath('https://www.gstatic.com/draco/v1/decoders/');
                 loader.setDRACOLoader(dracoLoader);
+                
+                // First create the material
+                hoodieMaterial = createHoodieMaterial();
+                if (!hoodieMaterial) {
+                    throw new Error('Failed to create material');
+                }
                 
                 const modelUrl = 'Hoodie_Walking_Animated.glb';
                 logToTestPanel(`Loading model from: ${modelUrl}`, 'info');
@@ -834,12 +840,6 @@
                 hoodieModel = gltf.scene;
                 scene.add(hoodieModel);
                 modelLoaded = true;
-                
-                // Create material before applying to model
-                hoodieMaterial = createHoodieMaterial();
-                if (!hoodieMaterial) {
-                    throw new Error('Failed to create material');
-                }
                 
                 hoodieModel.traverse((child) => {
                     if (child.isMesh) {
@@ -875,7 +875,7 @@
             }
         }
 
-        // New helper function for fallback model
+        // Create fallback model
         function createFallbackModel() {
             logToTestPanel('Creating fallback model', 'warning');
             
