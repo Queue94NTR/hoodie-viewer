@@ -489,7 +489,7 @@
         function testColorFunction() {
             logToTestPanel('Running color function test...', 'info');
             
-            if (!hoodieMaterial) {
+            if (!hoodieMaterial || !hoodieMaterial.uniforms) {
                 logToTestPanel('Test failed: Hoodie material not initialized', 'error');
                 return;
             }
@@ -517,7 +517,7 @@
         function testStickerFunction() {
             logToTestPanel('Running sticker function test...', 'info');
             
-            if (!hoodieMaterial) {
+            if (!hoodieMaterial || !hoodieMaterial.uniforms) {
                 logToTestPanel('Test failed: Hoodie material not initialized', 'error');
                 return;
             }
@@ -553,8 +553,10 @@
             
             // Clear after 2 seconds
             setTimeout(() => {
-                hoodieMaterial.uniforms.useSticker.value = false;
-                logToTestPanel('Test sticker cleared', 'info');
+                if (hoodieMaterial && hoodieMaterial.uniforms) {
+                    hoodieMaterial.uniforms.useSticker.value = false;
+                    logToTestPanel('Test sticker cleared', 'info');
+                }
             }, 2000);
         }
         
@@ -601,12 +603,12 @@
                 // Create texture from the uploaded image
                 const image = new Image();
                 image.onload = function() {
-                    if (currentStickerTexture) {
-                        currentStickerTexture.dispose();
-                        logToTestPanel('Previous sticker texture disposed', 'info');
-                    }
-                    
                     try {
+                        if (currentStickerTexture) {
+                            currentStickerTexture.dispose();
+                            logToTestPanel('Previous sticker texture disposed', 'info');
+                        }
+                        
                         currentStickerTexture = new THREE.Texture(image);
                         currentStickerTexture.needsUpdate = true;
                         updateStatus('Image loaded - ready to apply');
@@ -651,92 +653,98 @@
             
             stickerUniforms = uniforms;
             
-            const material = new THREE.ShaderMaterial({
-                uniforms: uniforms,
-                vertexShader: `
-                    varying vec2 vUv;
-                    varying vec3 vNormal;
-                    
-                    void main() {
-                        vUv = uv;
-                        vNormal = normalize(normalMatrix * normal);
-                        gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
-                    }
-                `,
-                fragmentShader: `
-                    uniform vec3 baseColor;
-                    uniform bool useSticker;
-                    uniform sampler2D stickerTexture;
-                    uniform vec2 stickerRegionMin;
-                    uniform vec2 stickerRegionMax;
-                    uniform vec2 stickerPosition;
-                    uniform float stickerScale;
-                    uniform float stickerRotation;
-                    
-                    varying vec2 vUv;
-                    varying vec3 vNormal;
-                    
-                    // Rotate UV coordinates around a center point
-                    vec2 rotateUV(vec2 uv, vec2 center, float angle) {
-                        uv -= center;
-                        float s = sin(angle);
-                        float c = cos(angle);
-                        mat2 rotMat = mat2(c, -s, s, c);
-                        uv = rotMat * uv;
-                        uv += center;
-                        return uv;
-                    }
-                    
-                    void main() {
-                        // Base color - you could make hood different from body here
-                        vec3 finalColor = baseColor;
+            try {
+                const material = new THREE.ShaderMaterial({
+                    uniforms: uniforms,
+                    vertexShader: `
+                        varying vec2 vUv;
+                        varying vec3 vNormal;
                         
-                        // Apply sticker if enabled and in the right region
-                        if (useSticker) {
-                            // Check if we're in the target region
-                            bool inRegion = vUv.x >= stickerRegionMin.x && vUv.x <= stickerRegionMax.x &&
-                                            vUv.y >= stickerRegionMin.y && vUv.y <= stickerRegionMax.y;
-                            
-                            if (inRegion) {
-                                // Transform UV coordinates for the sticker
-                                vec2 regionSize = stickerRegionMax - stickerRegionMin;
-                                vec2 regionCenter = stickerRegionMin + regionSize * 0.5;
-                                
-                                // Normalize UV to the region
-                                vec2 regionUV = (vUv - stickerRegionMin) / regionSize;
-                                
-                                // Apply transformations
-                                vec2 stickerUV = regionUV - vec2(0.5); // Center at 0,0
-                                stickerUV /= stickerScale; // Scale
-                                stickerUV = rotateUV(stickerUV, vec2(0.0), stickerRotation * 0.01745329251); // Rotate (convert degrees to radians)
-                                stickerUV += vec2(0.5); // Move back to center
-                                stickerUV += stickerPosition; // Apply position offset
-                                
-                                // Only apply sticker if within 0-1 range after transformations
-                                if (stickerUV.x >= 0.0 && stickerUV.x <= 1.0 && 
-                                    stickerUV.y >= 0.0 && stickerUV.y <= 1.0) {
-                                    
-                                    vec4 stickerColor = texture2D(stickerTexture, stickerUV);
-                                    
-                                    // Blend with base color using sticker's alpha
-                                    finalColor = mix(finalColor, stickerColor.rgb, stickerColor.a);
-                                }
-                            }
+                        void main() {
+                            vUv = uv;
+                            vNormal = normalize(normalMatrix * normal);
+                            gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+                        }
+                    `,
+                    fragmentShader: `
+                        uniform vec3 baseColor;
+                        uniform bool useSticker;
+                        uniform sampler2D stickerTexture;
+                        uniform vec2 stickerRegionMin;
+                        uniform vec2 stickerRegionMax;
+                        uniform vec2 stickerPosition;
+                        uniform float stickerScale;
+                        uniform float stickerRotation;
+                        
+                        varying vec2 vUv;
+                        varying vec3 vNormal;
+                        
+                        // Rotate UV coordinates around a center point
+                        vec2 rotateUV(vec2 uv, vec2 center, float angle) {
+                            uv -= center;
+                            float s = sin(angle);
+                            float c = cos(angle);
+                            mat2 rotMat = mat2(c, -s, s, c);
+                            uv = rotMat * uv;
+                            uv += center;
+                            return uv;
                         }
                         
-                        // Simple lighting based on normals
-                        float lighting = dot(vNormal, vec3(0.5, 0.5, 1.0)) * 0.5 + 0.5;
-                        finalColor *= lighting;
-                        
-                        gl_FragColor = vec4(finalColor, 1.0);
-                    }
-                `,
-                side: THREE.DoubleSide,
-                lights: true
-            });
-            
-            logToTestPanel('Custom hoodie material created successfully', 'success');
-            return material;
+                        void main() {
+                            // Base color - you could make hood different from body here
+                            vec3 finalColor = baseColor;
+                            
+                            // Apply sticker if enabled and in the right region
+                            if (useSticker) {
+                                // Check if we're in the target region
+                                bool inRegion = vUv.x >= stickerRegionMin.x && vUv.x <= stickerRegionMax.x &&
+                                                vUv.y >= stickerRegionMin.y && vUv.y <= stickerRegionMax.y;
+                                
+                                if (inRegion) {
+                                    // Transform UV coordinates for the sticker
+                                    vec2 regionSize = stickerRegionMax - stickerRegionMin;
+                                    vec2 regionCenter = stickerRegionMin + regionSize * 0.5;
+                                    
+                                    // Normalize UV to the region
+                                    vec2 regionUV = (vUv - stickerRegionMin) / regionSize;
+                                    
+                                    // Apply transformations
+                                    vec2 stickerUV = regionUV - vec2(0.5); // Center at 0,0
+                                    stickerUV /= stickerScale; // Scale
+                                    stickerUV = rotateUV(stickerUV, vec2(0.0), stickerRotation * 0.01745329251); // Rotate (convert degrees to radians)
+                                    stickerUV += vec2(0.5); // Move back to center
+                                    stickerUV += stickerPosition; // Apply position offset
+                                    
+                                    // Only apply sticker if within 0-1 range after transformations
+                                    if (stickerUV.x >= 0.0 && stickerUV.x <= 1.0 && 
+                                        stickerUV.y >= 0.0 && stickerUV.y <= 1.0) {
+                                        
+                                        vec4 stickerColor = texture2D(stickerTexture, stickerUV);
+                                        
+                                        // Blend with base color using sticker's alpha
+                                        finalColor = mix(finalColor, stickerColor.rgb, stickerColor.a);
+                                    }
+                                }
+                            }
+                            
+                            // Simple lighting based on normals
+                            float lighting = dot(vNormal, vec3(0.5, 0.5, 1.0)) * 0.5 + 0.5;
+                            finalColor *= lighting;
+                            
+                            gl_FragColor = vec4(finalColor, 1.0);
+                        }
+                    `,
+                    side: THREE.DoubleSide,
+                    lights: true
+                });
+                
+                logToTestPanel('Custom hoodie material created successfully', 'success');
+                return material;
+            } catch (error) {
+                logToTestPanel(`Failed to create shader material: ${error.message}`, 'error');
+                // Fallback to standard material if shader fails
+                return new THREE.MeshStandardMaterial({ color: 0xFFFFFF });
+            }
         }
 
         // Apply color to the hoodie
@@ -835,6 +843,11 @@
                 // Create our custom shader material
                 hoodieMaterial = createHoodieMaterial();
                 
+                // Verify material was created before applying
+                if (!hoodieMaterial) {
+                    throw new Error('Failed to create hoodie material');
+                }
+                
                 // Apply to all parts of the model
                 hoodieModel.traverse((child) => {
                     if (child.isMesh) {
@@ -883,7 +896,16 @@
                 // Create a fallback cube
                 logToTestPanel('Creating fallback cube model', 'warning');
                 const geometry = new THREE.BoxGeometry(1, 1.5, 0.8);
-                hoodieMaterial = createHoodieMaterial();
+                
+                // Ensure we have a valid material
+                if (!hoodieMaterial) {
+                    hoodieMaterial = createHoodieMaterial();
+                    if (!hoodieMaterial) {
+                        // Ultimate fallback if shader material fails
+                        hoodieMaterial = new THREE.MeshStandardMaterial({ color: 0xFFFFFF });
+                    }
+                }
+                
                 hoodieModel = new THREE.Mesh(geometry, hoodieMaterial);
                 scene.add(hoodieModel);
                 modelLoaded = true;
@@ -891,10 +913,7 @@
                 camera.position.z = 3;
                 controls.update();
                 
-                // Hide loading overlay
                 document.getElementById('loading-overlay').style.display = 'none';
-                
-                // Start animation loop
                 animate();
             }
         }
