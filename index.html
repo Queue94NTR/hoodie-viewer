@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>3D Hoodie Viewer with Stickers</title>
+    <title>3D Hoodie Viewer with Testing Panel</title>
     <style>
         body { 
             margin: 0;
@@ -22,13 +22,15 @@
             position: absolute;
             top: 20px;
             right: 20px;
-            background: rgba(255, 255, 255, 0.9);
+            background: rgba(255, 255, 255, 0.95);
             padding: 15px;
             border-radius: 8px;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-            max-width: 300px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+            max-width: 350px;
             max-height: 90vh;
             overflow-y: auto;
+            display: flex;
+            flex-direction: column;
         }
         
         .control-group {
@@ -43,11 +45,11 @@
             color: #4361ee;
         }
         
-        .color-control, .sticker-control {
+        .color-control, .sticker-control, .test-control {
             margin-bottom: 10px;
         }
         
-        .color-control label, .sticker-control label {
+        .color-control label, .sticker-control label, .test-control label {
             display: block;
             margin-bottom: 5px;
             font-weight: 500;
@@ -75,6 +77,14 @@
         
         button:hover {
             background: #3a56d4;
+        }
+        
+        button.secondary {
+            background: #6c757d;
+        }
+        
+        button.secondary:hover {
+            background: #5a6268;
         }
         
         input[type="range"] {
@@ -122,6 +132,10 @@
             margin-top: 10px;
             font-size: 0.9em;
             color: #666;
+            padding: 8px;
+            background: #f8f9fa;
+            border-radius: 4px;
+            border-left: 4px solid #4361ee;
         }
         
         .sticker-preview {
@@ -145,6 +159,48 @@
         .hidden {
             display: none;
         }
+        
+        #test-panel {
+            margin-top: 15px;
+            padding: 10px;
+            background: #f8f9fa;
+            border-radius: 4px;
+            border: 1px solid #dee2e6;
+        }
+        
+        #test-log {
+            height: 100px;
+            overflow-y: auto;
+            font-family: monospace;
+            font-size: 12px;
+            background: #212529;
+            color: #e9ecef;
+            padding: 8px;
+            border-radius: 4px;
+            margin-top: 10px;
+        }
+        
+        .log-entry {
+            margin-bottom: 4px;
+            padding-bottom: 4px;
+            border-bottom: 1px solid #495057;
+        }
+        
+        .log-success {
+            color: #20c997;
+        }
+        
+        .log-warning {
+            color: #ffc107;
+        }
+        
+        .log-error {
+            color: #dc3545;
+        }
+        
+        .log-info {
+            color: #0dcaf0;
+        }
     </style>
 </head>
 <body>
@@ -163,6 +219,7 @@
                     <input type="color" id="hoodieColor" value="#FFFFFF">
                 </div>
                 <button id="apply-colors">Apply Color</button>
+                <button id="test-colors" class="secondary">Test Color Function</button>
             </div>
             
             <div class="control-group">
@@ -209,9 +266,20 @@
                 
                 <button id="apply-sticker">Apply Sticker</button>
                 <button id="clear-stickers">Clear All Stickers</button>
+                <button id="test-stickers" class="secondary">Test Sticker Function</button>
             </div>
             
-            <div id="status">Initializing...</div>
+            <div class="control-group">
+                <h3>Testing Panel</h3>
+                <div id="test-panel">
+                    <button id="run-all-tests">Run All Tests</button>
+                    <button id="check-webgl" class="secondary">Check WebGL Support</button>
+                    <button id="check-model" class="secondary">Check Model Status</button>
+                    <div id="test-log"></div>
+                </div>
+            </div>
+            
+            <div id="status">Initializing application...</div>
         </div>
     </div>
 
@@ -234,6 +302,7 @@
         let hoodieMaterial = null;
         let currentStickerTexture = null;
         let stickerUniforms = null;
+        let modelLoaded = false;
         
         // UV regions for different parts of the hoodie
         const uvRegions = {
@@ -244,8 +313,26 @@
             hood: { min: new THREE.Vector2(0.25, 0.5), max: new THREE.Vector2(0.75, 1.0) }
         };
         
+        // Testing and logging functions
+        function logToTestPanel(message, type = 'info') {
+            const testLog = document.getElementById('test-log');
+            const logEntry = document.createElement('div');
+            logEntry.className = `log-entry log-${type}`;
+            logEntry.textContent = `[${new Date().toLocaleTimeString()}] ${message}`;
+            testLog.appendChild(logEntry);
+            testLog.scrollTop = testLog.scrollHeight;
+            console.log(`[${type.toUpperCase()}] ${message}`);
+        }
+        
+        function updateStatus(message) {
+            document.getElementById('status').textContent = message;
+            logToTestPanel(`Status: ${message}`, 'info');
+        }
+        
         // Initialize the application
         function init() {
+            logToTestPanel('Application initialization started', 'info');
+            
             // Check WebGL support
             if (!isWebGLAvailable()) {
                 showWebGLError();
@@ -256,6 +343,8 @@
             setupControls();
             setupUI();
             loadModel();
+            
+            logToTestPanel('Application initialization completed', 'success');
         }
 
         // Check WebGL support
@@ -264,8 +353,17 @@
                 const canvas = document.createElement('canvas');
                 canvas.width = canvas.height = 2;
                 const ctx = canvas.getContext('webgl') || canvas.getContext('experimental-webgl');
-                return !!(window.WebGLRenderingContext && ctx);
+                const supported = !!(window.WebGLRenderingContext && ctx);
+                
+                if (supported) {
+                    logToTestPanel('WebGL is supported in this browser', 'success');
+                } else {
+                    logToTestPanel('WebGL is not supported in this browser', 'error');
+                }
+                
+                return supported;
             } catch (e) {
+                logToTestPanel(`WebGL check failed: ${e.message}`, 'error');
                 return false;
             }
         }
@@ -278,12 +376,14 @@
             warning.style.padding = '20px';
             warning.style.fontFamily = 'sans-serif';
             document.getElementById('viewer').appendChild(warning);
-            document.getElementById('status').textContent = 'WebGL not supported';
+            updateStatus('WebGL not supported');
             throw new Error('WebGL not supported');
         }
 
         // Setup Three.js scene
         function setupScene() {
+            logToTestPanel('Setting up Three.js scene', 'info');
+            
             scene = new THREE.Scene();
             scene.background = new THREE.Color(0xf0f0f0);
             
@@ -316,10 +416,14 @@
             
             // Initialize clock for animations
             clock = new THREE.Clock();
+            
+            logToTestPanel('Three.js scene setup completed', 'success');
         }
 
         // Setup orbit controls
         function setupControls() {
+            logToTestPanel('Setting up orbit controls', 'info');
+            
             controls = new OrbitControls(camera, renderer.domElement);
             controls.enableDamping = true;
             controls.dampingFactor = 0.05;
@@ -327,17 +431,23 @@
             controls.maxPolarAngle = Math.PI;
             controls.minDistance = 1;
             controls.maxDistance = 10;
+            
+            logToTestPanel('Orbit controls setup completed', 'success');
         }
 
         // Setup UI event listeners
         function setupUI() {
+            logToTestPanel('Setting up UI event listeners', 'info');
+            
             // Color controls
             document.getElementById('apply-colors').addEventListener('click', applyColor);
+            document.getElementById('test-colors').addEventListener('click', testColorFunction);
             
             // Sticker controls
             document.getElementById('stickerImage').addEventListener('change', handleImageUpload);
             document.getElementById('apply-sticker').addEventListener('click', applySticker);
             document.getElementById('clear-stickers').addEventListener('click', clearStickers);
+            document.getElementById('test-stickers').addEventListener('click', testStickerFunction);
             
             // Update slider value displays
             document.getElementById('stickerPositionX').addEventListener('input', (e) => {
@@ -355,12 +465,128 @@
             document.getElementById('stickerRotation').addEventListener('input', (e) => {
                 document.getElementById('rotationValue').textContent = e.target.value;
             });
+            
+            // Testing controls
+            document.getElementById('run-all-tests').addEventListener('click', runAllTests);
+            document.getElementById('check-webgl').addEventListener('click', () => {
+                const supported = isWebGLAvailable();
+                logToTestPanel(`WebGL check result: ${supported ? 'Supported' : 'Not supported'}`, 
+                             supported ? 'success' : 'error');
+            });
+            
+            document.getElementById('check-model').addEventListener('click', () => {
+                logToTestPanel(`Model status: ${modelLoaded ? 'Loaded' : 'Not loaded'}`, 
+                             modelLoaded ? 'success' : 'warning');
+                if (modelLoaded) {
+                    logToTestPanel(`Model details: ${hoodieModel.children.length} children`, 'info');
+                }
+            });
+            
+            logToTestPanel('UI event listeners setup completed', 'success');
+        }
+        
+        // Test color function
+        function testColorFunction() {
+            logToTestPanel('Running color function test...', 'info');
+            
+            if (!hoodieMaterial) {
+                logToTestPanel('Test failed: Hoodie material not initialized', 'error');
+                return;
+            }
+            
+            // Store original color
+            const originalColor = hoodieMaterial.uniforms.baseColor.value.clone();
+            
+            // Test with known color
+            const testColor = new THREE.Color(0xff0000);
+            hoodieMaterial.uniforms.baseColor.value.copy(testColor);
+            
+            // Verify the color was applied
+            const currentColor = hoodieMaterial.uniforms.baseColor.value;
+            if (currentColor.equals(testColor)) {
+                logToTestPanel('Color test passed: Color applied successfully', 'success');
+            } else {
+                logToTestPanel('Color test failed: Color not applied correctly', 'error');
+            }
+            
+            // Restore original color
+            hoodieMaterial.uniforms.baseColor.value.copy(originalColor);
+        }
+        
+        // Test sticker function
+        function testStickerFunction() {
+            logToTestPanel('Running sticker function test...', 'info');
+            
+            if (!hoodieMaterial) {
+                logToTestPanel('Test failed: Hoodie material not initialized', 'error');
+                return;
+            }
+            
+            // Create a test texture
+            const canvas = document.createElement('canvas');
+            canvas.width = canvas.height = 32;
+            const ctx = canvas.getContext('2d');
+            ctx.fillStyle = '#00ff00';
+            ctx.fillRect(0, 0, 32, 32);
+            ctx.fillStyle = '#000000';
+            ctx.font = '16px Arial';
+            ctx.fillText('TEST', 8, 20);
+            
+            const testTexture = new THREE.CanvasTexture(canvas);
+            
+            // Apply test sticker
+            hoodieMaterial.uniforms.useSticker.value = true;
+            hoodieMaterial.uniforms.stickerTexture.value = testTexture;
+            hoodieMaterial.uniforms.stickerRegionMin.value.copy(uvRegions.front.min);
+            hoodieMaterial.uniforms.stickerRegionMax.value.copy(uvRegions.front.max);
+            hoodieMaterial.uniforms.stickerPosition.value.set(0, 0);
+            hoodieMaterial.uniforms.stickerScale.value = 1.0;
+            hoodieMaterial.uniforms.stickerRotation.value = 0.0;
+            
+            // Verify the sticker was applied
+            if (hoodieMaterial.uniforms.useSticker.value && 
+                hoodieMaterial.uniforms.stickerTexture.value) {
+                logToTestPanel('Sticker test passed: Sticker applied successfully', 'success');
+            } else {
+                logToTestPanel('Sticker test failed: Sticker not applied correctly', 'error');
+            }
+            
+            // Clear after 2 seconds
+            setTimeout(() => {
+                hoodieMaterial.uniforms.useSticker.value = false;
+                logToTestPanel('Test sticker cleared', 'info');
+            }, 2000);
+        }
+        
+        // Run all tests
+        function runAllTests() {
+            logToTestPanel('Running all tests...', 'info');
+            
+            // WebGL test
+            const webglSupported = isWebGLAvailable();
+            logToTestPanel(`WebGL test: ${webglSupported ? 'PASSED' : 'FAILED'}`, 
+                         webglSupported ? 'success' : 'error');
+            
+            // Model test
+            logToTestPanel(`Model test: ${modelLoaded ? 'PASSED' : 'FAILED'}`, 
+                         modelLoaded ? 'success' : 'error');
+            
+            // Run individual function tests
+            testColorFunction();
+            testStickerFunction();
+            
+            logToTestPanel('All tests completed', 'info');
         }
         
         // Handle image upload for sticker
         function handleImageUpload(event) {
             const file = event.target.files[0];
-            if (!file) return;
+            if (!file) {
+                logToTestPanel('No file selected for sticker', 'warning');
+                return;
+            }
+            
+            logToTestPanel(`Processing sticker image: ${file.name}`, 'info');
             
             const reader = new FileReader();
             reader.onload = function(e) {
@@ -377,18 +603,40 @@
                 image.onload = function() {
                     if (currentStickerTexture) {
                         currentStickerTexture.dispose();
+                        logToTestPanel('Previous sticker texture disposed', 'info');
                     }
-                    currentStickerTexture = new THREE.Texture(image);
-                    currentStickerTexture.needsUpdate = true;
-                    document.getElementById('status').textContent = 'Image loaded - ready to apply';
+                    
+                    try {
+                        currentStickerTexture = new THREE.Texture(image);
+                        currentStickerTexture.needsUpdate = true;
+                        updateStatus('Image loaded - ready to apply');
+                        logToTestPanel('Sticker image loaded successfully', 'success');
+                    } catch (error) {
+                        logToTestPanel(`Failed to create texture: ${error.message}`, 'error');
+                        updateStatus('Error loading image');
+                    }
                 };
+                
+                image.onerror = function() {
+                    logToTestPanel('Failed to load image file', 'error');
+                    updateStatus('Error loading image');
+                };
+                
                 image.src = e.target.result;
             };
+            
+            reader.onerror = function() {
+                logToTestPanel('Failed to read file', 'error');
+                updateStatus('Error reading file');
+            };
+            
             reader.readAsDataURL(file);
         }
         
         // Create custom shader material for the hoodie
         function createHoodieMaterial() {
+            logToTestPanel('Creating custom hoodie material', 'info');
+            
             // Define uniforms for our shader
             const uniforms = {
                 baseColor: { value: new THREE.Color(0xFFFFFF) },
@@ -403,7 +651,7 @@
             
             stickerUniforms = uniforms;
             
-            return new THREE.ShaderMaterial({
+            const material = new THREE.ShaderMaterial({
                 uniforms: uniforms,
                 vertexShader: `
                     varying vec2 vUv;
@@ -486,21 +734,42 @@
                 side: THREE.DoubleSide,
                 lights: true
             });
+            
+            logToTestPanel('Custom hoodie material created successfully', 'success');
+            return material;
         }
 
         // Apply color to the hoodie
         function applyColor() {
             const colorValue = document.getElementById('hoodieColor').value;
-            if (hoodieMaterial && hoodieMaterial.uniforms) {
+            
+            if (!hoodieMaterial || !hoodieMaterial.uniforms) {
+                logToTestPanel('Cannot apply color: Hoodie material not ready', 'error');
+                updateStatus('Error: Material not ready');
+                return;
+            }
+            
+            try {
                 hoodieMaterial.uniforms.baseColor.value.set(colorValue);
-                document.getElementById('status').textContent = `Color applied: ${colorValue}`;
+                updateStatus(`Color applied: ${colorValue}`);
+                logToTestPanel(`Color applied successfully: ${colorValue}`, 'success');
+            } catch (error) {
+                logToTestPanel(`Failed to apply color: ${error.message}`, 'error');
+                updateStatus('Error applying color');
             }
         }
         
         // Apply sticker to the hoodie
         function applySticker() {
             if (!currentStickerTexture) {
-                document.getElementById('status').textContent = 'Please upload an image first';
+                logToTestPanel('Cannot apply sticker: No image uploaded', 'warning');
+                updateStatus('Please upload an image first');
+                return;
+            }
+            
+            if (!hoodieMaterial || !hoodieMaterial.uniforms) {
+                logToTestPanel('Cannot apply sticker: Hoodie material not ready', 'error');
+                updateStatus('Error: Material not ready');
                 return;
             }
             
@@ -510,7 +779,7 @@
             const scale = parseFloat(document.getElementById('stickerScale').value);
             const rotation = parseFloat(document.getElementById('stickerRotation').value);
             
-            if (hoodieMaterial && hoodieMaterial.uniforms) {
+            try {
                 hoodieMaterial.uniforms.useSticker.value = true;
                 hoodieMaterial.uniforms.stickerTexture.value = currentStickerTexture;
                 hoodieMaterial.uniforms.stickerRegionMin.value.copy(uvRegions[placement].min);
@@ -519,7 +788,12 @@
                 hoodieMaterial.uniforms.stickerScale.value = scale;
                 hoodieMaterial.uniforms.stickerRotation.value = rotation;
                 
-                document.getElementById('status').textContent = `Sticker applied to ${placement}`;
+                updateStatus(`Sticker applied to ${placement}`);
+                logToTestPanel(`Sticker applied successfully to ${placement}`, 'success');
+                logToTestPanel(`Sticker params: X=${positionX}, Y=${positionY}, Scale=${scale}, Rotation=${rotation}°`, 'info');
+            } catch (error) {
+                logToTestPanel(`Failed to apply sticker: ${error.message}`, 'error');
+                updateStatus('Error applying sticker');
             }
         }
         
@@ -527,30 +801,36 @@
         function clearStickers() {
             if (hoodieMaterial && hoodieMaterial.uniforms) {
                 hoodieMaterial.uniforms.useSticker.value = false;
-                document.getElementById('status').textContent = 'All stickers cleared';
+                updateStatus('All stickers cleared');
+                logToTestPanel('All stickers cleared', 'info');
+            } else {
+                logToTestPanel('Cannot clear stickers: Material not ready', 'warning');
             }
         }
 
         // Load the model
         async function loadModel() {
+            updateStatus('Loading model...');
+            logToTestPanel('Starting model load process', 'info');
+            
             try {
-                document.getElementById('status').textContent = 'Loading model...';
-                
                 const loader = new GLTFLoader();
                 const dracoLoader = new DRACOLoader();
                 dracoLoader.setDecoderPath('https://www.gstatic.com/draco/v1/decoders/');
                 loader.setDRACOLoader(dracoLoader);
                 
                 // Load your hoodie model
-                // Make sure the path is correct relative to your HTML file
-                // or use an absolute URL if hosted elsewhere
                 const modelUrl = 'Hoodie_Walking_Animated.glb';
+                logToTestPanel(`Loading model from: ${modelUrl}`, 'info');
                 
                 const gltf = await loader.loadAsync(modelUrl);
                 
+                logToTestPanel('Model loaded successfully', 'success');
                 console.log('Model loaded successfully:', gltf);
+                
                 hoodieModel = gltf.scene;
                 scene.add(hoodieModel);
+                modelLoaded = true;
                 
                 // Create our custom shader material
                 hoodieMaterial = createHoodieMaterial();
@@ -559,7 +839,7 @@
                 hoodieModel.traverse((child) => {
                     if (child.isMesh) {
                         child.material = hoodieMaterial;
-                        console.log("Replaced material for:", child.name);
+                        logToTestPanel(`Applied material to: ${child.name || 'unnamed mesh'}`, 'info');
                     }
                 });
                 
@@ -568,9 +848,11 @@
                     mixer = new THREE.AnimationMixer(hoodieModel);
                     const action = mixer.clipAction(gltf.animations[0]);
                     action.play();
-                    document.getElementById('status').textContent = 'Model loaded with animation';
+                    updateStatus('Model loaded with animation');
+                    logToTestPanel(`Animation loaded: ${gltf.animations[0].name}`, 'success');
                 } else {
-                    document.getElementById('status').textContent = 'Model loaded (no animations)';
+                    updateStatus('Model loaded (no animations)');
+                    logToTestPanel('No animations found in model', 'info');
                 }
                 
                 // Center model
@@ -583,6 +865,8 @@
                 camera.position.z = size * 1.5;
                 controls.update();
                 
+                logToTestPanel(`Model centered and scaled. Size: ${size.toFixed(2)}`, 'info');
+                
                 // Hide loading overlay
                 document.getElementById('loading-overlay').style.display = 'none';
                 
@@ -590,23 +874,25 @@
                 animate();
                 
             } catch (error) {
+                logToTestPanel(`Error loading model: ${error.message}`, 'error');
                 console.error('Error loading model:', error);
                 
                 // Update status
-                document.getElementById('status').textContent = `Failed to load model: ${error.message}`;
+                updateStatus(`Failed to load model: ${error.message}`);
                 
                 // Create a fallback cube
+                logToTestPanel('Creating fallback cube model', 'warning');
                 const geometry = new THREE.BoxGeometry(1, 1.5, 0.8);
                 hoodieMaterial = createHoodieMaterial();
                 hoodieModel = new THREE.Mesh(geometry, hoodieMaterial);
                 scene.add(hoodieModel);
+                modelLoaded = true;
                 
                 camera.position.z = 3;
                 controls.update();
                 
                 // Hide loading overlay
                 document.getElementById('loading-overlay').style.display = 'none';
-                document.getElementById('status').textContent = 'Using fallback model - ' + error.message;
                 
                 // Start animation loop
                 animate();
@@ -634,6 +920,8 @@
             camera.aspect = width / height;
             camera.updateProjectionMatrix();
             renderer.setSize(width, height);
+            
+            logToTestPanel(`Window resized to: ${width}x${height}`, 'info');
         }
 
         // Event listeners
