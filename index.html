@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Basic 3D Hoodie Viewer</title>
+    <title>3D Hoodie Viewer</title>
     <style>
         body { 
             margin: 0;
@@ -145,7 +145,7 @@
         import { DRACOLoader } from 'three/addons/loaders/DRACOLoader.js';
         
         // Main variables
-        let scene, camera, renderer, controls, hoodieModel;
+        let scene, camera, renderer, controls, hoodieModel, mixer, clock;
         let hoodieMaterial = null;
         
         // Initialize the application
@@ -217,6 +217,9 @@
             const directionalLight2 = new THREE.DirectionalLight(0xffffff, 0.5);
             directionalLight2.position.set(-1, -1, -1);
             scene.add(directionalLight2);
+            
+            // Initialize clock for animations
+            clock = new THREE.Clock();
         }
 
         // Setup orbit controls
@@ -266,9 +269,10 @@
                 dracoLoader.setDecoderPath('https://www.gstatic.com/draco/v1/decoders/');
                 loader.setDRACOLoader(dracoLoader);
                 
-                // Load hoodie model
-                // Replace this URL with your actual model URL
-                const modelUrl = 'https://cdn.jsdelivr.net/gh/mrdoob/three.js@dev/examples/models/gltf/LittlestTokyo.glb';
+                // Load your hoodie model
+                // Make sure the path is correct relative to your HTML file
+                // or use an absolute URL if hosted elsewhere
+                const modelUrl = 'Hoodie_Walking_Animated.glb';
                 
                 const gltf = await loader.loadAsync(modelUrl);
                 
@@ -287,6 +291,16 @@
                     }
                 });
                 
+                // Check for animations
+                if (gltf.animations && gltf.animations.length > 0) {
+                    mixer = new THREE.AnimationMixer(hoodieModel);
+                    const action = mixer.clipAction(gltf.animations[0]);
+                    action.play();
+                    document.getElementById('status').textContent = 'Model loaded with animation';
+                } else {
+                    document.getElementById('status').textContent = 'Model loaded (no animations)';
+                }
+                
                 // Center model
                 const box = new THREE.Box3().setFromObject(hoodieModel);
                 const center = box.getCenter(new THREE.Vector3());
@@ -299,7 +313,6 @@
                 
                 // Hide loading overlay
                 document.getElementById('loading-overlay').style.display = 'none';
-                document.getElementById('status').textContent = 'Ready - Drag to rotate, scroll to zoom';
                 
                 // Start animation loop
                 animate();
@@ -331,6 +344,12 @@
         // Animation loop
         function animate() {
             requestAnimationFrame(animate);
+            
+            const delta = clock.getDelta();
+            if (mixer) {
+                mixer.update(delta);
+            }
+            
             controls.update();
             renderer.render(scene, camera);
         }
