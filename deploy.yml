@@ -1,13 +1,18 @@
-name: Deploy Hoodie Viewer to GitHub Pages
+name: Deploy 3D Hoodie Viewer
 
 on:
   push:
-    branches: [ "main" ]
-    
+    branches: ["main"]
+  workflow_dispatch:  # Enable manual deployment button
+
 permissions:
   contents: write
   pages: write
   id-token: write
+
+concurrency:
+  group: "pages"
+  cancel-in-progress: true  # Cancel previous deployments if new commit pushed
 
 jobs:
   deploy:
@@ -15,28 +20,65 @@ jobs:
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
-    
+
     steps:
+      # 1. Checkout code with Git LFS (for large .glb files)
       - name: Checkout repository
         uses: actions/checkout@v4
-        
-      # Setup Node.js
-      - name: Set up Node.js
+        with:
+          fetch-depth: 0
+          lfs: true  # Required for large model files
+
+      # 2. Setup Node.js with caching
+      - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
-          cache: 'npm'
-          
-      # Install dependencies (if you have a package.json)
+          node-version: "20"
+          cache: "npm"
+
+      # 3. Cache dependencies for faster installs
+      - name: Cache dependencies
+        uses: actions/cache@v4
+        id: npm-cache
+        with:
+          path: |
+            node_modules
+            ~/.npm
+          key: ${{ runner.os }}-npm-${{ hashFiles('**/package-lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-npm-
+
+      # 4. Install dependencies (optimized for CI)
       - name: Install dependencies
         run: |
-          npm install three
-          npm install --save-dev gh-pages
-          
-      # No build step needed for basic Three.js projects
-      # Just ensure all files are in the right place
-      
-      # Deploy to GitHub Pages
+          npm ci --prefer-offline --no-audit --no-fund
+          npm install three@latest @types/three --save-exact
+
+      # 5. Optional build step (uncomment if using Vite/Webpack)
+      # - name: Build project
+      #   run: |
+      #     npm run build
+
+      # 6. Verify critical files exist
+      - name: Validate files
+        run: |
+          if [ ! -f "index.html" ]; then
+            echo "::error::index.html not found!"
+            exit 1
+          fi
+          if [ ! -f "Hoodie_Walking_Animated.glb" ]; then
+            echo "::warning::3D model file not found, fallback will be used"
+          fi
+
+      # 7. Upload artifact (entire repo or build folder)
+      - name: Upload artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: "./"  # Change to "./dist" if using a build tool
+
+      # 8. Deploy to GitHub Pages
       - name: Deploy to GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v3
+        env:
+          THREEJS_CDN: "https://cdn.jsdelivr.net/npm/three"  # Optional CDN override
