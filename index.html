@@ -23,6 +23,19 @@
     }
     @keyframes spin { to { transform: rotate(360deg); } }
     #status { margin-top: 10px; font-size: 1em; }
+    #uv-display {
+      position: absolute; bottom: 10px; left: 10px; z-index: 100;
+      background: rgba(255,255,255,0.8); padding: 10px; border-radius: 5px;
+      font-family: monospace; font-size: 14px;
+    }
+    #uv-region-display {
+      position: absolute; bottom: 10px; right: 10px; z-index: 100;
+      background: rgba(255,255,255,0.8); padding: 10px; border-radius: 5px;
+      width: 200px; height: 200px;
+    }
+    #uv-region-display canvas {
+      width: 100%; height: 100%;
+    }
   </style>
 </head>
 <body>
@@ -31,6 +44,15 @@
     <div>Position: <input type="range" id="position-x" min="-1" max="1" step="0.01" value="0"> X</div>
     <div><input type="range" id="position-y" min="-1" max="1" step="0.01" value="0"> Y</div>
     <div>Scale: <input type="range" id="scale" min="0.1" max="2" step="0.05" value="0.5"></div>
+  </div>
+  
+  <div id="uv-display">
+    Current UV: (0.5, 0.5)
+  </div>
+  
+  <div id="uv-region-display">
+    <canvas id="uv-region-canvas"></canvas>
+    <div>Front Main Region</div>
   </div>
   
   <div id="loading-overlay">
@@ -56,6 +78,15 @@
 
     let scene, camera, renderer, controls, hoodieModel, mixer, clock;
     let decalMaterial, currentStickerTexture = null;
+    let uvRegionCanvas, uvRegionCtx;
+    const uvRegions = [{
+      id: 'front',         // Internal identifier (must be unique)
+      name: 'Front Main',  // Display name shown in UI
+      u: 0.5,             // Horizontal center position (0-1)
+      v: 0.5,             // Vertical center position (0-1)
+      width: 0.3,         // Width of the region (0-1)
+      height: 0.4         // Height of the region (0-1)
+    }];
 
     init();
 
@@ -94,6 +125,13 @@
       document.getElementById('position-y').addEventListener('input', updateDecal);
       document.getElementById('scale').addEventListener('input', updateDecal);
 
+      // Setup UV region display
+      uvRegionCanvas = document.getElementById('uv-region-canvas');
+      uvRegionCanvas.width = 200;
+      uvRegionCanvas.height = 200;
+      uvRegionCtx = uvRegionCanvas.getContext('2d');
+      drawUVRegion();
+
       // Load model
       loadModel();
 
@@ -102,6 +140,49 @@
 
       // Handle window resize
       window.addEventListener('resize', onWindowResize);
+    }
+
+    function drawUVRegion() {
+      const region = uvRegions[0];
+      const canvasSize = 200;
+      const padding = 10;
+      
+      // Clear canvas
+      uvRegionCtx.clearRect(0, 0, canvasSize, canvasSize);
+      
+      // Draw background
+      uvRegionCtx.fillStyle = '#ffffff';
+      uvRegionCtx.fillRect(0, 0, canvasSize, canvasSize);
+      
+      // Draw region outline
+      uvRegionCtx.strokeStyle = '#4361ee';
+      uvRegionCtx.lineWidth = 2;
+      uvRegionCtx.beginPath();
+      uvRegionCtx.rect(
+        padding + (region.u - region.width/2) * (canvasSize - 2*padding),
+        padding + (1 - region.v - region.height/2) * (canvasSize - 2*padding),
+        region.width * (canvasSize - 2*padding),
+        region.height * (canvasSize - 2*padding)
+      );
+      uvRegionCtx.stroke();
+      
+      // Draw center point
+      uvRegionCtx.fillStyle = '#ff0000';
+      uvRegionCtx.beginPath();
+      uvRegionCtx.arc(
+        padding + region.u * (canvasSize - 2*padding),
+        padding + (1 - region.v) * (canvasSize - 2*padding),
+        3, 0, Math.PI * 2
+      );
+      uvRegionCtx.fill();
+      
+      // Update UV display
+      updateUVDisplay(region.u, region.v);
+    }
+
+    function updateUVDisplay(u, v) {
+      document.getElementById('uv-display').textContent = 
+        `Current UV: (${u.toFixed(2)}, ${v.toFixed(2)})`;
     }
 
     async function loadModel() {
@@ -251,6 +332,9 @@
       decalMaterial.uniforms.decalPosition.value.set(posX, posY);
       decalMaterial.uniforms.decalScale.value = scale;
       decalMaterial.needsUpdate = true;
+      
+      // Update UV display
+      updateUVDisplay(0.5 + posX, 0.5 + posY);
     }
 
     function createFallbackModel() {
