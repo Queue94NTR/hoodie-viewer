@@ -7,7 +7,10 @@
   <style>
     body { margin: 0; overflow: hidden; font-family: Arial, sans-serif; }
     #viewer { width: 100vw; height: 100vh; }
-    #sticker-upload { position: absolute; top: 10px; left: 10px; z-index: 100; }
+    #controls {
+      position: absolute; top: 10px; left: 10px; z-index: 100;
+      background: rgba(255,255,255,0.8); padding: 10px; border-radius: 5px;
+    }
     #loading-overlay {
       position: absolute; top: 0; left: 0; width: 100%; height: 100%;
       background: rgba(0,0,0,0.8); display: flex; flex-direction: column;
@@ -23,7 +26,13 @@
   </style>
 </head>
 <body>
-  <input type="file" id="sticker-upload" accept="image/*">
+  <div id="controls">
+    <input type="file" id="sticker-upload" accept="image/*">
+    <div>Position: <input type="range" id="position-x" min="-1" max="1" step="0.01" value="0"> X</div>
+    <div><input type="range" id="position-y" min="-1" max="1" step="0.01" value="0"> Y</div>
+    <div>Scale: <input type="range" id="scale" min="0.1" max="2" step="0.05" value="0.5"></div>
+  </div>
+  
   <div id="loading-overlay">
     <div class="spinner"></div>
     <div id="status">Loading 3D Hoodie Viewer...</div>
@@ -45,98 +54,71 @@
     import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
     import { DRACOLoader } from 'three/addons/loaders/DRACOLoader.js';
 
-    let scene, camera, renderer, controls, hoodieModel, mixer, clock, decalTexture;
-
-    const viewer = document.getElementById('viewer');
-    const fileInput = document.getElementById('sticker-upload');
-    const uniforms = {
-      baseTexture: { value: null },
-      decalTexture: { value: null },
-      regionMin: { value: new THREE.Vector2(0.2, 0.4) },
-      regionMax: { value: new THREE.Vector2(0.5, 0.7) },
-      decalPosition: { value: new THREE.Vector2(0.0, 0.0) },
-      decalScale: { value: 0.5 },
-      decalRotation: { value: 0.0 }
-    };
-
-    const fragmentShader = `
-      precision mediump float;
-      uniform sampler2D baseTexture;
-      uniform sampler2D decalTexture;
-      uniform vec2 regionMin;
-      uniform vec2 regionMax;
-      uniform vec2 decalPosition;
-      uniform float decalScale;
-      uniform float decalRotation;
-      varying vec2 vUV;
-
-      vec2 transformUV(vec2 uv, vec2 center, float scale, float rotation, vec2 offset) {
-        uv -= center;
-        float cosR = cos(rotation);
-        float sinR = sin(rotation);
-        mat2 rot = mat2(cosR, -sinR, sinR, cosR);
-        uv = rot * uv * scale;
-        uv += offset;
-        return uv + center;
-      }
-
-      void main() {
-        vec4 baseColor = texture2D(baseTexture, vUV);
-        if (vUV.x >= regionMin.x && vUV.x <= regionMax.x && vUV.y >= regionMin.y && vUV.y <= regionMax.y) {
-          vec2 regionCenter = (regionMin + regionMax) * 0.5;
-          vec2 decalUV = transformUV(vUV, regionCenter, decalScale, decalRotation, decalPosition);
-          vec2 localUV = (decalUV - regionMin) / (regionMax - regionMin);
-          if (all(greaterThanEqual(localUV, vec2(0.0))) && all(lessThanEqual(localUV, vec2(1.0)))) {
-            vec4 decalColor = texture2D(decalTexture, localUV);
-            baseColor = mix(baseColor, decalColor, decalColor.a);
-          }
-        }
-        gl_FragColor = baseColor;
-      }
-    `;
+    let scene, camera, renderer, controls, hoodieModel, mixer, clock;
+    let decalMaterial, currentStickerTexture = null;
 
     init();
 
     function init() {
+      // Setup scene
       scene = new THREE.Scene();
       scene.background = new THREE.Color(0xf0f0f0);
 
+      // Setup camera
       camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
       camera.position.z = 5;
 
+      // Setup renderer
       renderer = new THREE.WebGLRenderer({ antialias: true });
       renderer.setSize(window.innerWidth, window.innerHeight);
-      viewer.appendChild(renderer.domElement);
+      document.getElementById('viewer').appendChild(renderer.domElement);
 
+      // Lights
       const ambientLight = new THREE.AmbientLight(0xffffff, 0.5);
       scene.add(ambientLight);
+      
       const directionalLight = new THREE.DirectionalLight(0xffffff, 1);
       directionalLight.position.set(1, 1, 1);
       scene.add(directionalLight);
 
+      // Controls
       controls = new OrbitControls(camera, renderer.domElement);
       controls.enableDamping = true;
 
+      // Clock for animations
       clock = new THREE.Clock();
 
+      // UI Event Listeners
+      document.getElementById('sticker-upload').addEventListener('change', handleStickerUpload);
+      document.getElementById('position-x').addEventListener('input', updateDecal);
+      document.getElementById('position-y').addEventListener('input', updateDecal);
+      document.getElementById('scale').addEventListener('input', updateDecal);
+
+      // Load model
       loadModel();
+
+      // Start animation loop
       animate();
+
+      // Handle window resize
       window.addEventListener('resize', onWindowResize);
-      fileInput.addEventListener('change', handleStickerUpload);
     }
 
     async function loadModel() {
       updateStatus('Loading hoodie model...');
+      
       try {
         const loader = new GLTFLoader();
         const dracoLoader = new DRACOLoader();
         dracoLoader.setDecoderPath('https://www.gstatic.com/draco/versioned/decoders/1.5.6/');
         loader.setDRACOLoader(dracoLoader);
+        
         const gltf = await loader.loadAsync('Hoodie_Walking_Animated.glb');
         hoodieModel = gltf.scene;
         scene.add(hoodieModel);
 
-        if (gltf.animations.length > 0) {
+        // Setup animations if available
+        if (gltf.animations && gltf.animations.length > 0) {
           mixer = new THREE.AnimationMixer(hoodieModel);
           mixer.clipAction(gltf.animations[0]).play();
           updateStatus('Model loaded with animation');
@@ -144,36 +126,99 @@
           updateStatus('Model loaded');
         }
 
-        const textureLoader = new THREE.TextureLoader();
-        uniforms.baseTexture.value = textureLoader.load('hoodie-fabric.jpg');
-
-        const material = new THREE.ShaderMaterial({
-          uniforms,
-          vertexShader: `
-            varying vec2 vUV;
-            void main() {
-              vUV = uv;
-              gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
-            }
-          `,
-          fragmentShader,
-          transparent: true
-        });
-
+        // Create a default white texture
+        const defaultTexture = createDefaultTexture();
+        
+        // Create decal material
+        decalMaterial = createDecalMaterial(defaultTexture);
+        
+        // Apply material to all meshes
         hoodieModel.traverse((child) => {
-          if (child.isMesh) child.material = material;
+          if (child.isMesh) {
+            child.material = decalMaterial;
+          }
         });
 
+        // Center model
         const box = new THREE.Box3().setFromObject(hoodieModel);
         const center = box.getCenter(new THREE.Vector3());
         hoodieModel.position.sub(center);
         camera.position.z = box.getSize(new THREE.Vector3()).length() * 1.5;
         controls.update();
+
+        // Hide loading overlay
         document.getElementById('loading-overlay').style.display = 'none';
       } catch (error) {
         updateStatus('Failed to load model');
         console.error(error);
+        createFallbackModel();
       }
+    }
+
+    function createDefaultTexture() {
+      const canvas = document.createElement('canvas');
+      canvas.width = canvas.height = 2;
+      const ctx = canvas.getContext('2d');
+      ctx.fillStyle = '#4361ee';
+      ctx.fillRect(0, 0, 2, 2);
+      return new THREE.CanvasTexture(canvas);
+    }
+
+    function createDecalMaterial(baseTexture) {
+      return new THREE.ShaderMaterial({
+        uniforms: {
+          baseTexture: { value: baseTexture },
+          decalTexture: { value: null },
+          decalPosition: { value: new THREE.Vector2(0, 0) },
+          decalScale: { value: 0.5 },
+          decalRotation: { value: 0 },
+          useDecal: { value: false }
+        },
+        vertexShader: `
+          varying vec2 vUV;
+          void main() {
+            vUV = uv;
+            gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+          }
+        `,
+        fragmentShader: `
+          uniform sampler2D baseTexture;
+          uniform sampler2D decalTexture;
+          uniform vec2 decalPosition;
+          uniform float decalScale;
+          uniform float decalRotation;
+          uniform bool useDecal;
+          varying vec2 vUV;
+
+          void main() {
+            vec4 baseColor = texture2D(baseTexture, vUV);
+            
+            if (useDecal) {
+              vec2 center = vec2(0.5);
+              vec2 uv = vUV - center;
+              
+              // Apply rotation
+              float cosRot = cos(decalRotation);
+              float sinRot = sin(decalRotation);
+              uv = vec2(
+                uv.x * cosRot - uv.y * sinRot,
+                uv.x * sinRot + uv.y * cosRot
+              );
+              
+              // Apply scale and position
+              uv = uv / decalScale + decalPosition + center;
+              
+              if (uv.x >= 0.0 && uv.x <= 1.0 && uv.y >= 0.0 && uv.y <= 1.0) {
+                vec4 decalColor = texture2D(decalTexture, uv);
+                baseColor = mix(baseColor, decalColor, decalColor.a);
+              }
+            }
+            
+            gl_FragColor = baseColor;
+          }
+        `,
+        transparent: true
+      });
     }
 
     function handleStickerUpload(event) {
@@ -184,18 +229,41 @@
       reader.onload = (e) => {
         const img = new Image();
         img.onload = () => {
-          const texture = new THREE.Texture(img);
-          texture.needsUpdate = true;
-          uniforms.decalTexture.value = texture;
+          currentStickerTexture = new THREE.Texture(img);
+          currentStickerTexture.needsUpdate = true;
+          
+          decalMaterial.uniforms.decalTexture.value = currentStickerTexture;
+          decalMaterial.uniforms.useDecal.value = true;
+          updateDecal();
         };
         img.src = e.target.result;
       };
       reader.readAsDataURL(file);
     }
 
+    function updateDecal() {
+      if (!decalMaterial) return;
+      
+      const posX = parseFloat(document.getElementById('position-x').value);
+      const posY = parseFloat(document.getElementById('position-y').value);
+      const scale = parseFloat(document.getElementById('scale').value);
+      
+      decalMaterial.uniforms.decalPosition.value.set(posX, posY);
+      decalMaterial.uniforms.decalScale.value = scale;
+      decalMaterial.needsUpdate = true;
+    }
+
+    function createFallbackModel() {
+      const geometry = new THREE.BoxGeometry(1, 1, 1);
+      const material = new THREE.MeshBasicMaterial({ color: 0x4361ee });
+      hoodieModel = new THREE.Mesh(geometry, material);
+      scene.add(hoodieModel);
+      
+      document.getElementById('loading-overlay').style.display = 'none';
+    }
+
     function updateStatus(msg) {
-      const el = document.getElementById('status');
-      if (el) el.textContent = msg;
+      document.getElementById('status').textContent = msg;
       console.log(msg);
     }
 
