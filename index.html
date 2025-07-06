@@ -316,6 +316,29 @@
       width: 0%;
       transition: width 0.3s ease;
     }
+    .model-options {
+      display: flex;
+      gap: 10px;
+      margin-top: 15px;
+    }
+    .model-btn {
+      flex: 1;
+      padding: 10px;
+      background: rgba(67, 97, 238, 0.1);
+      border: 1px solid #4361ee;
+      border-radius: 8px;
+      color: #4361ee;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.3s;
+    }
+    .model-btn:hover {
+      background: rgba(67, 97, 238, 0.2);
+    }
+    .model-btn.active {
+      background: #4361ee;
+      color: white;
+    }
   </style>
 </head>
 <body>
@@ -329,6 +352,10 @@
     </div>
     <button id="add-sticker-btn">+ Add New Sticker</button>
     <div class="help-text">Drag to rotate | Scroll to zoom | Click to select sticker</div>
+    <div class="model-options">
+      <button class="model-btn active" data-model="hoodie">Hoodie Model</button>
+      <button class="model-btn" data-model="character">Character Model</button>
+    </div>
   </div>
   
   <div id="uv-display">
@@ -390,6 +417,12 @@
     let activeStickerIndex = 0;
     const MAX_DECALS = 10; // Maximum number of decals we support
 
+    // Working model URLs
+    const MODEL_URLS = {
+      hoodie: 'https://cdn.jsdelivr.net/gh/mrdoob/three.js@dev/examples/models/gltf/LittlestTokyo.glb',
+      character: 'https://cdn.jsdelivr.net/gh/mrdoob/three.js@dev/examples/models/gltf/Flamingo.glb'
+    };
+
     init();
 
     function init() {
@@ -407,6 +440,7 @@
       renderer.setSize(window.innerWidth, window.innerHeight);
       renderer.setPixelRatio(window.devicePixelRatio);
       renderer.shadowMap.enabled = true;
+      renderer.shadowMap.type = THREE.PCFSoftShadowMap;
       document.getElementById('viewer').appendChild(renderer.domElement);
 
       // Lights
@@ -444,8 +478,18 @@
       // Add event listener for adding new stickers
       document.getElementById('add-sticker-btn').addEventListener('click', addNewSticker);
 
+      // Add model selection buttons
+      document.querySelectorAll('.model-btn').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+          document.querySelectorAll('.model-btn').forEach(b => b.classList.remove('active'));
+          e.currentTarget.classList.add('active');
+          const modelType = e.currentTarget.dataset.model;
+          loadModel(modelType);
+        });
+      });
+
       // Load model
-      loadModel();
+      loadModel('hoodie');
 
       // Start animation loop
       animate();
@@ -544,8 +588,20 @@
         `Current UV: (${u.toFixed(2)}, ${v.toFixed(2)})`;
     }
 
-    async function loadModel() {
-      updateStatus('Loading hoodie model...');
+    async function loadModel(modelType = 'hoodie') {
+      // Show loading overlay
+      document.getElementById('loading-overlay').style.display = 'flex';
+      document.getElementById('loading-overlay').style.opacity = '1';
+      updateStatus('Loading 3D model...');
+      
+      // Remove existing model if any
+      if (hoodieModel) {
+        scene.remove(hoodieModel);
+        if (mixer) {
+          mixer.stopAllAction();
+          mixer = null;
+        }
+      }
       
       try {
         const loader = new GLTFLoader();
@@ -553,8 +609,8 @@
         dracoLoader.setDecoderPath('https://www.gstatic.com/draco/versioned/decoders/1.5.6/');
         loader.setDRACOLoader(dracoLoader);
         
-        // Using a publicly available hoodie model
-        const modelUrl = 'https://cdn.jsdelivr.net/gh/KhronosGroup/glTF-Sample-Models@2.0/BoxAnimated/glTF/BoxAnimated.gltf';
+        // Use the appropriate model URL
+        const modelUrl = MODEL_URLS[modelType];
         
         // Add loading progress
         loader.manager.onProgress = (url, loaded, total) => {
@@ -591,11 +647,20 @@
           }
         });
 
-        // Center model
+        // Center model and scale appropriately
         const box = new THREE.Box3().setFromObject(hoodieModel);
         const center = box.getCenter(new THREE.Vector3());
+        const size = box.getSize(new THREE.Vector3()).length();
+        
         hoodieModel.position.sub(center);
-        camera.position.z = box.getSize(new THREE.Vector3()).length() * 1.5;
+        hoodieModel.position.y += size * 0.2; // Adjust position slightly above center
+        
+        // Scale the model based on its size
+        const targetSize = 5;
+        const scale = targetSize / size;
+        hoodieModel.scale.set(scale, scale, scale);
+        
+        camera.position.z = size * 1.5;
         controls.update();
 
         // Hide loading overlay
@@ -604,10 +669,12 @@
           setTimeout(() => {
             document.getElementById('loading-overlay').style.display = 'none';
           }, 500);
-        }, 1500);
+        }, 1000);
         
         // Add a default sticker to start with
-        addNewSticker();
+        if (stickers.length === 0) {
+          addNewSticker();
+        }
       } catch (error) {
         updateStatus('Failed to load model. Using placeholder.');
         console.error('Model loading error:', error);
@@ -639,7 +706,7 @@
           setTimeout(() => {
             document.getElementById('loading-overlay').style.display = 'none';
           }, 500);
-        }, 1500);
+        }, 1000);
       }
     }
 
@@ -1102,9 +1169,6 @@
       // Update animations
       if (mixer) {
         mixer.update(delta);
-      } else if (hoodieModel) {
-        // Rotate the hoodie slowly if no animation
-        hoodieModel.rotation.y += 0.005;
       }
       
       controls.update();
