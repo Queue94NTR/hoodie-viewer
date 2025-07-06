@@ -283,7 +283,6 @@
         </div>
     </div>
 
-    <!-- Updated Three.js imports using ES modules -->
     <script type="importmap">
         {
             "imports": {
@@ -294,7 +293,6 @@
     </script>
 
     <script type="module">
-        // Import Three.js and required modules
         import * as THREE from 'three';
         import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
         import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
@@ -654,14 +652,14 @@
             try {
                 // Define uniforms with proper initialization
                 const uniforms = {
-                    baseColor: { value: new THREE.Color(0x4361ee) },
-                    useSticker: { value: false },
-                    stickerTexture: { value: createDefaultTexture() },
-                    stickerRegionMin: { value: new THREE.Vector2(0, 0) },
-                    stickerRegionMax: { value: new THREE.Vector2(1, 1) },
-                    stickerPosition: { value: new THREE.Vector2(0, 0) },
-                    stickerScale: { value: 1.0 },
-                    stickerRotation: { value: 0.0 }
+                    baseColor: { type: 'c', value: new THREE.Color(0x4361ee) },
+                    useSticker: { type: 'b', value: false },
+                    stickerTexture: { type: 't', value: createDefaultTexture() },
+                    stickerRegionMin: { type: 'v2', value: new THREE.Vector2(0, 0) },
+                    stickerRegionMax: { type: 'v2', value: new THREE.Vector2(1, 1) },
+                    stickerPosition: { type: 'v2', value: new THREE.Vector2(0, 0) },
+                    stickerScale: { type: 'f', value: 1.0 },
+                    stickerRotation: { type: 'f', value: 0.0 }
                 };
 
                 const vertexShader = `
