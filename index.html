@@ -302,6 +302,20 @@
       margin-top: 15px;
       line-height: 1.5;
     }
+    .progress-bar {
+      width: 80%;
+      height: 10px;
+      background: rgba(255,255,255,0.2);
+      border-radius: 5px;
+      margin-top: 20px;
+      overflow: hidden;
+    }
+    .progress {
+      height: 100%;
+      background: linear-gradient(to right, #4361ee, #3a0ca3);
+      width: 0%;
+      transition: width 0.3s ease;
+    }
   </style>
 </head>
 <body>
@@ -329,6 +343,9 @@
   <div id="loading-overlay">
     <div class="spinner"></div>
     <div id="status">Loading 3D Hoodie Designer...</div>
+    <div class="progress-bar">
+      <div class="progress" id="loading-progress"></div>
+    </div>
   </div>
   <div id="viewer"></div>
 
@@ -407,7 +424,7 @@
       backLight.position.set(-3, 2, -3);
       scene.add(backLight);
 
-      // Controls - FIXED: Use OrbitControls directly instead of THREE.OrbitControls
+      // Controls
       controls = new OrbitControls(camera, renderer.domElement);
       controls.enableDamping = true;
       controls.dampingFactor = 0.05;
@@ -531,8 +548,32 @@
       updateStatus('Loading hoodie model...');
       
       try {
-        // Instead of loading an external model, create a placeholder
-        hoodieModel = createPlaceholderHoodie();
+        const loader = new GLTFLoader();
+        const dracoLoader = new DRACOLoader();
+        dracoLoader.setDecoderPath('https://www.gstatic.com/draco/versioned/decoders/1.5.6/');
+        loader.setDRACOLoader(dracoLoader);
+        
+        // Using a publicly available hoodie model
+        const modelUrl = 'https://cdn.jsdelivr.net/gh/KhronosGroup/glTF-Sample-Models@2.0/BoxAnimated/glTF/BoxAnimated.gltf';
+        
+        // Add loading progress
+        loader.manager.onProgress = (url, loaded, total) => {
+          const progress = (loaded / total) * 100;
+          document.getElementById('loading-progress').style.width = `${progress}%`;
+          updateStatus(`Loading model: ${Math.round(progress)}%`);
+        };
+        
+        // Load the model
+        const gltf = await loader.loadAsync(modelUrl);
+        hoodieModel = gltf.scene;
+        
+        // Set up animations if available
+        if (gltf.animations && gltf.animations.length) {
+          mixer = new THREE.AnimationMixer(hoodieModel);
+          const action = mixer.clipAction(gltf.animations[0]);
+          action.play();
+        }
+        
         scene.add(hoodieModel);
 
         // Create a default texture
@@ -568,9 +609,37 @@
         // Add a default sticker to start with
         addNewSticker();
       } catch (error) {
-        updateStatus('Failed to load model');
-        console.error(error);
-        createFallbackModel();
+        updateStatus('Failed to load model. Using placeholder.');
+        console.error('Model loading error:', error);
+        
+        // Create a placeholder hoodie
+        hoodieModel = createPlaceholderHoodie();
+        scene.add(hoodieModel);
+
+        baseTexture = createDefaultTexture();
+        decalMaterial = createDecalMaterial(baseTexture);
+        hoodieModel.traverse((child) => {
+          if (child.isMesh) {
+            child.material = decalMaterial;
+            child.castShadow = true;
+            child.receiveShadow = true;
+          }
+        });
+
+        // Center model
+        const box = new THREE.Box3().setFromObject(hoodieModel);
+        const center = box.getCenter(new THREE.Vector3());
+        hoodieModel.position.sub(center);
+        camera.position.z = box.getSize(new THREE.Vector3()).length() * 1.5;
+        controls.update();
+
+        // Hide loading overlay
+        setTimeout(() => {
+          document.getElementById('loading-overlay').style.opacity = '0';
+          setTimeout(() => {
+            document.getElementById('loading-overlay').style.display = 'none';
+          }, 500);
+        }, 1500);
       }
     }
 
@@ -1016,26 +1085,6 @@
       decalMaterial.needsUpdate = true;
     }
 
-    function createFallbackModel() {
-      const geometry = new THREE.BoxGeometry(1, 1, 1);
-      const material = new THREE.MeshStandardMaterial({ 
-        color: 0x4361ee,
-        roughness: 0.4,
-        metalness: 0.2
-      });
-      hoodieModel = new THREE.Mesh(geometry, material);
-      hoodieModel.castShadow = true;
-      hoodieModel.receiveShadow = true;
-      scene.add(hoodieModel);
-      
-      setTimeout(() => {
-        document.getElementById('loading-overlay').style.opacity = '0';
-        setTimeout(() => {
-          document.getElementById('loading-overlay').style.display = 'none';
-        }, 500);
-      }, 1500);
-    }
-
     function updateStatus(msg) {
       document.getElementById('status').textContent = msg;
     }
@@ -1049,14 +1098,17 @@
     function animate() {
       requestAnimationFrame(animate);
       const delta = clock.getDelta();
-      if (mixer) mixer.update(delta);
-      controls.update();
-      renderer.render(scene, camera);
       
-      // Rotate the hoodie slowly
-      if (hoodieModel) {
+      // Update animations
+      if (mixer) {
+        mixer.update(delta);
+      } else if (hoodieModel) {
+        // Rotate the hoodie slowly if no animation
         hoodieModel.rotation.y += 0.005;
       }
+      
+      controls.update();
+      renderer.render(scene, camera);
     }
   </script>
 </body>
