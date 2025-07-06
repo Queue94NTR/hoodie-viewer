@@ -216,7 +216,7 @@
                 <h3>Color Customization</h3>
                 <div class="color-control">
                     <label for="hoodieColor">Hoodie Color</label>
-                    <input type="color" id="hoodieColor" value="#FFFFFF">
+                    <input type="color" id="hoodieColor" value="#4361ee">
                 </div>
                 <button id="apply-colors">Apply Color</button>
                 <button id="test-colors" class="secondary">Test Color Function</button>
@@ -283,20 +283,12 @@
         </div>
     </div>
 
-    <script type="importmap">
-        {
-            "imports": {
-                "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
-                "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
-            }
-        }
-    </script>
-    <script type="module">
-        import * as THREE from 'three';
-        import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
-        import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
-        import { DRACOLoader } from 'three/addons/loaders/DRACOLoader.js';
-        
+    <script src="https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.160.0/examples/js/loaders/GLTFLoader.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.160.0/examples/js/controls/OrbitControls.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.160.0/examples/js/loaders/DRACOLoader.js"></script>
+    
+    <script>
         // Main variables
         let scene, camera, renderer, controls, hoodieModel, mixer, clock;
         let hoodieMaterial = null;
@@ -433,7 +425,7 @@
         function setupControls() {
             logToTestPanel('Setting up orbit controls', 'info');
             
-            controls = new OrbitControls(camera, renderer.domElement);
+            controls = new THREE.OrbitControls(camera, renderer.domElement);
             controls.enableDamping = true;
             controls.dampingFactor = 0.05;
             controls.screenSpacePanning = false;
@@ -651,7 +643,7 @@
             try {
                 // Define uniforms with proper initialization
                 const uniforms = {
-                    baseColor: { value: new THREE.Color(0xFFFFFF) },
+                    baseColor: { value: new THREE.Color(0x4361ee) },
                     useSticker: { value: false },
                     stickerTexture: { value: createDefaultTexture() },
                     stickerRegionMin: { value: new THREE.Vector2(0, 0) },
@@ -745,7 +737,7 @@
                 logToTestPanel(`Error creating shader material: ${error.message}`, 'error');
                 // Fallback to standard material
                 return new THREE.MeshStandardMaterial({ 
-                    color: 0xFFFFFF,
+                    color: 0x4361ee,
                     side: THREE.DoubleSide
                 });
             }
@@ -832,8 +824,8 @@
                     throw new Error('Failed to create material');
                 }
                 
-                const loader = new GLTFLoader();
-                const dracoLoader = new DRACOLoader();
+                const loader = new THREE.GLTFLoader();
+                const dracoLoader = new THREE.DRACOLoader();
                 
                 // Set the correct Draco decoder path
                 dracoLoader.setDecoderPath('https://www.gstatic.com/draco/versioned/decoders/1.5.6/');
@@ -843,16 +835,20 @@
                 const modelUrl = 'Hoodie_Walking_Animated.glb';
                 logToTestPanel(`Loading model from: ${modelUrl}`, 'info');
                 
-                const gltf = await loader.loadAsync(modelUrl, undefined, 
-                    (error) => {
-                        logToTestPanel(`Error loading model: ${error.message}`, 'error');
-                        throw error;
-                    },
-                    (xhr) => {
-                        const percent = (xhr.loaded / xhr.total) * 100;
-                        logToTestPanel(`Loading progress: ${percent.toFixed(2)}%`, 'info');
-                    }
-                );
+                const gltf = await new Promise((resolve, reject) => {
+                    loader.load(
+                        modelUrl,
+                        (gltf) => resolve(gltf),
+                        (xhr) => {
+                            const percent = (xhr.loaded / xhr.total) * 100;
+                            logToTestPanel(`Loading progress: ${percent.toFixed(2)}%`, 'info');
+                        },
+                        (error) => {
+                            logToTestPanel(`Error loading model: ${error.message}`, 'error');
+                            reject(error);
+                        }
+                    );
+                });
                 
                 logToTestPanel('Model loaded successfully', 'success');
                 
@@ -907,7 +903,7 @@
                 hoodieMaterial = createHoodieMaterial();
                 if (!hoodieMaterial) {
                     hoodieMaterial = new THREE.MeshStandardMaterial({ 
-                        color: 0xFFFFFF,
+                        color: 0x4361ee,
                         side: THREE.DoubleSide
                     });
                 }
