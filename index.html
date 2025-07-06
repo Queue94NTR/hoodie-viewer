@@ -5,241 +5,175 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>3D Hoodie Designer with Sticker Placement</title>
   <style>
-    body { 
-      margin: 0; 
-      overflow: hidden; 
-      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+    
+    body {
+      margin: 0;
+      overflow: hidden;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
       background: linear-gradient(135deg, #1a2a6c, #b21f1f, #fdbb2d);
-    }
-    #viewer { 
-      width: 100vw; 
-      height: 100vh; 
-    }
-    #controls {
-      position: absolute; 
-      top: 10px; 
-      left: 10px; 
-      z-index: 100;
-      background: rgba(255,255,255,0.92); 
-      padding: 20px; 
-      border-radius: 15px;
-      max-height: 80vh; 
-      overflow-y: auto; 
-      width: 350px; 
-      box-shadow: 0 8px 30px rgba(0,0,0,0.25);
-      border: 1px solid rgba(255,255,255,0.3);
-    }
-    #loading-overlay {
-      position: absolute; 
-      top: 0; 
-      left: 0; 
-      width: 100%; 
-      height: 100%;
-      background: rgba(0,0,0,0.9); 
-      display: flex; 
+      height: 100vh;
+      display: flex;
       flex-direction: column;
-      justify-content: center; 
-      align-items: center; 
-      color: white; 
-      z-index: 100;
-      backdrop-filter: blur(5px);
+      color: #333;
     }
-    .spinner {
-      width: 60px; 
-      height: 60px; 
-      border: 5px solid rgba(255,255,255,0.3);
-      border-radius: 50%; 
-      border-top-color: #4cc9f0;
-      animation: spin 1.2s ease-in-out infinite; 
+    
+    .app-container {
+      display: flex;
+      flex: 1;
+      overflow: hidden;
+    }
+    
+    #viewer {
+      flex: 1;
+      width: 100%;
+      height: 100%;
+    }
+    
+    #controls {
+      width: 350px;
+      background: rgba(255, 255, 255, 0.95);
+      padding: 20px;
+      border-radius: 15px 0 0 15px;
+      overflow-y: auto;
+      box-shadow: 0 8px 30px rgba(0, 0, 0, 0.25);
+      border-left: 1px solid rgba(255, 255, 255, 0.3);
+      z-index: 100;
+      display: flex;
+      flex-direction: column;
+    }
+    
+    .app-header {
+      padding-bottom: 20px;
+      border-bottom: 1px solid #eee;
       margin-bottom: 20px;
     }
-    @keyframes spin { 
-      to { transform: rotate(360deg); } 
-    }
-    #status { 
-      margin-top: 15px; 
-      font-size: 1.2em; 
-      text-align: center; 
-      color: #f0f0f0;
-      max-width: 80%;
-    }
-    #uv-display {
-      position: absolute; 
-      bottom: 20px; 
-      left: 20px; 
-      z-index: 100;
-      background: rgba(255,255,255,0.92); 
-      padding: 15px; 
-      border-radius: 12px;
-      font-family: monospace; 
-      font-size: 16px; 
-      box-shadow: 0 4px 15px rgba(0,0,0,0.2);
-      border: 1px solid rgba(0,0,0,0.1);
-      font-weight: 600;
-      color: #4361ee;
-    }
-    #uv-region-display {
-      position: absolute; 
-      bottom: 20px; 
-      right: 20px; 
-      z-index: 100;
-      background: rgba(255,255,255,0.92); 
-      padding: 15px; 
-      border-radius: 15px;
-      width: 220px; 
-      height: 220px; 
-      box-shadow: 0 4px 15px rgba(0,0,0,0.2);
-      border: 1px solid rgba(0,0,0,0.1);
-    }
-    #uv-region-display canvas {
-      width: 100%; 
-      height: 100%; 
-      border-radius: 8px;
-      box-shadow: inset 0 0 10px rgba(0,0,0,0.1);
-    }
-    .sticker-controls {
-      border: 1px solid #e0e0e0; 
-      padding: 18px; 
-      margin-top: 20px;
-      border-radius: 12px; 
-      background: rgba(255,255,255,0.85);
-      transition: all 0.3s ease;
-      box-shadow: 0 4px 10px rgba(0,0,0,0.05);
-    }
-    .sticker-header {
-      display: flex; 
-      justify-content: space-between; 
+    
+    .app-title {
+      display: flex;
       align-items: center;
-      margin-bottom: 15px; 
-      font-weight: bold; 
+      gap: 15px;
+      margin-bottom: 10px;
+    }
+    
+    .app-title h1 {
+      font-size: 26px;
+      color: #4361ee;
+      font-weight: 800;
+      text-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    }
+    
+    .app-title span {
+      font-size: 36px;
+      animation: float 3s ease-in-out infinite;
+    }
+    
+    @keyframes float {
+      0% { transform: translateY(0px); }
+      50% { transform: translateY(-8px); }
+      100% { transform: translateY(0px); }
+    }
+    
+    .app-subtitle {
+      font-size: 14px;
+      color: #666;
+      text-align: center;
+      line-height: 1.5;
+    }
+    
+    .section {
+      margin-bottom: 25px;
+      padding-bottom: 20px;
+      border-bottom: 1px solid #eee;
+    }
+    
+    .section-title {
+      font-size: 18px;
+      color: #4361ee;
+      margin-bottom: 15px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    
+    .color-options {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      margin-top: 10px;
+    }
+    
+    .color-option {
+      width: 30px;
+      height: 30px;
+      border-radius: 50%;
+      cursor: pointer;
+      border: 2px solid transparent;
+      transition: all 0.2s ease;
+    }
+    
+    .color-option.selected {
+      border-color: #333;
+      transform: scale(1.1);
+      box-shadow: 0 0 8px rgba(0, 0, 0, 0.3);
+    }
+    
+    .sticker-controls {
+      border: 1px solid #e0e0e0;
+      padding: 15px;
+      margin-top: 15px;
+      border-radius: 12px;
+      background: rgba(255, 255, 255, 0.85);
+      transition: all 0.3s ease;
+      box-shadow: 0 4px 10px rgba(0, 0, 0, 0.05);
+    }
+    
+    .sticker-controls.active {
+      background: rgba(67, 97, 238, 0.15);
+      border-color: #4361ee;
+      box-shadow: 0 6px 15px rgba(67, 97, 238, 0.15);
+    }
+    
+    .sticker-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 15px;
+      font-weight: bold;
       font-size: 18px;
       color: #4361ee;
       padding-bottom: 10px;
       border-bottom: 1px dashed #e0e0e0;
     }
+    
     .remove-sticker {
-      color: #f72585; 
-      cursor: pointer; 
-      font-size: 24px; 
+      color: #f72585;
+      cursor: pointer;
+      font-size: 24px;
       font-weight: bold;
-      width: 32px; 
-      height: 32px; 
-      display: flex; 
+      width: 32px;
+      height: 32px;
+      display: flex;
       align-items: center;
-      justify-content: center; 
-      border-radius: 50%; 
+      justify-content: center;
+      border-radius: 50%;
       background: rgba(247, 37, 133, 0.1);
       transition: all 0.2s;
     }
+    
     .remove-sticker:hover {
       background: rgba(247, 37, 133, 0.2);
       transform: scale(1.1);
     }
-    .active-sticker {
-      background: rgba(67, 97, 238, 0.15); 
-      border-color: #4361ee;
-      box-shadow: 0 6px 15px rgba(67, 97, 238, 0.15);
-      transform: translateY(-3px);
-    }
-    #add-sticker-btn {
-      margin-top: 20px; 
-      padding: 12px 20px;
-      background: linear-gradient(to right, #4361ee, #3a0ca3);
-      color: white;
-      border: none; 
-      border-radius: 10px; 
-      font-weight: 700;
-      cursor: pointer; 
-      transition: all 0.3s; 
-      width: 100%;
-      box-shadow: 0 6px 12px rgba(67, 97, 238, 0.4);
-      font-size: 16px;
-      letter-spacing: 0.5px;
-    }
-    #add-sticker-btn:hover {
-      background: linear-gradient(to right, #3a0ca3, #7209b7);
-      transform: translateY(-3px);
-      box-shadow: 0 8px 15px rgba(67, 97, 238, 0.5);
-    }
-    .position-controls {
-      margin: 20px 0; 
-      padding: 18px; 
-      background: rgba(67, 97, 238, 0.08);
-      border-radius: 12px; 
-      border: 1px solid rgba(67, 97, 238, 0.15);
-    }
-    .position-controls h4 {
-      margin: 0 0 15px 0; 
-      color: #4361ee; 
-      font-size: 16px;
-      text-transform: uppercase; 
-      letter-spacing: 1px;
-      font-weight: 700;
-    }
-    .position-presets {
-      display: grid; 
-      grid-template-columns: repeat(3, 1fr);
-      gap: 12px; 
-      margin-top: 12px;
-    }
-    .position-presets button {
-      background: rgba(67, 97, 238, 0.12); 
-      border: none;
-      padding: 10px; 
-      border-radius: 8px; 
-      cursor: pointer;
-      transition: all 0.25s; 
-      font-size: 14px; 
-      font-weight: 600;
-      color: #4361ee;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      gap: 5px;
-    }
-    .position-presets button:hover {
-      background: rgba(67, 97, 238, 0.25); 
-      transform: translateY(-3px);
-    }
-    .position-presets button.active {
-      background: #4361ee; 
-      color: white;
-      box-shadow: 0 4px 8px rgba(67, 97, 238, 0.3);
-    }
-    .slider-control {
-      margin-bottom: 20px;
-    }
-    .slider-control label {
-      display: block; 
-      margin-bottom: 8px; 
-      font-size: 15px;
-      color: #444; 
-      font-weight: 600;
-      display: flex;
-      justify-content: space-between;
-    }
-    .slider-control input[type="range"] {
-      width: 100%; 
-      height: 8px; 
-      border-radius: 4px;
-      background: linear-gradient(to right, #4361ee, #3a0ca3);
-      outline: none;
-      -webkit-appearance: none;
-    }
-    .slider-control input[type="range"]::-webkit-slider-thumb {
-      -webkit-appearance: none;
-      width: 22px; 
-      height: 22px; 
-      border-radius: 50%;
-      background: white; 
-      cursor: pointer;
-      box-shadow: 0 2px 8px rgba(0,0,0,0.3);
-      border: 2px solid #4361ee;
-    }
+    
     .sticker-upload {
-      margin: 18px 0; 
+      margin: 15px 0;
       width: 100%;
-      padding: 12px;
+      padding: 15px;
       border: 2px dashed #4361ee;
       border-radius: 10px;
       background: rgba(67, 97, 238, 0.05);
@@ -249,78 +183,250 @@
       cursor: pointer;
       transition: all 0.3s;
     }
+    
     .sticker-upload:hover {
       background: rgba(67, 97, 238, 0.1);
       transform: translateY(-2px);
     }
+    
     .sticker-preview {
-      width: 100%; 
-      height: 100px; 
+      width: 100%;
+      height: 100px;
       margin-top: 15px;
-      border: 2px dashed #e0e0e0; 
+      border: 2px dashed #e0e0e0;
       border-radius: 10px;
-      display: flex; 
-      align-items: center; 
+      display: flex;
+      align-items: center;
       justify-content: center;
       overflow: hidden;
-      background: rgba(0,0,0,0.03);
+      background: rgba(0, 0, 0, 0.03);
     }
+    
     .sticker-preview img {
-      max-width: 100%; 
+      max-width: 100%;
       max-height: 100%;
       object-fit: contain;
     }
-    .app-title {
-      text-align: center; 
-      margin-bottom: 25px;
-      color: #4361ee; 
-      font-size: 26px; 
-      font-weight: 800;
-      display: flex; 
-      align-items: center; 
-      justify-content: center;
-      gap: 15px;
-      text-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    
+    .slider-control {
+      margin-bottom: 15px;
     }
-    .app-title span {
-      font-size: 36px;
+    
+    .slider-control label {
+      display: block;
+      margin-bottom: 8px;
+      font-size: 15px;
+      color: #444;
+      font-weight: 600;
+      display: flex;
+      justify-content: space-between;
     }
-    #logo {
-      font-size: 32px; 
-      margin-right: 10px;
-      animation: float 3s ease-in-out infinite;
+    
+    .slider-control input[type="range"] {
+      width: 100%;
+      height: 8px;
+      border-radius: 4px;
+      background: linear-gradient(to right, #4361ee, #3a0ca3);
+      outline: none;
+      -webkit-appearance: none;
     }
-    @keyframes float {
-      0% { transform: translateY(0px); }
-      50% { transform: translateY(-8px); }
-      100% { transform: translateY(0px); }
+    
+    .slider-control input[type="range"]::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      width: 22px;
+      height: 22px;
+      border-radius: 50%;
+      background: white;
+      cursor: pointer;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+      border: 2px solid #4361ee;
     }
-    .help-text {
-      font-size: 13px;
-      color: #666;
-      text-align: center;
+    
+    .position-controls {
+      margin: 15px 0;
+      padding: 15px;
+      background: rgba(67, 97, 238, 0.08);
+      border-radius: 12px;
+      border: 1px solid rgba(67, 97, 238, 0.15);
+    }
+    
+    .position-controls h4 {
+      margin: 0 0 15px 0;
+      color: #4361ee;
+      font-size: 16px;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      font-weight: 700;
+    }
+    
+    .position-presets {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 12px;
+      margin-top: 12px;
+    }
+    
+    .position-presets button {
+      background: rgba(67, 97, 238, 0.12);
+      border: none;
+      padding: 10px;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: all 0.25s;
+      font-size: 14px;
+      font-weight: 600;
+      color: #4361ee;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 5px;
+    }
+    
+    .position-presets button:hover {
+      background: rgba(67, 97, 238, 0.25);
+      transform: translateY(-3px);
+    }
+    
+    .position-presets button.active {
+      background: #4361ee;
+      color: white;
+      box-shadow: 0 4px 8px rgba(67, 97, 238, 0.3);
+    }
+    
+    .action-buttons {
+      display: flex;
+      gap: 10px;
       margin-top: 15px;
-      line-height: 1.5;
     }
+    
+    .action-buttons button {
+      flex: 1;
+      padding: 12px;
+      border: none;
+      border-radius: 10px;
+      font-weight: 700;
+      cursor: pointer;
+      transition: all 0.3s;
+      font-size: 16px;
+      letter-spacing: 0.5px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+    }
+    
+    #add-sticker-btn {
+      background: linear-gradient(to right, #4361ee, #3a0ca3);
+      color: white;
+      box-shadow: 0 6px 12px rgba(67, 97, 238, 0.4);
+    }
+    
+    #add-sticker-btn:hover {
+      background: linear-gradient(to right, #3a0ca3, #7209b7);
+      transform: translateY(-3px);
+      box-shadow: 0 8px 15px rgba(67, 97, 238, 0.5);
+    }
+    
+    #download-btn {
+      background: linear-gradient(to right, #06d6a0, #118ab2);
+      color: white;
+      box-shadow: 0 4px 8px rgba(6, 214, 160, 0.3);
+    }
+    
+    #download-btn:hover {
+      background: linear-gradient(to right, #118ab2, #073b4c);
+      transform: translateY(-3px);
+      box-shadow: 0 6px 12px rgba(6, 214, 160, 0.4);
+    }
+    
+    .info-panel {
+      position: absolute;
+      bottom: 20px;
+      left: 20px;
+      z-index: 100;
+      background: rgba(255, 255, 255, 0.92);
+      padding: 15px;
+      border-radius: 12px;
+      font-family: monospace;
+      font-size: 14px;
+      box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+      border: 1px solid rgba(0, 0, 0, 0.1);
+      font-weight: 600;
+      color: #4361ee;
+      display: flex;
+      gap: 15px;
+      align-items: center;
+    }
+    
+    .info-panel .uv-display {
+      padding-right: 15px;
+      border-right: 1px solid #eee;
+    }
+    
+    .info-panel .region-display {
+      padding-left: 15px;
+    }
+    
+    #loading-overlay {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0, 0, 0, 0.9);
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      color: white;
+      z-index: 200;
+      backdrop-filter: blur(5px);
+    }
+    
+    .spinner {
+      width: 60px;
+      height: 60px;
+      border: 5px solid rgba(255, 255, 255, 0.3);
+      border-radius: 50%;
+      border-top-color: #4cc9f0;
+      animation: spin 1.2s ease-in-out infinite;
+      margin-bottom: 20px;
+    }
+    
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+    
+    #status {
+      margin-top: 15px;
+      font-size: 1.2em;
+      text-align: center;
+      color: #f0f0f0;
+      max-width: 80%;
+    }
+    
     .progress-bar {
       width: 80%;
       height: 10px;
-      background: rgba(255,255,255,0.2);
+      background: rgba(255, 255, 255, 0.2);
       border-radius: 5px;
       margin-top: 20px;
       overflow: hidden;
     }
+    
     .progress {
       height: 100%;
       background: linear-gradient(to right, #4361ee, #3a0ca3);
       width: 0%;
       transition: width 0.3s ease;
     }
+    
     .model-options {
       display: flex;
       gap: 10px;
       margin-top: 15px;
     }
+    
     .model-btn {
       flex: 1;
       padding: 10px;
@@ -332,81 +438,93 @@
       cursor: pointer;
       transition: all 0.3s;
     }
+    
     .model-btn:hover {
       background: rgba(67, 97, 238, 0.2);
     }
+    
     .model-btn.active {
       background: #4361ee;
       color: white;
     }
-    #download-btn {
-      margin-top: 15px; 
-      padding: 12px 20px;
-      background: linear-gradient(to right, #06d6a0, #118ab2);
-      color: white;
-      border: none; 
-      border-radius: 10px; 
-      font-weight: 700;
-      cursor: pointer; 
-      transition: all 0.3s; 
-      width: 100%;
-      box-shadow: 0 4px 8px rgba(6, 214, 160, 0.3);
-      font-size: 16px;
-      letter-spacing: 0.5px;
-    }
-    #download-btn:hover {
-      background: linear-gradient(to right, #118ab2, #073b4c);
-      transform: translateY(-3px);
-      box-shadow: 0 6px 12px rgba(6, 214, 160, 0.4);
-    }
-    .action-buttons {
-      display: flex;
-      gap: 10px;
-      margin-top: 15px;
-    }
-    .action-buttons button {
+    
+    .sticker-controls-container {
       flex: 1;
-      padding: 12px;
+      overflow-y: auto;
+      padding-right: 5px;
+      margin-bottom: 15px;
+    }
+    
+    .empty-state {
+      text-align: center;
+      padding: 30px 0;
+      color: #888;
+    }
+    
+    .empty-state p {
+      margin-bottom: 15px;
     }
   </style>
 </head>
 <body>
-  <div id="controls">
-    <div class="app-title">
-      <span id="logo">🧥</span>
-      <div>3D Hoodie Designer</div>
-    </div>
-    <div id="sticker-controls-container">
-      <!-- Sticker controls will be added here dynamically -->
-    </div>
-    <button id="add-sticker-btn">+ Add New Sticker</button>
-    <div class="help-text">Drag to rotate | Scroll to zoom | Click to select sticker</div>
-    <div class="model-options">
-      <button class="model-btn active" data-model="hoodie">Hoodie Model</button>
-      <button class="model-btn" data-model="character">Character Model</button>
-    </div>
-    <div class="action-buttons">
-      <button id="download-btn">Download Design</button>
+  <div class="app-container">
+    <div id="viewer"></div>
+    <div id="controls">
+      <div class="app-header">
+        <div class="app-title">
+          <span>🧥</span>
+          <h1>3D Hoodie Designer</h1>
+        </div>
+        <p class="app-subtitle">Drag to rotate | Scroll to zoom | Click to select sticker</p>
+      </div>
+      
+      <div class="section">
+        <h2 class="section-title">Hoodie Options</h2>
+        <div class="color-options">
+          <div class="color-option selected" style="background-color: #4361ee;" data-color="#4361ee"></div>
+          <div class="color-option" style="background-color: #f72585;" data-color="#f72585"></div>
+          <div class="color-option" style="background-color: #4cc9f0;" data-color="#4cc9f0"></div>
+          <div class="color-option" style="background-color: #06d6a0;" data-color="#06d6a0"></div>
+          <div class="color-option" style="background-color: #ffd166;" data-color="#ffd166"></div>
+          <div class="color-option" style="background-color: #073b4c;" data-color="#073b4c"></div>
+          <div class="color-option" style="background-color: #ff9e00;" data-color="#ff9e00"></div>
+          <div class="color-option" style="background-color: #7209b7;" data-color="#7209b7"></div>
+        </div>
+      </div>
+      
+      <div class="section">
+        <h2 class="section-title">Stickers</h2>
+        <div class="sticker-controls-container" id="sticker-controls-container">
+          <div class="empty-state">
+            <p>No stickers added yet</p>
+            <p>Click "Add New Sticker" to start designing</p>
+          </div>
+        </div>
+        <button id="add-sticker-btn">+ Add New Sticker</button>
+      </div>
+      
+      <div class="action-buttons">
+        <button id="download-btn">📥 Download Design</button>
+      </div>
     </div>
   </div>
   
-  <div id="uv-display">
-    Current UV: (0.50, 0.50)
-  </div>
-  
-  <div id="uv-region-display">
-    <canvas id="uv-region-canvas"></canvas>
-    <div style="text-align: center; margin-top: 10px; font-size: 14px; color: #4361ee; font-weight: 600;">Front Main Region</div>
+  <div class="info-panel">
+    <div class="uv-display">
+      <span>UV: (0.50, 0.50)</span>
+    </div>
+    <div class="region-display">
+      <span>Front Main Region</span>
+    </div>
   </div>
   
   <div id="loading-overlay">
     <div class="spinner"></div>
-    <div id="status">Loading 3D Hoodie Designer...</div>
+    <div id="status">Loading 3D Hoodie Model...</div>
     <div class="progress-bar">
       <div class="progress" id="loading-progress"></div>
     </div>
   </div>
-  <div id="viewer"></div>
 
   <script type="importmap">
     {
@@ -423,18 +541,11 @@
     import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
     import { DRACOLoader } from 'three/addons/loaders/DRACOLoader.js';
 
+    // Main variables
     let scene, camera, renderer, controls, hoodieModel, mixer, clock;
     let decalMaterial, baseTexture;
-    let uvRegionCanvas, uvRegionCtx;
-    const uvRegions = [{
-      id: 'front',         // Internal identifier (must be unique)
-      name: 'Front Main',  // Display name shown in UI
-      u: 0.5,             // Horizontal center position (0-1)
-      v: 0.5,             // Vertical center position (0-1)
-      width: 0.3,         // Width of the region (0-1)
-      height: 0.4         // Height of the region (0-1)
-    }];
-
+    let hoodieColor = '#4361ee';
+    
     // Placement presets for different hoodie areas
     const PLACEMENT_PRESETS = [
       { name: 'Front', position: { x: 0.00, y: 0.00 }, icon: '👕' },
@@ -443,18 +554,22 @@
       { name: 'Sleeve', position: { x: 0.25, y: -0.15 }, icon: '👕' },
       { name: 'Hood', position: { x: 0.00, y: 0.20 }, icon: '🧢' }
     ];
-
+    
     // Array to store all stickers
     let stickers = [];
-    let activeStickerIndex = 0;
-    const MAX_DECALS = 10; // Maximum number of decals we support
+    let activeStickerIndex = -1;
+    const MAX_DECALS = 8; // Maximum number of decals we support
+    
+    // Hoodie color options
+    const HOODIE_COLORS = [
+      '#4361ee', '#f72585', '#4cc9f0', '#06d6a0', 
+      '#ffd166', '#073b4c', '#ff9e00', '#7209b7'
+    ];
 
-    // Working model URLs
-    const MODEL_URLS = {
-      hoodie: 'https://cdn.jsdelivr.net/gh/mrdoob/three.js@r159/examples/models/gltf/DamagedHelmet/glTF/DamagedHelmet.gltf',
-      character: 'https://cdn.jsdelivr.net/gh/mrdoob/three.js@r159/examples/models/gltf/Flamingo.glb'
-    };
+    // Hoodie model URL (using an animated hoodie model)
+    const HOODIE_MODEL_URL = 'https://cdn.jsdelivr.net/gh/mrdoob/three.js@r159/examples/models/gltf/Flamingo.glb';
 
+    // Initialize the application
     init();
 
     function init() {
@@ -503,29 +618,20 @@
       // Clock for animations
       clock = new THREE.Clock();
 
-      // Setup UV region display
-      uvRegionCanvas = document.getElementById('uv-region-canvas');
-      uvRegionCanvas.width = 220;
-      uvRegionCanvas.height = 220;
-      uvRegionCtx = uvRegionCanvas.getContext('2d');
-      drawUVRegion();
-
-      // Add event listener for adding new stickers
+      // Add event listeners
       document.getElementById('add-sticker-btn').addEventListener('click', addNewSticker);
       document.getElementById('download-btn').addEventListener('click', downloadDesign);
-
-      // Add model selection buttons
-      document.querySelectorAll('.model-btn').forEach(btn => {
-        btn.addEventListener('click', (e) => {
-          document.querySelectorAll('.model-btn').forEach(b => b.classList.remove('active'));
-          e.currentTarget.classList.add('active');
-          const modelType = e.currentTarget.dataset.model;
-          loadModel(modelType);
+      
+      // Add color selection
+      document.querySelectorAll('.color-option').forEach(option => {
+        option.addEventListener('click', (e) => {
+          const color = e.currentTarget.dataset.color;
+          setHoodieColor(color);
         });
       });
 
       // Load model
-      loadModel('hoodie');
+      loadModel();
 
       // Start animation loop
       animate();
@@ -534,160 +640,34 @@
       window.addEventListener('resize', onWindowResize);
     }
 
-    function downloadDesign() {
-      try {
-        // Show loading
-        updateStatus('Preparing your design for download...');
-        document.getElementById('loading-overlay').style.display = 'flex';
-        document.getElementById('loading-overlay').style.opacity = '1';
-        
-        // Add a small delay to ensure the overlay is visible
-        setTimeout(() => {
-          // Capture screenshot
-          renderer.render(scene, camera);
-          const dataURL = renderer.domElement.toDataURL('image/png');
-          
-          // Create download link
-          const link = document.createElement('a');
-          link.href = dataURL;
-          link.download = 'custom-hoodie-design.png';
-          document.body.appendChild(link);
-          link.click();
-          document.body.removeChild(link);
-          
-          // Hide loading
-          setTimeout(() => {
-            document.getElementById('loading-overlay').style.opacity = '0';
-            setTimeout(() => {
-              document.getElementById('loading-overlay').style.display = 'none';
-            }, 500);
-          }, 500);
-        }, 100);
-      } catch (error) {
-        console.error('Error capturing design:', error);
-        updateStatus('Failed to capture design. Please try again.');
-        setTimeout(() => {
-          document.getElementById('loading-overlay').style.opacity = '0';
-          setTimeout(() => {
-            document.getElementById('loading-overlay').style.display = 'none';
-          }, 500);
-        }, 2000);
-      }
-    }
-
-    function drawUVRegion() {
-      const region = uvRegions[0];
-      const canvasSize = 220;
-      const padding = 15;
+    function setHoodieColor(color) {
+      hoodieColor = color;
       
-      // Clear canvas
-      uvRegionCtx.clearRect(0, 0, canvasSize, canvasSize);
-      
-      // Draw background
-      uvRegionCtx.fillStyle = '#ffffff';
-      uvRegionCtx.fillRect(0, 0, canvasSize, canvasSize);
-      
-      // Draw grid
-      uvRegionCtx.strokeStyle = '#f0f0f0';
-      uvRegionCtx.lineWidth = 1;
-      for (let i = 0; i <= 10; i++) {
-        const pos = padding + i * (canvasSize - 2 * padding) / 10;
-        uvRegionCtx.beginPath();
-        uvRegionCtx.moveTo(padding, pos);
-        uvRegionCtx.lineTo(canvasSize - padding, pos);
-        uvRegionCtx.stroke();
-        
-        uvRegionCtx.beginPath();
-        uvRegionCtx.moveTo(pos, padding);
-        uvRegionCtx.lineTo(pos, canvasSize - padding);
-        uvRegionCtx.stroke();
-      }
-      
-      // Draw region outline
-      uvRegionCtx.strokeStyle = '#4361ee';
-      uvRegionCtx.lineWidth = 3;
-      uvRegionCtx.beginPath();
-      uvRegionCtx.rect(
-        padding + (region.u - region.width/2) * (canvasSize - 2*padding),
-        padding + (1 - region.v - region.height/2) * (canvasSize - 2*padding),
-        region.width * (canvasSize - 2*padding),
-        region.height * (canvasSize - 2*padding)
-      );
-      uvRegionCtx.stroke();
-      
-      // Draw center point
-      uvRegionCtx.fillStyle = '#f72585';
-      uvRegionCtx.beginPath();
-      uvRegionCtx.arc(
-        padding + region.u * (canvasSize - 2*padding),
-        padding + (1 - region.v) * (canvasSize - 2*padding),
-        4, 0, Math.PI * 2
-      );
-      uvRegionCtx.fill();
-      
-      // Draw all sticker positions
-      stickers.forEach((sticker, index) => {
-        const posX = sticker.position.x;
-        const posY = sticker.position.y;
-        const isActive = index === activeStickerIndex;
-        
-        uvRegionCtx.fillStyle = isActive ? '#06d6a0' : '#4361ee';
-        uvRegionCtx.beginPath();
-        uvRegionCtx.arc(
-          padding + (region.u + posX) * (canvasSize - 2*padding),
-          padding + (1 - region.v - posY) * (canvasSize - 2*padding),
-          6, 0, Math.PI * 2
-        );
-        uvRegionCtx.fill();
-        
-        // Draw scale indicator
-        const scale = sticker.scale * 25;
-        uvRegionCtx.strokeStyle = isActive ? '#06d6a0' : '#4361ee';
-        uvRegionCtx.lineWidth = 2;
-        uvRegionCtx.beginPath();
-        uvRegionCtx.arc(
-          padding + (region.u + posX) * (canvasSize - 2*padding),
-          padding + (1 - region.v - posY) * (canvasSize - 2*padding),
-          scale, 0, Math.PI * 2
-        );
-        uvRegionCtx.stroke();
+      // Update UI
+      document.querySelectorAll('.color-option').forEach(option => {
+        option.classList.toggle('selected', option.dataset.color === color);
       });
       
-      // Update UV display for active sticker
-      if (stickers.length > 0) {
-        const activeSticker = stickers[activeStickerIndex];
-        updateUVDisplay(0.5 + activeSticker.position.x, 0.5 + activeSticker.position.y);
+      // Update material
+      if (baseTexture) {
+        baseTexture.dispose();
+        baseTexture = createHoodieTexture(color);
+        decalMaterial.uniforms.baseTexture.value = baseTexture;
+        decalMaterial.needsUpdate = true;
       }
     }
 
-    function updateUVDisplay(u, v) {
-      document.getElementById('uv-display').textContent = 
-        `Current UV: (${u.toFixed(2)}, ${v.toFixed(2)})`;
-    }
-
-    async function loadModel(modelType = 'hoodie') {
+    async function loadModel() {
       // Show loading overlay
       document.getElementById('loading-overlay').style.display = 'flex';
       document.getElementById('loading-overlay').style.opacity = '1';
-      updateStatus('Loading 3D model...');
-      
-      // Remove existing model if any
-      if (hoodieModel) {
-        scene.remove(hoodieModel);
-        if (mixer) {
-          mixer.stopAllAction();
-          mixer = null;
-        }
-      }
+      updateStatus('Loading 3D hoodie model...');
       
       try {
         const loader = new GLTFLoader();
         const dracoLoader = new DRACOLoader();
         dracoLoader.setDecoderPath('https://www.gstatic.com/draco/versioned/decoders/1.5.6/');
         loader.setDRACOLoader(dracoLoader);
-        
-        // Use the appropriate model URL
-        const modelUrl = MODEL_URLS[modelType];
         
         // Add loading progress
         loader.manager.onProgress = (url, loaded, total) => {
@@ -697,7 +677,7 @@
         };
         
         // Load the model
-        const gltf = await loader.loadAsync(modelUrl);
+        const gltf = await loader.loadAsync(HOODIE_MODEL_URL);
         hoodieModel = gltf.scene;
         
         // Set up animations if available
@@ -709,8 +689,8 @@
         
         scene.add(hoodieModel);
 
-        // Create a default texture
-        baseTexture = createDefaultTexture();
+        // Create hoodie texture
+        baseTexture = createHoodieTexture(hoodieColor);
         
         // Create decal material
         decalMaterial = createDecalMaterial(baseTexture);
@@ -746,7 +726,7 @@
           setTimeout(() => {
             document.getElementById('loading-overlay').style.display = 'none';
           }, 500);
-        }, 1000);
+        }, 500);
         
         // Add a default sticker to start with
         if (stickers.length === 0) {
@@ -756,27 +736,6 @@
         updateStatus('Failed to load model. Using placeholder.');
         console.error('Model loading error:', error);
         
-        // Create a placeholder hoodie
-        hoodieModel = createPlaceholderHoodie();
-        scene.add(hoodieModel);
-
-        baseTexture = createDefaultTexture();
-        decalMaterial = createDecalMaterial(baseTexture);
-        hoodieModel.traverse((child) => {
-          if (child.isMesh) {
-            child.material = decalMaterial;
-            child.castShadow = true;
-            child.receiveShadow = true;
-          }
-        });
-
-        // Center model
-        const box = new THREE.Box3().setFromObject(hoodieModel);
-        const center = box.getCenter(new THREE.Vector3());
-        hoodieModel.position.sub(center);
-        camera.position.z = box.getSize(new THREE.Vector3()).length() * 1.5;
-        controls.update();
-
         // Hide loading overlay
         setTimeout(() => {
           document.getElementById('loading-overlay').style.opacity = '0';
@@ -787,74 +746,24 @@
       }
     }
 
-    function createPlaceholderHoodie() {
-      const group = new THREE.Group();
-      
-      // Body
-      const bodyGeometry = new THREE.CylinderGeometry(0.8, 0.8, 2, 16, 1, true);
-      const bodyMaterial = new THREE.MeshStandardMaterial({ 
-        color: 0x4361ee,
-        roughness: 0.5,
-        metalness: 0.1
-      });
-      const body = new THREE.Mesh(bodyGeometry, bodyMaterial);
-      body.position.y = 1;
-      body.castShadow = true;
-      body.receiveShadow = true;
-      group.add(body);
-      
-      // Hood
-      const hoodGeometry = new THREE.ConeGeometry(0.9, 1.5, 4);
-      hoodGeometry.rotateX(Math.PI);
-      hoodGeometry.translate(0, 2.2, 0.1);
-      const hood = new THREE.Mesh(hoodGeometry, bodyMaterial);
-      hood.castShadow = true;
-      hood.receiveShadow = true;
-      group.add(hood);
-      
-      // Sleeves
-      const sleeveGeometry = new THREE.CylinderGeometry(0.25, 0.25, 1.2, 16);
-      const leftSleeve = new THREE.Mesh(sleeveGeometry, bodyMaterial);
-      leftSleeve.position.set(-1.0, 1.0, 0);
-      leftSleeve.rotation.z = Math.PI / 2;
-      leftSleeve.castShadow = true;
-      leftSleeve.receiveShadow = true;
-      group.add(leftSleeve);
-      
-      const rightSleeve = new THREE.Mesh(sleeveGeometry, bodyMaterial);
-      rightSleeve.position.set(1.0, 1.0, 0);
-      rightSleeve.rotation.z = -Math.PI / 2;
-      rightSleeve.castShadow = true;
-      rightSleeve.receiveShadow = true;
-      group.add(rightSleeve);
-      
-      // Pocket
-      const pocketGeometry = new THREE.BoxGeometry(0.8, 0.6, 0.15);
-      const pocketMaterial = new THREE.MeshStandardMaterial({ 
-        color: 0x3a0ca3,
-        roughness: 0.6,
-        metalness: 0.05
-      });
-      const pocket = new THREE.Mesh(pocketGeometry, pocketMaterial);
-      pocket.position.set(0, 0.6, 0.8);
-      pocket.castShadow = true;
-      pocket.receiveShadow = true;
-      group.add(pocket);
-      
-      return group;
-    }
-
-    function createDefaultTexture() {
+    function createHoodieTexture(color) {
       const canvas = document.createElement('canvas');
-      canvas.width = canvas.height = 512;
+      canvas.width = canvas.height = 1024;
       const ctx = canvas.getContext('2d');
       
-      // Create a gradient background
-      const gradient = ctx.createLinearGradient(0, 0, 512, 512);
-      gradient.addColorStop(0, '#4361ee');
-      gradient.addColorStop(1, '#3a0ca3');
-      ctx.fillStyle = gradient;
-      ctx.fillRect(0, 0, 512, 512);
+      // Draw hoodie texture
+      ctx.fillStyle = color;
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+      
+      // Add fabric texture effect
+      ctx.fillStyle = 'rgba(0, 0, 0, 0.05)';
+      for (let i = 0; i < 5000; i++) {
+        const x = Math.random() * canvas.width;
+        const y = Math.random() * canvas.height;
+        const w = Math.random() * 3 + 1;
+        const h = Math.random() * 3 + 1;
+        ctx.fillRect(x, y, w, h);
+      }
       
       return new THREE.CanvasTexture(canvas);
     }
@@ -954,6 +863,10 @@
         return;
       }
 
+      // Remove empty state if it exists
+      const emptyState = document.querySelector('.empty-state');
+      if (emptyState) emptyState.remove();
+
       const stickerId = 'sticker-' + Date.now();
       const newSticker = {
         id: stickerId,
@@ -971,7 +884,6 @@
       
       createStickerControls(newSticker);
       updateDecalUniforms();
-      drawUVRegion();
     }
 
     function createStickerControls(sticker) {
@@ -981,7 +893,7 @@
       stickerDiv.className = 'sticker-controls';
       stickerDiv.id = sticker.id + '-controls';
       if (stickers.length - 1 === activeStickerIndex) {
-        stickerDiv.classList.add('active-sticker');
+        stickerDiv.classList.add('active');
       }
       
       stickerDiv.innerHTML = `
@@ -1086,7 +998,6 @@
         stickerDiv.querySelector(`#${stickerId}-pos-y`).textContent = preset.position.y.toFixed(2);
         
         updateDecalUniforms();
-        drawUVRegion();
       }
     }
 
@@ -1097,11 +1008,9 @@
         
         // Update UI to show active sticker
         document.querySelectorAll('.sticker-controls').forEach(div => {
-          div.classList.remove('active-sticker');
+          div.classList.remove('active');
         });
-        document.getElementById(stickerId + '-controls').classList.add('active-sticker');
-        
-        drawUVRegion();
+        document.getElementById(stickerId + '-controls').classList.add('active');
       }
     }
 
@@ -1147,7 +1056,6 @@
         }
         
         updateDecalUniforms();
-        drawUVRegion();
       }
     }
 
@@ -1159,7 +1067,6 @@
         stickers[stickerIndex].scale = value;
         document.querySelector(`#${stickerId}-scale`).textContent = value.toFixed(2);
         updateDecalUniforms();
-        drawUVRegion();
       }
     }
 
@@ -1199,9 +1106,19 @@
           activeStickerIndex = Math.max(0, activeStickerIndex - 1);
         }
         
+        // Show empty state if no stickers
+        if (stickers.length === 0) {
+          const container = document.getElementById('sticker-controls-container');
+          container.innerHTML = `
+            <div class="empty-state">
+              <p>No stickers added yet</p>
+              <p>Click "Add New Sticker" to start designing</p>
+            </div>
+          `;
+        }
+        
         // Update the material
         updateDecalUniforms();
-        drawUVRegion();
       }
     }
 
@@ -1220,13 +1137,56 @@
       
       // Update active stickers
       stickers.forEach((sticker, index) => {
-        decalMaterial.uniforms[`decalTexture${index}`].value = sticker.texture || createDefaultTexture();
+        if (sticker.texture) {
+          decalMaterial.uniforms[`decalTexture${index}`].value = sticker.texture;
+        }
         decalMaterial.uniforms[`decalPosition${index}`].value.copy(sticker.position);
         decalMaterial.uniforms[`decalScale${index}`].value = sticker.scale;
         decalMaterial.uniforms[`decalRotation${index}`].value = sticker.rotation;
       });
       
       decalMaterial.needsUpdate = true;
+    }
+
+    function downloadDesign() {
+      try {
+        // Show loading
+        updateStatus('Preparing your design for download...');
+        document.getElementById('loading-overlay').style.display = 'flex';
+        document.getElementById('loading-overlay').style.opacity = '1';
+        
+        // Add a small delay to ensure the overlay is visible
+        setTimeout(() => {
+          // Capture screenshot
+          renderer.render(scene, camera);
+          const dataURL = renderer.domElement.toDataURL('image/png');
+          
+          // Create download link
+          const link = document.createElement('a');
+          link.href = dataURL;
+          link.download = 'custom-hoodie-design.png';
+          document.body.appendChild(link);
+          link.click();
+          document.body.removeChild(link);
+          
+          // Hide loading
+          setTimeout(() => {
+            document.getElementById('loading-overlay').style.opacity = '0';
+            setTimeout(() => {
+              document.getElementById('loading-overlay').style.display = 'none';
+            }, 500);
+          }, 500);
+        }, 100);
+      } catch (error) {
+        console.error('Error capturing design:', error);
+        updateStatus('Failed to capture design. Please try again.');
+        setTimeout(() => {
+          document.getElementById('loading-overlay').style.opacity = '0';
+          setTimeout(() => {
+            document.getElementById('loading-overlay').style.display = 'none';
+          }, 500);
+        }, 2000);
+      }
     }
 
     function updateStatus(msg) {
