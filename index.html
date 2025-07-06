@@ -416,6 +416,36 @@
             testStickerFunction();
             logToTestPanel('All tests completed', 'info');
         }
+
+        // Handle image upload
+        function handleImageUpload(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            
+            const preview = getElementSafe('stickerPreview');
+            if (!preview) return;
+            
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                preview.innerHTML = '';
+                preview.classList.remove('hidden');
+                
+                const img = document.createElement('img');
+                img.src = e.target.result;
+                preview.appendChild(img);
+                
+                // Create texture from the image
+                const textureLoader = new THREE.TextureLoader();
+                textureLoader.load(e.target.result, (texture) => {
+                    currentStickerTexture = texture;
+                    updateStatus('Image loaded and ready to apply');
+                    logToTestPanel('Sticker image loaded successfully', 'success');
+                }, undefined, (error) => {
+                    logToTestPanel(`Error loading sticker image: ${error.message}`, 'error');
+                });
+            };
+            reader.readAsDataURL(file);
+        }
         
         // Initialize the application after DOM is loaded
         document.addEventListener('DOMContentLoaded', () => {
@@ -605,33 +635,6 @@
             }
             
             logToTestPanel('UI event listeners setup completed', 'success');
-        }
-
-        // Handle image upload
-        function handleImageUpload(event) {
-            const file = event.target.files[0];
-            if (!file) return;
-            
-            const preview = getElementSafe('stickerPreview');
-            if (!preview) return;
-            
-            const reader = new FileReader();
-            reader.onload = function(e) {
-                preview.innerHTML = '';
-                preview.classList.remove('hidden');
-                
-                const img = document.createElement('img');
-                img.src = e.target.result;
-                preview.appendChild(img);
-                
-                // Create texture from the image
-                const texture = new THREE.TextureLoader().load(e.target.result, (tex) => {
-                    currentStickerTexture = tex;
-                    updateStatus('Image loaded and ready to apply');
-                    logToTestPanel('Sticker image loaded successfully', 'success');
-                });
-            };
-            reader.readAsDataURL(file);
         }
 
         // Create custom shader material for the hoodie
