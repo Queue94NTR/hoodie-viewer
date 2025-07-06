@@ -3,13 +3,14 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>3D Hoodie Viewer with Sticker</title>
+  <title>3D Hoodie Viewer with UV Region Stickers</title>
   <style>
     body { margin: 0; overflow: hidden; font-family: Arial, sans-serif; }
     #viewer { width: 100vw; height: 100vh; }
     #controls {
       position: absolute; top: 10px; left: 10px; z-index: 100;
       background: rgba(255,255,255,0.8); padding: 10px; border-radius: 5px;
+      max-width: 300px;
     }
     #loading-overlay {
       position: absolute; top: 0; left: 0; width: 100%; height: 100%;
@@ -23,14 +24,37 @@
     }
     @keyframes spin { to { transform: rotate(360deg); } }
     #status { margin-top: 10px; font-size: 1em; }
+    #uv-regions {
+      margin-top: 10px;
+      max-height: 200px;
+      overflow-y: auto;
+    }
+    .uv-region {
+      padding: 5px;
+      margin: 2px 0;
+      background: #eee;
+      cursor: pointer;
+    }
+    .uv-region:hover {
+      background: #ddd;
+    }
+    .uv-region.active {
+      background: #4361ee;
+      color: white;
+    }
   </style>
 </head>
 <body>
   <div id="controls">
     <input type="file" id="sticker-upload" accept="image/*">
-    <div>Position: <input type="range" id="position-x" min="-1" max="1" step="0.01" value="0"> X</div>
-    <div><input type="range" id="position-y" min="-1" max="1" step="0.01" value="0"> Y</div>
+    <div>Position: <input type="range" id="position-x" min="0" max="1" step="0.01" value="0.5"> X</div>
+    <div>Position: <input type="range" id="position-y" min="0" max="1" step="0.01" value="0.5"> Y</div>
     <div>Scale: <input type="range" id="scale" min="0.1" max="2" step="0.05" value="0.5"></div>
+    <div>Rotation: <input type="range" id="rotation" min="0" max="6.28" step="0.1" value="0"></div>
+    <div id="uv-regions">
+      <p>Select UV Region:</p>
+      <!-- UV regions will be populated dynamically -->
+    </div>
   </div>
   
   <div id="loading-overlay">
@@ -56,6 +80,19 @@
 
     let scene, camera, renderer, controls, hoodieModel, mixer, clock;
     let decalMaterial, currentStickerTexture = null;
+    let currentUVRegion = null;
+    let uvRegions = [];
+
+    // Define UV regions based on your UV map
+    // These are example regions - you should adjust these to match your actual UV map
+    const predefinedUVRegions = [
+      { id: 'front', name: 'Front Main', u: 0.5, v: 0.5, width: 0.3, height: 0.4 },
+      { id: 'back', name: 'Back Main', u: 0.2, v: 0.5, width: 0.3, height: 0.4 },
+      { id: 'sleeve_left', name: 'Left Sleeve', u: 0.7, v: 0.7, width: 0.2, height: 0.2 },
+      { id: 'sleeve_right', name: 'Right Sleeve', u: 0.3, v: 0.7, width: 0.2, height: 0.2 },
+      { id: 'hood', name: 'Hood', u: 0.5, v: 0.1, width: 0.3, height: 0.2 },
+      // Add more regions as needed based on your UV map
+    ];
 
     init();
 
@@ -93,6 +130,10 @@
       document.getElementById('position-x').addEventListener('input', updateDecal);
       document.getElementById('position-y').addEventListener('input', updateDecal);
       document.getElementById('scale').addEventListener('input', updateDecal);
+      document.getElementById('rotation').addEventListener('input', updateDecal);
+
+      // Initialize UV regions UI
+      initUVRegions();
 
       // Load model
       loadModel();
@@ -102,6 +143,43 @@
 
       // Handle window resize
       window.addEventListener('resize', onWindowResize);
+    }
+
+    function initUVRegions() {
+      const uvRegionsContainer = document.getElementById('uv-regions');
+      
+      predefinedUVRegions.forEach(region => {
+        const regionElement = document.createElement('div');
+        regionElement.className = 'uv-region';
+        regionElement.textContent = region.name;
+        regionElement.dataset.id = region.id;
+        
+        regionElement.addEventListener('click', () => {
+          // Set active state
+          document.querySelectorAll('.uv-region').forEach(el => el.classList.remove('active'));
+          regionElement.classList.add('active');
+          
+          // Set current UV region
+          currentUVRegion = region;
+          
+          // Update sliders to match this region's center
+          document.getElementById('position-x').value = region.u;
+          document.getElementById('position-y').value = region.v;
+          
+          // Update decal
+          updateDecal();
+        });
+        
+        uvRegionsContainer.appendChild(regionElement);
+      });
+      
+      // Select first region by default
+      if (predefinedUVRegions.length > 0) {
+        currentUVRegion = predefinedUVRegions[0];
+        document.querySelector('.uv-region').classList.add('active');
+        document.getElementById('position-x').value = currentUVRegion.u;
+        document.getElementById('position-y').value = currentUVRegion.v;
+      }
     }
 
     async function loadModel() {
@@ -129,7 +207,7 @@
         // Create a default white texture
         const defaultTexture = createDefaultTexture();
         
-        // Create decal material
+        // Create decal material with support for multiple decals
         decalMaterial = createDecalMaterial(defaultTexture);
         
         // Apply material to all meshes
@@ -169,10 +247,11 @@
         uniforms: {
           baseTexture: { value: baseTexture },
           decalTexture: { value: null },
-          decalPosition: { value: new THREE.Vector2(0, 0) },
+          decalPosition: { value: new THREE.Vector2(0.5, 0.5) },
           decalScale: { value: 0.5 },
           decalRotation: { value: 0 },
-          useDecal: { value: false }
+          useDecal: { value: false },
+          uvRegion: { value: new THREE.Vector4(0, 0, 1, 1) } // x, y, width, height
         },
         vertexShader: `
           varying vec2 vUV;
@@ -188,29 +267,39 @@
           uniform float decalScale;
           uniform float decalRotation;
           uniform bool useDecal;
+          uniform vec4 uvRegion; // x, y, width, height
           varying vec2 vUV;
 
           void main() {
             vec4 baseColor = texture2D(baseTexture, vUV);
             
             if (useDecal) {
-              vec2 center = vec2(0.5);
-              vec2 uv = vUV - center;
-              
-              // Apply rotation
-              float cosRot = cos(decalRotation);
-              float sinRot = sin(decalRotation);
-              uv = vec2(
-                uv.x * cosRot - uv.y * sinRot,
-                uv.x * sinRot + uv.y * cosRot
-              );
-              
-              // Apply scale and position
-              uv = uv / decalScale + decalPosition + center;
-              
-              if (uv.x >= 0.0 && uv.x <= 1.0 && uv.y >= 0.0 && uv.y <= 1.0) {
-                vec4 decalColor = texture2D(decalTexture, uv);
-                baseColor = mix(baseColor, decalColor, decalColor.a);
+              // Check if current UV is within the active region
+              if (vUV.x >= uvRegion.x && vUV.x <= (uvRegion.x + uvRegion.z) &&
+                  vUV.y >= uvRegion.y && vUV.y <= (uvRegion.y + uvRegion.w)) {
+                
+                // Normalize UV coordinates within the region
+                vec2 regionUV = (vUV - uvRegion.xy) / uvRegion.zw;
+                
+                // Transform to decal space
+                vec2 center = vec2(0.5);
+                vec2 uv = regionUV - center;
+                
+                // Apply rotation
+                float cosRot = cos(decalRotation);
+                float sinRot = sin(decalRotation);
+                uv = vec2(
+                  uv.x * cosRot - uv.y * sinRot,
+                  uv.x * sinRot + uv.y * cosRot
+                );
+                
+                // Apply scale and position
+                uv = uv / decalScale + decalPosition;
+                
+                if (uv.x >= 0.0 && uv.x <= 1.0 && uv.y >= 0.0 && uv.y <= 1.0) {
+                  vec4 decalColor = texture2D(decalTexture, uv);
+                  baseColor = mix(baseColor, decalColor, decalColor.a);
+                }
               }
             }
             
@@ -234,6 +323,17 @@
           
           decalMaterial.uniforms.decalTexture.value = currentStickerTexture;
           decalMaterial.uniforms.useDecal.value = true;
+          
+          // Set UV region based on current selection
+          if (currentUVRegion) {
+            decalMaterial.uniforms.uvRegion.value.set(
+              currentUVRegion.u - currentUVRegion.width/2,
+              currentUVRegion.v - currentUVRegion.height/2,
+              currentUVRegion.width,
+              currentUVRegion.height
+            );
+          }
+          
           updateDecal();
         };
         img.src = e.target.result;
@@ -247,9 +347,22 @@
       const posX = parseFloat(document.getElementById('position-x').value);
       const posY = parseFloat(document.getElementById('position-y').value);
       const scale = parseFloat(document.getElementById('scale').value);
+      const rotation = parseFloat(document.getElementById('rotation').value);
       
       decalMaterial.uniforms.decalPosition.value.set(posX, posY);
       decalMaterial.uniforms.decalScale.value = scale;
+      decalMaterial.uniforms.decalRotation.value = rotation;
+      
+      // Update UV region if one is selected
+      if (currentUVRegion) {
+        decalMaterial.uniforms.uvRegion.value.set(
+          currentUVRegion.u - currentUVRegion.width/2,
+          currentUVRegion.v - currentUVRegion.height/2,
+          currentUVRegion.width,
+          currentUVRegion.height
+        );
+      }
+      
       decalMaterial.needsUpdate = true;
     }
 
