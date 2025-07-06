@@ -22,25 +22,28 @@ jobs:
       url: ${{ steps.deployment.outputs.page_url }}
 
     steps:
-      # 1. Checkout code with Git LFS (for large .glb files)
+      # 1. Checkout code
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
-          lfs: true  # Required for large model files
+          fetch-depth: 0  # Get full history for proper LFS fetching
 
-      # 2. Validate critical files exist
+      # 2. Setup Node.js (for potential future builds)
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      # 3. Validate critical files exist
       - name: Validate files
         run: |
           if [ ! -f "index.html" ]; then
             echo "::error::index.html not found!"
             exit 1
           fi
-          if [ ! -f "Hoodie_Walking_Animated.glb" ]; then
-            echo "::warning::3D model file not found, fallback will be used"
-          fi
-          ls -lh  # Debug: List files in directory
+          echo "All required files present"
 
-      # 3. Upload artifact directly (no build needed for static HTML)
+      # 4. Upload artifact directly (no build needed for static HTML)
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
         with:
@@ -52,8 +55,10 @@ jobs:
             .gitignore
             README.md
             *.yml
+            node_modules/
+            package*.json
 
-      # 4. Deploy to GitHub Pages
+      # 5. Deploy to GitHub Pages
       - name: Deploy to GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v3
