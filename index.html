@@ -3,100 +3,17 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>3D Hoodie Viewer with Testing Panel</title>
+    <title>3D Hoodie Viewer</title>
     <style>
         body { 
             margin: 0;
-            height: 100vh;
             overflow: hidden;
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            font-family: Arial, sans-serif;
         }
         
-        #viewer-container {
-            width: 100%;
-            height: 100%;
-            position: relative;
-        }
-        
-        #controls {
-            position: absolute;
-            top: 20px;
-            right: 20px;
-            background: rgba(255, 255, 255, 0.95);
-            padding: 15px;
-            border-radius: 8px;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.2);
-            max-width: 350px;
-            max-height: 90vh;
-            overflow-y: auto;
-            display: flex;
-            flex-direction: column;
-        }
-        
-        .control-group {
-            margin-bottom: 15px;
-            border-bottom: 1px solid #eee;
-            padding-bottom: 15px;
-        }
-        
-        .control-group h3 {
-            margin-top: 0;
-            margin-bottom: 10px;
-            color: #4361ee;
-        }
-        
-        .color-control, .sticker-control, .test-control {
-            margin-bottom: 10px;
-        }
-        
-        .color-control label, .sticker-control label, .test-control label {
-            display: block;
-            margin-bottom: 5px;
-            font-weight: 500;
-        }
-        
-        .color-control input[type="color"] {
-            width: 100%;
-            height: 40px;
-            cursor: pointer;
-            border: 1px solid #ddd;
-            border-radius: 4px;
-        }
-        
-        button, input[type="file"] {
-            width: 100%;
-            padding: 10px;
-            background: #4361ee;
-            color: white;
-            border: none;
-            border-radius: 4px;
-            cursor: pointer;
-            margin-top: 10px;
-            font-weight: 500;
-        }
-        
-        button:hover {
-            background: #3a56d4;
-        }
-        
-        button.secondary {
-            background: #6c757d;
-        }
-        
-        button.secondary:hover {
-            background: #5a6268;
-        }
-        
-        input[type="range"] {
-            width: 100%;
-        }
-        
-        select {
-            width: 100%;
-            padding: 8px;
-            border: 1px solid #ddd;
-            border-radius: 4px;
-            margin-bottom: 10px;
+        #viewer {
+            width: 100vw;
+            height: 100vh;
         }
         
         #loading-overlay {
@@ -130,158 +47,17 @@
         
         #status {
             margin-top: 10px;
-            font-size: 0.9em;
-            color: #666;
-            padding: 8px;
-            background: #f8f9fa;
-            border-radius: 4px;
-            border-left: 4px solid #4361ee;
-        }
-        
-        .sticker-preview {
-            width: 100%;
-            height: 100px;
-            background-color: #f5f5f5;
-            margin-top: 10px;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            overflow: hidden;
-            border-radius: 4px;
-        }
-        
-        .sticker-preview img {
-            max-width: 100%;
-            max-height: 100%;
-            object-fit: contain;
-        }
-        
-        .hidden {
-            display: none;
-        }
-        
-        #test-panel {
-            margin-top: 15px;
-            padding: 10px;
-            background: #f8f9fa;
-            border-radius: 4px;
-            border: 1px solid #dee2e6;
-        }
-        
-        #test-log {
-            height: 100px;
-            overflow-y: auto;
-            font-family: monospace;
-            font-size: 12px;
-            background: #212529;
-            color: #e9ecef;
-            padding: 8px;
-            border-radius: 4px;
-            margin-top: 10px;
-        }
-        
-        .log-entry {
-            margin-bottom: 4px;
-            padding-bottom: 4px;
-            border-bottom: 1px solid #495057;
-        }
-        
-        .log-success {
-            color: #20c997;
-        }
-        
-        .log-warning {
-            color: #ffc107;
-        }
-        
-        .log-error {
-            color: #dc3545;
-        }
-        
-        .log-info {
-            color: #0dcaf0;
+            font-size: 1em;
         }
     </style>
 </head>
 <body>
     <div id="loading-overlay">
         <div class="spinner"></div>
-        <div>Loading 3D Hoodie Viewer...</div>
+        <div id="status">Loading 3D Hoodie Viewer...</div>
     </div>
     
-    <div id="viewer-container">
-        <div id="viewer"></div>
-        <div id="controls">
-            <div class="control-group">
-                <h3>Color Customization</h3>
-                <div class="color-control">
-                    <label for="hoodieColor">Hoodie Color</label>
-                    <input type="color" id="hoodieColor" value="#4361ee">
-                </div>
-                <button id="apply-colors">Apply Color</button>
-                <button id="test-colors" class="secondary">Test Color Function</button>
-            </div>
-            
-            <div class="control-group">
-                <h3>Add Sticker</h3>
-                <div class="sticker-control">
-                    <label for="stickerImage">Upload Image</label>
-                    <input type="file" id="stickerImage" accept="image/*">
-                </div>
-                
-                <div class="sticker-preview hidden" id="stickerPreview">
-                    <span>Preview will appear here</span>
-                </div>
-                
-                <div class="sticker-control">
-                    <label for="stickerPlacement">Placement Area</label>
-                    <select id="stickerPlacement">
-                        <option value="front">Front</option>
-                        <option value="back">Back</option>
-                        <option value="leftSleeve">Left Sleeve</option>
-                        <option value="rightSleeve">Right Sleeve</option>
-                        <option value="hood">Hood</option>
-                    </select>
-                </div>
-                
-                <div class="sticker-control">
-                    <label for="stickerPositionX">Position X: <span id="positionXValue">0</span></label>
-                    <input type="range" id="stickerPositionX" min="-1" max="1" step="0.01" value="0">
-                </div>
-                
-                <div class="sticker-control">
-                    <label for="stickerPositionY">Position Y: <span id="positionYValue">0</span></label>
-                    <input type="range" id="stickerPositionY" min="-1" max="1" step="0.01" value="0">
-                </div>
-                
-                <div class="sticker-control">
-                    <label for="stickerScale">Scale: <span id="scaleValue">1</span></label>
-                    <input type="range" id="stickerScale" min="0.1" max="2" step="0.05" value="1">
-                </div>
-                
-                <div class="sticker-control">
-                    <label for="stickerRotation">Rotation: <span id="rotationValue">0</span>°</label>
-                    <input type="range" id="stickerRotation" min="0" max="360" step="1" value="0">
-                </div>
-                
-                <button id="apply-sticker">Apply Sticker</button>
-                <button id="clear-stickers">Clear All Stickers</button>
-                <button id="test-stickers" class="secondary">Test Sticker Function</button>
-            </div>
-            
-            <div class="control-group">
-                <h3>Testing Panel</h3>
-                <div id="test-panel">
-                    <button id="run-all-tests">Run All Tests</button>
-                    <button id="check-webgl" class="secondary">Check WebGL Support</button>
-                    <button id="check-model" class="secondary">Check Model Status</button>
-                    <div id="test-log"></div>
-                </div>
-            </div>
-            
-            <div id="status">Initializing application...</div>
-        </div>
-    </div>
+    <div id="viewer"></div>
 
     <script type="importmap">
         {
@@ -300,237 +76,26 @@
 
         // Main variables
         let scene, camera, renderer, controls, hoodieModel, mixer, clock;
-        let hoodieMaterial = null;
-        let currentStickerTexture = null;
-        let modelLoaded = false;
         
-        // UV regions for different parts of the hoodie
-        const uvRegions = {
-            front: { min: new THREE.Vector2(0.0, 0.0), max: new THREE.Vector2(0.5, 1.0) },
-            back: { min: new THREE.Vector2(0.5, 0.0), max: new THREE.Vector2(1.0, 1.0) },
-            leftSleeve: { min: new THREE.Vector2(0.0, 0.0), max: new THREE.Vector2(0.5, 0.5) },
-            rightSleeve: { min: new THREE.Vector2(0.5, 0.0), max: new THREE.Vector2(1.0, 0.5) },
-            hood: { min: new THREE.Vector2(0.25, 0.5), max: new THREE.Vector2(0.75, 1.0) }
-        };
-
-        // Safe DOM access functions
-        function getElementSafe(id) {
-            const element = document.getElementById(id);
-            if (!element) {
-                console.error(`Element with ID ${id} not found`);
-                return null;
-            }
-            return element;
-        }
-
-        // Create a default white texture
-        function createDefaultTexture() {
-            const canvas = document.createElement('canvas');
-            canvas.width = canvas.height = 2;
-            const ctx = canvas.getContext('2d');
-            ctx.fillStyle = 'white';
-            ctx.fillRect(0, 0, 2, 2);
-            return new THREE.CanvasTexture(canvas);
-        }
+        // Initialize the application
+        init();
         
-        // Testing and logging functions
-        function logToTestPanel(message, type = 'info') {
-            const testLog = getElementSafe('test-log');
-            if (!testLog) return;
-            
-            const logEntry = document.createElement('div');
-            logEntry.className = `log-entry log-${type}`;
-            logEntry.textContent = `[${new Date().toLocaleTimeString()}] ${message}`;
-            testLog.appendChild(logEntry);
-            testLog.scrollTop = testLog.scrollHeight;
-            console.log(`[${type.toUpperCase()}] ${message}`);
-        }
-        
-        function updateStatus(message) {
-            const statusElement = getElementSafe('status');
-            if (statusElement) {
-                statusElement.textContent = message;
-            }
-            logToTestPanel(`Status: ${message}`, 'info');
-        }
-
-        // Test functions
-        function testColorFunction() {
-            logToTestPanel('Running color function test...', 'info');
-            
-            try {
-                // Test color input
-                const colorInput = getElementSafe('hoodieColor');
-                if (!colorInput) throw new Error('Color input not found');
-                
-                // Test material exists
-                if (!hoodieMaterial) throw new Error('Hoodie material not initialized');
-                
-                // Test color application
-                const testColor = '#ff0000';
-                colorInput.value = testColor;
-                applyColor();
-                
-                logToTestPanel('Color function test passed successfully', 'success');
-            } catch (error) {
-                logToTestPanel(`Color function test failed: ${error.message}`, 'error');
-            }
-        }
-
-        function testStickerFunction() {
-            logToTestPanel('Running sticker function test...', 'info');
-            
-            try {
-                // Test sticker placement
-                const placementSelect = getElementSafe('stickerPlacement');
-                if (!placementSelect) throw new Error('Placement select not found');
-                
-                // Test material exists
-                if (!hoodieMaterial) throw new Error('Hoodie material not initialized');
-                
-                // Create a test sticker
-                const canvas = document.createElement('canvas');
-                canvas.width = canvas.height = 128;
-                const ctx = canvas.getContext('2d');
-                ctx.fillStyle = 'rgba(255, 255, 0, 0.7)';
-                ctx.fillRect(0, 0, 128, 128);
-                ctx.fillStyle = 'black';
-                ctx.font = '20px Arial';
-                ctx.fillText('TEST', 30, 70);
-                
-                const testTexture = new THREE.CanvasTexture(canvas);
-                currentStickerTexture = testTexture;
-                
-                // Apply test sticker
-                applySticker();
-                
-                logToTestPanel('Sticker function test passed successfully', 'success');
-            } catch (error) {
-                logToTestPanel(`Sticker function test failed: ${error.message}`, 'error');
-            }
-        }
-
-        function runAllTests() {
-            logToTestPanel('Running all tests...', 'info');
-            testColorFunction();
-            testStickerFunction();
-            logToTestPanel('All tests completed', 'info');
-        }
-
-        // Handle image upload
-        function handleImageUpload(event) {
-            const file = event.target.files[0];
-            if (!file) return;
-            
-            const preview = getElementSafe('stickerPreview');
-            if (!preview) return;
-            
-            const reader = new FileReader();
-            reader.onload = function(e) {
-                preview.innerHTML = '';
-                preview.classList.remove('hidden');
-                
-                const img = document.createElement('img');
-                img.src = e.target.result;
-                preview.appendChild(img);
-                
-                // Create texture from the image
-                const textureLoader = new THREE.TextureLoader();
-                textureLoader.load(e.target.result, (texture) => {
-                    currentStickerTexture = texture;
-                    updateStatus('Image loaded and ready to apply');
-                    logToTestPanel('Sticker image loaded successfully', 'success');
-                }, undefined, (error) => {
-                    logToTestPanel(`Error loading sticker image: ${error.message}`, 'error');
-                });
-            };
-            reader.readAsDataURL(file);
-        }
-        
-        // Initialize the application after DOM is loaded
-        document.addEventListener('DOMContentLoaded', () => {
-            init();
-        });
-
         function init() {
-            logToTestPanel('Application initialization started', 'info');
-            
-            // Check WebGL support
-            if (!isWebGLAvailable()) {
-                showWebGLError();
-                return;
-            }
-
-            setupScene();
-            setupControls();
-            setupUI();
-            loadModel();
-            
-            logToTestPanel('Application initialization completed', 'success');
-        }
-
-        // Check WebGL support
-        function isWebGLAvailable() {
-            try {
-                const canvas = document.createElement('canvas');
-                canvas.width = canvas.height = 2;
-                const ctx = canvas.getContext('webgl') || canvas.getContext('experimental-webgl');
-                const supported = !!(window.WebGLRenderingContext && ctx);
-                
-                if (supported) {
-                    logToTestPanel('WebGL is supported in this browser', 'success');
-                } else {
-                    logToTestPanel('WebGL is not supported in this browser', 'error');
-                }
-                
-                return supported;
-            } catch (e) {
-                logToTestPanel(`WebGL check failed: ${e.message}`, 'error');
-                return false;
-            }
-        }
-
-        function showWebGLError() {
-            const warning = document.createElement('div');
-            warning.innerHTML = 'WebGL not supported in your browser';
-            warning.style.color = 'white';
-            warning.style.backgroundColor = 'red';
-            warning.style.padding = '20px';
-            warning.style.fontFamily = 'sans-serif';
-            
-            const viewer = getElementSafe('viewer');
-            if (viewer) {
-                viewer.appendChild(warning);
-            }
-            updateStatus('WebGL not supported');
-            throw new Error('WebGL not supported');
-        }
-
-        // Setup Three.js scene
-        function setupScene() {
-            logToTestPanel('Setting up Three.js scene', 'info');
-            
+            // Setup Three.js scene
             scene = new THREE.Scene();
             scene.background = new THREE.Color(0xf0f0f0);
             
-            // Get dimensions
+            // Camera
             const width = window.innerWidth;
             const height = window.innerHeight;
-            
             camera = new THREE.PerspectiveCamera(75, width / height, 0.1, 1000);
             camera.position.z = 5;
             
-            renderer = new THREE.WebGLRenderer({ 
-                antialias: true,
-                powerPreference: "high-performance"
-            });
+            // Renderer
+            renderer = new THREE.WebGLRenderer({ antialias: true });
             renderer.setSize(width, height);
             renderer.outputColorSpace = THREE.SRGBColorSpace;
-            
-            const viewer = getElementSafe('viewer');
-            if (viewer) {
-                viewer.appendChild(renderer.domElement);
-            }
+            document.getElementById('viewer').appendChild(renderer.domElement);
             
             // Lighting
             const ambientLight = new THREE.AmbientLight(0xffffff, 0.5);
@@ -540,310 +105,40 @@
             directionalLight.position.set(1, 1, 1);
             scene.add(directionalLight);
             
-            const directionalLight2 = new THREE.DirectionalLight(0xffffff, 0.5);
-            directionalLight2.position.set(-1, -1, -1);
-            scene.add(directionalLight2);
-            
-            // Initialize clock for animations
-            clock = new THREE.Clock();
-            
-            logToTestPanel('Three.js scene setup completed', 'success');
-        }
-
-        // Setup orbit controls
-        function setupControls() {
-            logToTestPanel('Setting up orbit controls', 'info');
-            
+            // Controls
             controls = new OrbitControls(camera, renderer.domElement);
             controls.enableDamping = true;
             controls.dampingFactor = 0.05;
-            controls.screenSpacePanning = false;
-            controls.maxPolarAngle = Math.PI;
-            controls.minDistance = 1;
-            controls.maxDistance = 10;
             
-            logToTestPanel('Orbit controls setup completed', 'success');
-        }
-
-        // Setup UI event listeners
-        function setupUI() {
-            logToTestPanel('Setting up UI event listeners', 'info');
+            // Clock for animations
+            clock = new THREE.Clock();
             
-            // Safe element access
-            const applyColorsBtn = getElementSafe('apply-colors');
-            const testColorsBtn = getElementSafe('test-colors');
-            const stickerImageInput = getElementSafe('stickerImage');
-            const applyStickerBtn = getElementSafe('apply-sticker');
-            const clearStickersBtn = getElementSafe('clear-stickers');
-            const testStickersBtn = getElementSafe('test-stickers');
-            const runAllTestsBtn = getElementSafe('run-all-tests');
-            const checkWebglBtn = getElementSafe('check-webgl');
-            const checkModelBtn = getElementSafe('check-model');
+            // Load the model
+            loadModel();
             
-            if (applyColorsBtn) applyColorsBtn.addEventListener('click', applyColor);
-            if (testColorsBtn) testColorsBtn.addEventListener('click', testColorFunction);
-            if (stickerImageInput) stickerImageInput.addEventListener('change', handleImageUpload);
-            if (applyStickerBtn) applyStickerBtn.addEventListener('click', applySticker);
-            if (clearStickersBtn) clearStickersBtn.addEventListener('click', clearStickers);
-            if (testStickersBtn) testStickersBtn.addEventListener('click', testStickerFunction);
-            if (runAllTestsBtn) runAllTestsBtn.addEventListener('click', runAllTests);
-            if (checkWebglBtn) checkWebglBtn.addEventListener('click', () => {
-                const supported = isWebGLAvailable();
-                logToTestPanel(`WebGL check result: ${supported ? 'Supported' : 'Not supported'}`, 
-                             supported ? 'success' : 'error');
+            // Start animation loop
+            animate();
+            
+            // Handle window resize
+            window.addEventListener('resize', () => {
+                camera.aspect = window.innerWidth / window.innerHeight;
+                camera.updateProjectionMatrix();
+                renderer.setSize(window.innerWidth, window.innerHeight);
             });
-            if (checkModelBtn) checkModelBtn.addEventListener('click', () => {
-                logToTestPanel(`Model status: ${modelLoaded ? 'Loaded' : 'Not loaded'}`, 
-                             modelLoaded ? 'success' : 'warning');
-                if (modelLoaded) {
-                    logToTestPanel(`Model details: ${hoodieModel.children.length} children`, 'info');
-                }
-            });
-            
-            // Update slider value displays
-            const positionXSlider = getElementSafe('stickerPositionX');
-            const positionYSlider = getElementSafe('stickerPositionY');
-            const scaleSlider = getElementSafe('stickerScale');
-            const rotationSlider = getElementSafe('stickerRotation');
-            
-            if (positionXSlider) {
-                positionXSlider.addEventListener('input', (e) => {
-                    const valueDisplay = getElementSafe('positionXValue');
-                    if (valueDisplay) valueDisplay.textContent = e.target.value;
-                });
-            }
-            
-            if (positionYSlider) {
-                positionYSlider.addEventListener('input', (e) => {
-                    const valueDisplay = getElementSafe('positionYValue');
-                    if (valueDisplay) valueDisplay.textContent = e.target.value;
-                });
-            }
-            
-            if (scaleSlider) {
-                scaleSlider.addEventListener('input', (e) => {
-                    const valueDisplay = getElementSafe('scaleValue');
-                    if (valueDisplay) valueDisplay.textContent = e.target.value;
-                });
-            }
-            
-            if (rotationSlider) {
-                rotationSlider.addEventListener('input', (e) => {
-                    const valueDisplay = getElementSafe('rotationValue');
-                    if (valueDisplay) valueDisplay.textContent = e.target.value;
-                });
-            }
-            
-            logToTestPanel('UI event listeners setup completed', 'success');
-        }
-
-        // Create custom shader material for the hoodie
-        function createHoodieMaterial() {
-            logToTestPanel('Creating custom hoodie material', 'info');
-            
-            try {
-                // Define uniforms with proper initialization
-                const uniforms = {
-                    baseColor: { value: new THREE.Color(0x4361ee) },
-                    useSticker: { value: false },
-                    stickerTexture: { value: createDefaultTexture() },
-                    stickerRegionMin: { value: new THREE.Vector2(0, 0) },
-                    stickerRegionMax: { value: new THREE.Vector2(1, 1) },
-                    stickerPosition: { value: new THREE.Vector2(0, 0) },
-                    stickerScale: { value: 1.0 },
-                    stickerRotation: { value: 0.0 }
-                };
-
-                const vertexShader = `
-                    varying vec2 vUv;
-                    varying vec3 vNormal;
-                    
-                    void main() {
-                        vUv = uv;
-                        vNormal = normalize(normalMatrix * normal);
-                        gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
-                    }
-                `;
-
-                const fragmentShader = `
-                    uniform vec3 baseColor;
-                    uniform bool useSticker;
-                    uniform sampler2D stickerTexture;
-                    uniform vec2 stickerRegionMin;
-                    uniform vec2 stickerRegionMax;
-                    uniform vec2 stickerPosition;
-                    uniform float stickerScale;
-                    uniform float stickerRotation;
-                    
-                    varying vec2 vUv;
-                    varying vec3 vNormal;
-                    
-                    vec2 rotateUV(vec2 uv, vec2 center, float angle) {
-                        uv -= center;
-                        float s = sin(angle);
-                        float c = cos(angle);
-                        mat2 rotMat = mat2(c, -s, s, c);
-                        uv = rotMat * uv;
-                        uv += center;
-                        return uv;
-                    }
-                    
-                    void main() {
-                        vec3 finalColor = baseColor;
-                        
-                        if (useSticker) {
-                            bool inRegion = vUv.x >= stickerRegionMin.x && vUv.x <= stickerRegionMax.x &&
-                                          vUv.y >= stickerRegionMin.y && vUv.y <= stickerRegionMax.y;
-                            
-                            if (inRegion) {
-                                vec2 regionSize = stickerRegionMax - stickerRegionMin;
-                                vec2 regionCenter = stickerRegionMin + regionSize * 0.5;
-                                vec2 regionUV = (vUv - stickerRegionMin) / regionSize;
-                                
-                                vec2 stickerUV = regionUV - vec2(0.5);
-                                stickerUV /= stickerScale;
-                                stickerUV = rotateUV(stickerUV, vec2(0.0), stickerRotation * 0.01745329251);
-                                stickerUV += vec2(0.5);
-                                stickerUV += stickerPosition;
-                                
-                                if (stickerUV.x >= 0.0 && stickerUV.x <= 1.0 && 
-                                    stickerUV.y >= 0.0 && stickerUV.y <= 1.0) {
-                                    vec4 stickerColor = texture2D(stickerTexture, stickerUV);
-                                    if (stickerColor.a > 0.01) {
-                                        finalColor = mix(finalColor, stickerColor.rgb, stickerColor.a);
-                                    }
-                                }
-                            }
-                        }
-                        
-                        float lighting = dot(vNormal, vec3(0.5, 0.5, 1.0)) * 0.5 + 0.5;
-                        finalColor *= lighting;
-                        
-                        gl_FragColor = vec4(finalColor, 1.0);
-                    }
-                `;
-
-                const material = new THREE.ShaderMaterial({
-                    uniforms: uniforms,
-                    vertexShader: vertexShader,
-                    fragmentShader: fragmentShader,
-                    side: THREE.DoubleSide,
-                    lights: true
-                });
-
-                // Force shader compilation
-                material.needsUpdate = true;
-                
-                logToTestPanel('Custom hoodie material created successfully', 'success');
-                return material;
-            } catch (error) {
-                logToTestPanel(`Error creating shader material: ${error.message}`, 'error');
-                // Fallback to standard material
-                return new THREE.MeshStandardMaterial({ 
-                    color: 0x4361ee,
-                    side: THREE.DoubleSide
-                });
-            }
-        }
-
-        // Apply color to the hoodie
-        function applyColor() {
-            const colorInput = getElementSafe('hoodieColor');
-            if (!colorInput) return;
-            
-            const colorValue = colorInput.value;
-            
-            if (!hoodieMaterial || !hoodieMaterial.uniforms) {
-                logToTestPanel('Cannot apply color: Hoodie material not ready', 'error');
-                updateStatus('Error: Material not ready');
-                return;
-            }
-            
-            try {
-                hoodieMaterial.uniforms.baseColor.value.set(colorValue);
-                hoodieMaterial.needsUpdate = true;
-                updateStatus(`Color applied: ${colorValue}`);
-                logToTestPanel(`Color applied successfully: ${colorValue}`, 'success');
-            } catch (error) {
-                logToTestPanel(`Failed to apply color: ${error.message}`, 'error');
-                updateStatus('Error applying color');
-            }
         }
         
-        // Apply sticker to the hoodie
-        function applySticker() {
-            if (!currentStickerTexture) {
-                logToTestPanel('Cannot apply sticker: No image uploaded', 'warning');
-                updateStatus('Please upload an image first');
-                return;
+        function updateStatus(message) {
+            const statusElement = document.getElementById('status');
+            if (statusElement) {
+                statusElement.textContent = message;
             }
-            
-            if (!hoodieMaterial || !hoodieMaterial.uniforms) {
-                logToTestPanel('Cannot apply sticker: Hoodie material not ready', 'error');
-                updateStatus('Error: Material not ready');
-                return;
-            }
-            
-            const placementSelect = getElementSafe('stickerPlacement');
-            const positionXSlider = getElementSafe('stickerPositionX');
-            const positionYSlider = getElementSafe('stickerPositionY');
-            const scaleSlider = getElementSafe('stickerScale');
-            const rotationSlider = getElementSafe('stickerRotation');
-            
-            if (!placementSelect || !positionXSlider || !positionYSlider || !scaleSlider || !rotationSlider) {
-                logToTestPanel('Cannot apply sticker: UI elements not found', 'error');
-                return;
-            }
-            
-            const placement = placementSelect.value;
-            const positionX = parseFloat(positionXSlider.value);
-            const positionY = parseFloat(positionYSlider.value);
-            const scale = parseFloat(scaleSlider.value);
-            const rotation = parseFloat(rotationSlider.value);
-            
-            try {
-                hoodieMaterial.uniforms.useSticker.value = true;
-                hoodieMaterial.uniforms.stickerTexture.value = currentStickerTexture;
-                hoodieMaterial.uniforms.stickerRegionMin.value.copy(uvRegions[placement].min);
-                hoodieMaterial.uniforms.stickerRegionMax.value.copy(uvRegions[placement].max);
-                hoodieMaterial.uniforms.stickerPosition.value.set(positionX, positionY);
-                hoodieMaterial.uniforms.stickerScale.value = scale;
-                hoodieMaterial.uniforms.stickerRotation.value = rotation;
-                hoodieMaterial.needsUpdate = true;
-                
-                updateStatus(`Sticker applied to ${placement}`);
-                logToTestPanel(`Sticker applied successfully to ${placement}`, 'success');
-                logToTestPanel(`Sticker params: X=${positionX}, Y=${positionY}, Scale=${scale}, Rotation=${rotation}°`, 'info');
-            } catch (error) {
-                logToTestPanel(`Failed to apply sticker: ${error.message}`, 'error');
-                updateStatus('Error applying sticker');
-            }
+            console.log(message);
         }
         
-        // Clear all stickers
-        function clearStickers() {
-            if (hoodieMaterial && hoodieMaterial.uniforms) {
-                hoodieMaterial.uniforms.useSticker.value = false;
-                hoodieMaterial.needsUpdate = true;
-                updateStatus('All stickers cleared');
-                logToTestPanel('All stickers cleared', 'info');
-            } else {
-                logToTestPanel('Cannot clear stickers: Material not ready', 'warning');
-            }
-        }
-
-        // Load the model
         async function loadModel() {
-            updateStatus('Loading model...');
-            logToTestPanel('Starting model load process', 'info');
+            updateStatus('Loading hoodie model...');
             
             try {
-                // First create the material
-                hoodieMaterial = createHoodieMaterial();
-                if (!hoodieMaterial) {
-                    throw new Error('Failed to create material');
-                }
-                
                 const loader = new GLTFLoader();
                 const dracoLoader = new DRACOLoader();
                 
@@ -851,40 +146,14 @@
                 dracoLoader.setDecoderPath('https://www.gstatic.com/draco/versioned/decoders/1.5.6/');
                 loader.setDRACOLoader(dracoLoader);
                 
-                // Use your model URL
-                const modelUrl = 'Hoodie_Walking_Animated.glb';
-                logToTestPanel(`Loading model from: ${modelUrl}`, 'info');
-                
-                const gltf = await new Promise((resolve, reject) => {
-                    loader.load(
-                        modelUrl,
-                        (gltf) => resolve(gltf),
-                        (xhr) => {
-                            const percent = (xhr.loaded / xhr.total) * 100;
-                            logToTestPanel(`Loading progress: ${percent.toFixed(2)}%`, 'info');
-                        },
-                        (error) => {
-                            logToTestPanel(`Error loading model: ${error.message}`, 'error');
-                            reject(error);
-                        }
-                    );
-                });
-                
-                logToTestPanel('Model loaded successfully', 'success');
+                // Load the model
+                const gltf = await loader.loadAsync('Hoodie_Walking_Animated.glb');
                 
                 hoodieModel = gltf.scene;
                 scene.add(hoodieModel);
-                modelLoaded = true;
                 
-                // Apply material to all meshes in the model
-                hoodieModel.traverse((child) => {
-                    if (child.isMesh) {
-                        child.material = hoodieMaterial;
-                        logToTestPanel(`Applied material to: ${child.name || 'unnamed mesh'}`, 'info');
-                    }
-                });
-                
-                if (gltf.animations?.length > 0) {
+                // Set up animations if available
+                if (gltf.animations && gltf.animations.length > 0) {
                     mixer = new THREE.AnimationMixer(hoodieModel);
                     const action = mixer.clipAction(gltf.animations[0]);
                     action.play();
@@ -900,79 +169,30 @@
                 camera.position.z = box.getSize(new THREE.Vector3()).length() * 1.5;
                 controls.update();
                 
-                const loadingOverlay = getElementSafe('loading-overlay');
-                if (loadingOverlay) {
-                    loadingOverlay.style.display = 'none';
-                }
+                // Hide loading overlay
+                document.getElementById('loading-overlay').style.display = 'none';
                 
             } catch (error) {
-                logToTestPanel(`Error loading model: ${error.message}`, 'error');
                 updateStatus(`Failed to load model: ${error.message}`);
+                console.error('Error loading model:', error);
                 
-                // Create fallback model
+                // Create a simple fallback cube
                 createFallbackModel();
             }
-            
-            // Start animation loop
-            animate();
         }
-
-        // Create fallback model
+        
         function createFallbackModel() {
-            logToTestPanel('Creating fallback model', 'warning');
+            updateStatus('Creating fallback model');
             
-            // Ensure we have a valid material
-            if (!hoodieMaterial) {
-                hoodieMaterial = createHoodieMaterial();
-                if (!hoodieMaterial) {
-                    hoodieMaterial = new THREE.MeshStandardMaterial({ 
-                        color: 0x4361ee,
-                        side: THREE.DoubleSide
-                    });
-                }
-            }
-            
-            // Create a simple hoodie-like shape
-            const group = new THREE.Group();
-            
-            // Body
-            const bodyGeometry = new THREE.BoxGeometry(1, 1.5, 0.5);
-            const body = new THREE.Mesh(bodyGeometry, hoodieMaterial);
-            group.add(body);
-            
-            // Sleeves
-            const sleeveGeometry = new THREE.CylinderGeometry(0.15, 0.15, 0.8, 8);
-            sleeveGeometry.rotateZ(Math.PI/2);
-            
-            const leftSleeve = new THREE.Mesh(sleeveGeometry, hoodieMaterial);
-            leftSleeve.position.set(-0.6, 0.2, 0);
-            group.add(leftSleeve);
-            
-            const rightSleeve = new THREE.Mesh(sleeveGeometry, hoodieMaterial);
-            rightSleeve.position.set(0.6, 0.2, 0);
-            group.add(rightSleeve);
-            
-            // Hood
-            const hoodGeometry = new THREE.ConeGeometry(0.5, 0.7, 4);
-            hoodGeometry.rotateX(Math.PI);
-            const hood = new THREE.Mesh(hoodGeometry, hoodieMaterial);
-            hood.position.set(0, 0.9, 0.1);
-            group.add(hood);
-            
-            hoodieModel = group;
+            const geometry = new THREE.BoxGeometry(1, 1, 1);
+            const material = new THREE.MeshBasicMaterial({ color: 0x4361ee });
+            hoodieModel = new THREE.Mesh(geometry, material);
             scene.add(hoodieModel);
-            modelLoaded = true;
             
-            camera.position.z = 3;
-            controls.update();
-            
-            const loadingOverlay = getElementSafe('loading-overlay');
-            if (loadingOverlay) {
-                loadingOverlay.style.display = 'none';
-            }
+            // Hide loading overlay
+            document.getElementById('loading-overlay').style.display = 'none';
         }
-
-        // Animation loop
+        
         function animate() {
             requestAnimationFrame(animate);
             
@@ -984,21 +204,6 @@
             controls.update();
             renderer.render(scene, camera);
         }
-
-        // Handle window resize
-        function handleResize() {
-            const width = window.innerWidth;
-            const height = window.innerHeight;
-            
-            camera.aspect = width / height;
-            camera.updateProjectionMatrix();
-            renderer.setSize(width, height);
-            
-            logToTestPanel(`Window resized to: ${width}x${height}`, 'info');
-        }
-
-        // Event listeners
-        window.addEventListener('resize', handleResize);
     </script>
 </body>
 </html>
