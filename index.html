@@ -1,209 +1,217 @@
-<!DOCTYPE html>
+<!DOCTYPE html> 
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>3D Hoodie Viewer</title>
-    <style>
-        body { 
-            margin: 0;
-            overflow: hidden;
-            font-family: Arial, sans-serif;
-        }
-        
-        #viewer {
-            width: 100vw;
-            height: 100vh;
-        }
-        
-        #loading-overlay {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(0,0,0,0.8);
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-            align-items: center;
-            color: white;
-            z-index: 100;
-        }
-        
-        .spinner {
-            width: 40px;
-            height: 40px;
-            border: 4px solid rgba(255,255,255,0.3);
-            border-radius: 50%;
-            border-top-color: #4361ee;
-            animation: spin 1s ease-in-out infinite;
-            margin-bottom: 15px;
-        }
-        
-        @keyframes spin {
-            to { transform: rotate(360deg); }
-        }
-        
-        #status {
-            margin-top: 10px;
-            font-size: 1em;
-        }
-    </style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>3D Hoodie Viewer with Sticker</title>
+  <style>
+    body { margin: 0; overflow: hidden; font-family: Arial, sans-serif; }
+    #viewer { width: 100vw; height: 100vh; }
+    #sticker-upload { position: absolute; top: 10px; left: 10px; z-index: 100; }
+    #loading-overlay {
+      position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+      background: rgba(0,0,0,0.8); display: flex; flex-direction: column;
+      justify-content: center; align-items: center; color: white; z-index: 100;
+    }
+    .spinner {
+      width: 40px; height: 40px; border: 4px solid rgba(255,255,255,0.3);
+      border-radius: 50%; border-top-color: #4361ee;
+      animation: spin 1s ease-in-out infinite; margin-bottom: 15px;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    #status { margin-top: 10px; font-size: 1em; }
+  </style>
 </head>
 <body>
-    <div id="loading-overlay">
-        <div class="spinner"></div>
-        <div id="status">Loading 3D Hoodie Viewer...</div>
-    </div>
-    
-    <div id="viewer"></div>
+  <input type="file" id="sticker-upload" accept="image/*">
+  <div id="loading-overlay">
+    <div class="spinner"></div>
+    <div id="status">Loading 3D Hoodie Viewer...</div>
+  </div>
+  <div id="viewer"></div>
 
-    <script type="importmap">
-        {
-            "imports": {
-                "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
-                "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
-            }
-        }
-    </script>
+  <script type="importmap">
+    {
+      "imports": {
+        "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+        "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+      }
+    }
+  </script>
 
-    <script type="module">
-        import * as THREE from 'three';
-        import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
-        import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
-        import { DRACOLoader } from 'three/addons/loaders/DRACOLoader.js';
+  <script type="module">
+    import * as THREE from 'three';
+    import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+    import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+    import { DRACOLoader } from 'three/addons/loaders/DRACOLoader.js';
 
-        // Main variables
-        let scene, camera, renderer, controls, hoodieModel, mixer, clock;
-        
-        // Initialize the application
-        init();
-        
-        function init() {
-            // Setup Three.js scene
-            scene = new THREE.Scene();
-            scene.background = new THREE.Color(0xf0f0f0);
-            
-            // Camera
-            const width = window.innerWidth;
-            const height = window.innerHeight;
-            camera = new THREE.PerspectiveCamera(75, width / height, 0.1, 1000);
-            camera.position.z = 5;
-            
-            // Renderer
-            renderer = new THREE.WebGLRenderer({ antialias: true });
-            renderer.setSize(width, height);
-            renderer.outputColorSpace = THREE.SRGBColorSpace;
-            document.getElementById('viewer').appendChild(renderer.domElement);
-            
-            // Lighting
-            const ambientLight = new THREE.AmbientLight(0xffffff, 0.5);
-            scene.add(ambientLight);
-            
-            const directionalLight = new THREE.DirectionalLight(0xffffff, 1);
-            directionalLight.position.set(1, 1, 1);
-            scene.add(directionalLight);
-            
-            // Controls
-            controls = new OrbitControls(camera, renderer.domElement);
-            controls.enableDamping = true;
-            controls.dampingFactor = 0.05;
-            
-            // Clock for animations
-            clock = new THREE.Clock();
-            
-            // Load the model
-            loadModel();
-            
-            // Start animation loop
-            animate();
-            
-            // Handle window resize
-            window.addEventListener('resize', () => {
-                camera.aspect = window.innerWidth / window.innerHeight;
-                camera.updateProjectionMatrix();
-                renderer.setSize(window.innerWidth, window.innerHeight);
-            });
+    let scene, camera, renderer, controls, hoodieModel, mixer, clock, decalTexture;
+
+    const viewer = document.getElementById('viewer');
+    const fileInput = document.getElementById('sticker-upload');
+    const uniforms = {
+      baseTexture: { value: null },
+      decalTexture: { value: null },
+      regionMin: { value: new THREE.Vector2(0.2, 0.4) },
+      regionMax: { value: new THREE.Vector2(0.5, 0.7) },
+      decalPosition: { value: new THREE.Vector2(0.0, 0.0) },
+      decalScale: { value: 0.5 },
+      decalRotation: { value: 0.0 }
+    };
+
+    const fragmentShader = `
+      precision mediump float;
+      uniform sampler2D baseTexture;
+      uniform sampler2D decalTexture;
+      uniform vec2 regionMin;
+      uniform vec2 regionMax;
+      uniform vec2 decalPosition;
+      uniform float decalScale;
+      uniform float decalRotation;
+      varying vec2 vUV;
+
+      vec2 transformUV(vec2 uv, vec2 center, float scale, float rotation, vec2 offset) {
+        uv -= center;
+        float cosR = cos(rotation);
+        float sinR = sin(rotation);
+        mat2 rot = mat2(cosR, -sinR, sinR, cosR);
+        uv = rot * uv * scale;
+        uv += offset;
+        return uv + center;
+      }
+
+      void main() {
+        vec4 baseColor = texture2D(baseTexture, vUV);
+        if (vUV.x >= regionMin.x && vUV.x <= regionMax.x && vUV.y >= regionMin.y && vUV.y <= regionMax.y) {
+          vec2 regionCenter = (regionMin + regionMax) * 0.5;
+          vec2 decalUV = transformUV(vUV, regionCenter, decalScale, decalRotation, decalPosition);
+          vec2 localUV = (decalUV - regionMin) / (regionMax - regionMin);
+          if (all(greaterThanEqual(localUV, vec2(0.0))) && all(lessThanEqual(localUV, vec2(1.0)))) {
+            vec4 decalColor = texture2D(decalTexture, localUV);
+            baseColor = mix(baseColor, decalColor, decalColor.a);
+          }
         }
-        
-        function updateStatus(message) {
-            const statusElement = document.getElementById('status');
-            if (statusElement) {
-                statusElement.textContent = message;
+        gl_FragColor = baseColor;
+      }
+    `;
+
+    init();
+
+    function init() {
+      scene = new THREE.Scene();
+      scene.background = new THREE.Color(0xf0f0f0);
+
+      camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+      camera.position.z = 5;
+
+      renderer = new THREE.WebGLRenderer({ antialias: true });
+      renderer.setSize(window.innerWidth, window.innerHeight);
+      viewer.appendChild(renderer.domElement);
+
+      const ambientLight = new THREE.AmbientLight(0xffffff, 0.5);
+      scene.add(ambientLight);
+      const directionalLight = new THREE.DirectionalLight(0xffffff, 1);
+      directionalLight.position.set(1, 1, 1);
+      scene.add(directionalLight);
+
+      controls = new OrbitControls(camera, renderer.domElement);
+      controls.enableDamping = true;
+
+      clock = new THREE.Clock();
+
+      loadModel();
+      animate();
+      window.addEventListener('resize', onWindowResize);
+      fileInput.addEventListener('change', handleStickerUpload);
+    }
+
+    async function loadModel() {
+      updateStatus('Loading hoodie model...');
+      try {
+        const loader = new GLTFLoader();
+        const dracoLoader = new DRACOLoader();
+        dracoLoader.setDecoderPath('https://www.gstatic.com/draco/versioned/decoders/1.5.6/');
+        loader.setDRACOLoader(dracoLoader);
+        const gltf = await loader.loadAsync('Hoodie_Walking_Animated.glb');
+        hoodieModel = gltf.scene;
+        scene.add(hoodieModel);
+
+        if (gltf.animations.length > 0) {
+          mixer = new THREE.AnimationMixer(hoodieModel);
+          mixer.clipAction(gltf.animations[0]).play();
+          updateStatus('Model loaded with animation');
+        } else {
+          updateStatus('Model loaded');
+        }
+
+        const textureLoader = new THREE.TextureLoader();
+        uniforms.baseTexture.value = textureLoader.load('hoodie-fabric.jpg');
+
+        const material = new THREE.ShaderMaterial({
+          uniforms,
+          vertexShader: `
+            varying vec2 vUV;
+            void main() {
+              vUV = uv;
+              gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
             }
-            console.log(message);
-        }
-        
-        async function loadModel() {
-            updateStatus('Loading hoodie model...');
-            
-            try {
-                const loader = new GLTFLoader();
-                const dracoLoader = new DRACOLoader();
-                
-                // Set the correct Draco decoder path
-                dracoLoader.setDecoderPath('https://www.gstatic.com/draco/versioned/decoders/1.5.6/');
-                loader.setDRACOLoader(dracoLoader);
-                
-                // Load the model
-                const gltf = await loader.loadAsync('Hoodie_Walking_Animated.glb');
-                
-                hoodieModel = gltf.scene;
-                scene.add(hoodieModel);
-                
-                // Set up animations if available
-                if (gltf.animations && gltf.animations.length > 0) {
-                    mixer = new THREE.AnimationMixer(hoodieModel);
-                    const action = mixer.clipAction(gltf.animations[0]);
-                    action.play();
-                    updateStatus('Model loaded with animation');
-                } else {
-                    updateStatus('Model loaded (no animations)');
-                }
-                
-                // Center and scale the model
-                const box = new THREE.Box3().setFromObject(hoodieModel);
-                const center = box.getCenter(new THREE.Vector3());
-                hoodieModel.position.sub(center);
-                camera.position.z = box.getSize(new THREE.Vector3()).length() * 1.5;
-                controls.update();
-                
-                // Hide loading overlay
-                document.getElementById('loading-overlay').style.display = 'none';
-                
-            } catch (error) {
-                updateStatus(`Failed to load model: ${error.message}`);
-                console.error('Error loading model:', error);
-                
-                // Create a simple fallback cube
-                createFallbackModel();
-            }
-        }
-        
-        function createFallbackModel() {
-            updateStatus('Creating fallback model');
-            
-            const geometry = new THREE.BoxGeometry(1, 1, 1);
-            const material = new THREE.MeshBasicMaterial({ color: 0x4361ee });
-            hoodieModel = new THREE.Mesh(geometry, material);
-            scene.add(hoodieModel);
-            
-            // Hide loading overlay
-            document.getElementById('loading-overlay').style.display = 'none';
-        }
-        
-        function animate() {
-            requestAnimationFrame(animate);
-            
-            const delta = clock.getDelta();
-            if (mixer) {
-                mixer.update(delta);
-            }
-            
-            controls.update();
-            renderer.render(scene, camera);
-        }
-    </script>
+          `,
+          fragmentShader,
+          transparent: true
+        });
+
+        hoodieModel.traverse((child) => {
+          if (child.isMesh) child.material = material;
+        });
+
+        const box = new THREE.Box3().setFromObject(hoodieModel);
+        const center = box.getCenter(new THREE.Vector3());
+        hoodieModel.position.sub(center);
+        camera.position.z = box.getSize(new THREE.Vector3()).length() * 1.5;
+        controls.update();
+        document.getElementById('loading-overlay').style.display = 'none';
+      } catch (error) {
+        updateStatus('Failed to load model');
+        console.error(error);
+      }
+    }
+
+    function handleStickerUpload(event) {
+      const file = event.target.files[0];
+      if (!file) return;
+
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        const img = new Image();
+        img.onload = () => {
+          const texture = new THREE.Texture(img);
+          texture.needsUpdate = true;
+          uniforms.decalTexture.value = texture;
+        };
+        img.src = e.target.result;
+      };
+      reader.readAsDataURL(file);
+    }
+
+    function updateStatus(msg) {
+      const el = document.getElementById('status');
+      if (el) el.textContent = msg;
+      console.log(msg);
+    }
+
+    function onWindowResize() {
+      camera.aspect = window.innerWidth / window.innerHeight;
+      camera.updateProjectionMatrix();
+      renderer.setSize(window.innerWidth, window.innerHeight);
+    }
+
+    function animate() {
+      requestAnimationFrame(animate);
+      const delta = clock.getDelta();
+      if (mixer) mixer.update(delta);
+      controls.update();
+      renderer.render(scene, camera);
+    }
+  </script>
 </body>
 </html>
