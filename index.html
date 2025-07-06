@@ -339,6 +339,35 @@
       background: #4361ee;
       color: white;
     }
+    #download-btn {
+      margin-top: 15px; 
+      padding: 12px 20px;
+      background: linear-gradient(to right, #06d6a0, #118ab2);
+      color: white;
+      border: none; 
+      border-radius: 10px; 
+      font-weight: 700;
+      cursor: pointer; 
+      transition: all 0.3s; 
+      width: 100%;
+      box-shadow: 0 4px 8px rgba(6, 214, 160, 0.3);
+      font-size: 16px;
+      letter-spacing: 0.5px;
+    }
+    #download-btn:hover {
+      background: linear-gradient(to right, #118ab2, #073b4c);
+      transform: translateY(-3px);
+      box-shadow: 0 6px 12px rgba(6, 214, 160, 0.4);
+    }
+    .action-buttons {
+      display: flex;
+      gap: 10px;
+      margin-top: 15px;
+    }
+    .action-buttons button {
+      flex: 1;
+      padding: 12px;
+    }
   </style>
 </head>
 <body>
@@ -355,6 +384,9 @@
     <div class="model-options">
       <button class="model-btn active" data-model="hoodie">Hoodie Model</button>
       <button class="model-btn" data-model="character">Character Model</button>
+    </div>
+    <div class="action-buttons">
+      <button id="download-btn">Download Design</button>
     </div>
   </div>
   
@@ -419,8 +451,8 @@
 
     // Working model URLs
     const MODEL_URLS = {
-      hoodie: 'https://cdn.jsdelivr.net/gh/mrdoob/three.js@dev/examples/models/gltf/LittlestTokyo.glb',
-      character: 'https://cdn.jsdelivr.net/gh/mrdoob/three.js@dev/examples/models/gltf/Flamingo.glb'
+      hoodie: 'https://cdn.jsdelivr.net/gh/mrdoob/three.js@r159/examples/models/gltf/DamagedHelmet/glTF/DamagedHelmet.gltf',
+      character: 'https://cdn.jsdelivr.net/gh/mrdoob/three.js@r159/examples/models/gltf/Flamingo.glb'
     };
 
     init();
@@ -436,7 +468,10 @@
       camera.position.set(0, 1, 5);
 
       // Setup renderer
-      renderer = new THREE.WebGLRenderer({ antialias: true });
+      renderer = new THREE.WebGLRenderer({ 
+        antialias: true,
+        preserveDrawingBuffer: true // Required for screenshot capture
+      });
       renderer.setSize(window.innerWidth, window.innerHeight);
       renderer.setPixelRatio(window.devicePixelRatio);
       renderer.shadowMap.enabled = true;
@@ -477,6 +512,7 @@
 
       // Add event listener for adding new stickers
       document.getElementById('add-sticker-btn').addEventListener('click', addNewSticker);
+      document.getElementById('download-btn').addEventListener('click', downloadDesign);
 
       // Add model selection buttons
       document.querySelectorAll('.model-btn').forEach(btn => {
@@ -496,6 +532,47 @@
 
       // Handle window resize
       window.addEventListener('resize', onWindowResize);
+    }
+
+    function downloadDesign() {
+      try {
+        // Show loading
+        updateStatus('Preparing your design for download...');
+        document.getElementById('loading-overlay').style.display = 'flex';
+        document.getElementById('loading-overlay').style.opacity = '1';
+        
+        // Add a small delay to ensure the overlay is visible
+        setTimeout(() => {
+          // Capture screenshot
+          renderer.render(scene, camera);
+          const dataURL = renderer.domElement.toDataURL('image/png');
+          
+          // Create download link
+          const link = document.createElement('a');
+          link.href = dataURL;
+          link.download = 'custom-hoodie-design.png';
+          document.body.appendChild(link);
+          link.click();
+          document.body.removeChild(link);
+          
+          // Hide loading
+          setTimeout(() => {
+            document.getElementById('loading-overlay').style.opacity = '0';
+            setTimeout(() => {
+              document.getElementById('loading-overlay').style.display = 'none';
+            }, 500);
+          }, 500);
+        }, 100);
+      } catch (error) {
+        console.error('Error capturing design:', error);
+        updateStatus('Failed to capture design. Please try again.');
+        setTimeout(() => {
+          document.getElementById('loading-overlay').style.opacity = '0';
+          setTimeout(() => {
+            document.getElementById('loading-overlay').style.display = 'none';
+          }, 500);
+        }, 2000);
+      }
     }
 
     function drawUVRegion() {
