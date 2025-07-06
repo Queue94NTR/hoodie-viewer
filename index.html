@@ -1,1216 +1,859 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>3D Hoodie Designer with Sticker Placement</title>
-  <style>
-    * {
-      box-sizing: border-box;
-      margin: 0;
-      padding: 0;
-    }
-    
-    body {
-      margin: 0;
-      overflow: hidden;
-      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-      background: linear-gradient(135deg, #1a2a6c, #b21f1f, #fdbb2d);
-      height: 100vh;
-      display: flex;
-      flex-direction: column;
-      color: #333;
-    }
-    
-    .app-container {
-      display: flex;
-      flex: 1;
-      overflow: hidden;
-    }
-    
-    #viewer {
-      flex: 1;
-      width: 100%;
-      height: 100%;
-    }
-    
-    #controls {
-      width: 350px;
-      background: rgba(255, 255, 255, 0.95);
-      padding: 20px;
-      border-radius: 15px 0 0 15px;
-      overflow-y: auto;
-      box-shadow: 0 8px 30px rgba(0, 0, 0, 0.25);
-      border-left: 1px solid rgba(255, 255, 255, 0.3);
-      z-index: 100;
-      display: flex;
-      flex-direction: column;
-    }
-    
-    .app-header {
-      padding-bottom: 20px;
-      border-bottom: 1px solid #eee;
-      margin-bottom: 20px;
-    }
-    
-    .app-title {
-      display: flex;
-      align-items: center;
-      gap: 15px;
-      margin-bottom: 10px;
-    }
-    
-    .app-title h1 {
-      font-size: 26px;
-      color: #4361ee;
-      font-weight: 800;
-      text-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-    }
-    
-    .app-title span {
-      font-size: 36px;
-      animation: float 3s ease-in-out infinite;
-    }
-    
-    @keyframes float {
-      0% { transform: translateY(0px); }
-      50% { transform: translateY(-8px); }
-      100% { transform: translateY(0px); }
-    }
-    
-    .app-subtitle {
-      font-size: 14px;
-      color: #666;
-      text-align: center;
-      line-height: 1.5;
-    }
-    
-    .section {
-      margin-bottom: 25px;
-      padding-bottom: 20px;
-      border-bottom: 1px solid #eee;
-    }
-    
-    .section-title {
-      font-size: 18px;
-      color: #4361ee;
-      margin-bottom: 15px;
-      display: flex;
-      align-items: center;
-      gap: 10px;
-    }
-    
-    .color-options {
-      display: flex;
-      gap: 10px;
-      flex-wrap: wrap;
-      margin-top: 10px;
-    }
-    
-    .color-option {
-      width: 30px;
-      height: 30px;
-      border-radius: 50%;
-      cursor: pointer;
-      border: 2px solid transparent;
-      transition: all 0.2s ease;
-    }
-    
-    .color-option.selected {
-      border-color: #333;
-      transform: scale(1.1);
-      box-shadow: 0 0 8px rgba(0, 0, 0, 0.3);
-    }
-    
-    .sticker-controls {
-      border: 1px solid #e0e0e0;
-      padding: 15px;
-      margin-top: 15px;
-      border-radius: 12px;
-      background: rgba(255, 255, 255, 0.85);
-      transition: all 0.3s ease;
-      box-shadow: 0 4px 10px rgba(0, 0, 0, 0.05);
-    }
-    
-    .sticker-controls.active {
-      background: rgba(67, 97, 238, 0.15);
-      border-color: #4361ee;
-      box-shadow: 0 6px 15px rgba(67, 97, 238, 0.15);
-    }
-    
-    .sticker-header {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      margin-bottom: 15px;
-      font-weight: bold;
-      font-size: 18px;
-      color: #4361ee;
-      padding-bottom: 10px;
-      border-bottom: 1px dashed #e0e0e0;
-    }
-    
-    .remove-sticker {
-      color: #f72585;
-      cursor: pointer;
-      font-size: 24px;
-      font-weight: bold;
-      width: 32px;
-      height: 32px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      border-radius: 50%;
-      background: rgba(247, 37, 133, 0.1);
-      transition: all 0.2s;
-    }
-    
-    .remove-sticker:hover {
-      background: rgba(247, 37, 133, 0.2);
-      transform: scale(1.1);
-    }
-    
-    .sticker-upload {
-      margin: 15px 0;
-      width: 100%;
-      padding: 15px;
-      border: 2px dashed #4361ee;
-      border-radius: 10px;
-      background: rgba(67, 97, 238, 0.05);
-      text-align: center;
-      font-weight: 600;
-      color: #4361ee;
-      cursor: pointer;
-      transition: all 0.3s;
-    }
-    
-    .sticker-upload:hover {
-      background: rgba(67, 97, 238, 0.1);
-      transform: translateY(-2px);
-    }
-    
-    .sticker-preview {
-      width: 100%;
-      height: 100px;
-      margin-top: 15px;
-      border: 2px dashed #e0e0e0;
-      border-radius: 10px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      overflow: hidden;
-      background: rgba(0, 0, 0, 0.03);
-    }
-    
-    .sticker-preview img {
-      max-width: 100%;
-      max-height: 100%;
-      object-fit: contain;
-    }
-    
-    .slider-control {
-      margin-bottom: 15px;
-    }
-    
-    .slider-control label {
-      display: block;
-      margin-bottom: 8px;
-      font-size: 15px;
-      color: #444;
-      font-weight: 600;
-      display: flex;
-      justify-content: space-between;
-    }
-    
-    .slider-control input[type="range"] {
-      width: 100%;
-      height: 8px;
-      border-radius: 4px;
-      background: linear-gradient(to right, #4361ee, #3a0ca3);
-      outline: none;
-      -webkit-appearance: none;
-    }
-    
-    .slider-control input[type="range"]::-webkit-slider-thumb {
-      -webkit-appearance: none;
-      width: 22px;
-      height: 22px;
-      border-radius: 50%;
-      background: white;
-      cursor: pointer;
-      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
-      border: 2px solid #4361ee;
-    }
-    
-    .position-controls {
-      margin: 15px 0;
-      padding: 15px;
-      background: rgba(67, 97, 238, 0.08);
-      border-radius: 12px;
-      border: 1px solid rgba(67, 97, 238, 0.15);
-    }
-    
-    .position-controls h4 {
-      margin: 0 0 15px 0;
-      color: #4361ee;
-      font-size: 16px;
-      text-transform: uppercase;
-      letter-spacing: 1px;
-      font-weight: 700;
-    }
-    
-    .position-presets {
-      display: grid;
-      grid-template-columns: repeat(3, 1fr);
-      gap: 12px;
-      margin-top: 12px;
-    }
-    
-    .position-presets button {
-      background: rgba(67, 97, 238, 0.12);
-      border: none;
-      padding: 10px;
-      border-radius: 8px;
-      cursor: pointer;
-      transition: all 0.25s;
-      font-size: 14px;
-      font-weight: 600;
-      color: #4361ee;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      gap: 5px;
-    }
-    
-    .position-presets button:hover {
-      background: rgba(67, 97, 238, 0.25);
-      transform: translateY(-3px);
-    }
-    
-    .position-presets button.active {
-      background: #4361ee;
-      color: white;
-      box-shadow: 0 4px 8px rgba(67, 97, 238, 0.3);
-    }
-    
-    .action-buttons {
-      display: flex;
-      gap: 10px;
-      margin-top: 15px;
-    }
-    
-    .action-buttons button {
-      flex: 1;
-      padding: 12px;
-      border: none;
-      border-radius: 10px;
-      font-weight: 700;
-      cursor: pointer;
-      transition: all 0.3s;
-      font-size: 16px;
-      letter-spacing: 0.5px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      gap: 8px;
-    }
-    
-    #add-sticker-btn {
-      background: linear-gradient(to right, #4361ee, #3a0ca3);
-      color: white;
-      box-shadow: 0 6px 12px rgba(67, 97, 238, 0.4);
-    }
-    
-    #add-sticker-btn:hover {
-      background: linear-gradient(to right, #3a0ca3, #7209b7);
-      transform: translateY(-3px);
-      box-shadow: 0 8px 15px rgba(67, 97, 238, 0.5);
-    }
-    
-    #download-btn {
-      background: linear-gradient(to right, #06d6a0, #118ab2);
-      color: white;
-      box-shadow: 0 4px 8px rgba(6, 214, 160, 0.3);
-    }
-    
-    #download-btn:hover {
-      background: linear-gradient(to right, #118ab2, #073b4c);
-      transform: translateY(-3px);
-      box-shadow: 0 6px 12px rgba(6, 214, 160, 0.4);
-    }
-    
-    .info-panel {
-      position: absolute;
-      bottom: 20px;
-      left: 20px;
-      z-index: 100;
-      background: rgba(255, 255, 255, 0.92);
-      padding: 15px;
-      border-radius: 12px;
-      font-family: monospace;
-      font-size: 14px;
-      box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
-      border: 1px solid rgba(0, 0, 0, 0.1);
-      font-weight: 600;
-      color: #4361ee;
-      display: flex;
-      gap: 15px;
-      align-items: center;
-    }
-    
-    .info-panel .uv-display {
-      padding-right: 15px;
-      border-right: 1px solid #eee;
-    }
-    
-    .info-panel .region-display {
-      padding-left: 15px;
-    }
-    
-    #loading-overlay {
-      position: absolute;
-      top: 0;
-      left: 0;
-      width: 100%;
-      height: 100%;
-      background: rgba(0, 0, 0, 0.9);
-      display: flex;
-      flex-direction: column;
-      justify-content: center;
-      align-items: center;
-      color: white;
-      z-index: 200;
-      backdrop-filter: blur(5px);
-    }
-    
-    .spinner {
-      width: 60px;
-      height: 60px;
-      border: 5px solid rgba(255, 255, 255, 0.3);
-      border-radius: 50%;
-      border-top-color: #4cc9f0;
-      animation: spin 1.2s ease-in-out infinite;
-      margin-bottom: 20px;
-    }
-    
-    @keyframes spin {
-      to { transform: rotate(360deg); }
-    }
-    
-    #status {
-      margin-top: 15px;
-      font-size: 1.2em;
-      text-align: center;
-      color: #f0f0f0;
-      max-width: 80%;
-    }
-    
-    .progress-bar {
-      width: 80%;
-      height: 10px;
-      background: rgba(255, 255, 255, 0.2);
-      border-radius: 5px;
-      margin-top: 20px;
-      overflow: hidden;
-    }
-    
-    .progress {
-      height: 100%;
-      background: linear-gradient(to right, #4361ee, #3a0ca3);
-      width: 0%;
-      transition: width 0.3s ease;
-    }
-    
-    .model-options {
-      display: flex;
-      gap: 10px;
-      margin-top: 15px;
-    }
-    
-    .model-btn {
-      flex: 1;
-      padding: 10px;
-      background: rgba(67, 97, 238, 0.1);
-      border: 1px solid #4361ee;
-      border-radius: 8px;
-      color: #4361ee;
-      font-weight: 600;
-      cursor: pointer;
-      transition: all 0.3s;
-    }
-    
-    .model-btn:hover {
-      background: rgba(67, 97, 238, 0.2);
-    }
-    
-    .model-btn.active {
-      background: #4361ee;
-      color: white;
-    }
-    
-    .sticker-controls-container {
-      flex: 1;
-      overflow-y: auto;
-      padding-right: 5px;
-      margin-bottom: 15px;
-    }
-    
-    .empty-state {
-      text-align: center;
-      padding: 30px 0;
-      color: #888;
-    }
-    
-    .empty-state p {
-      margin-bottom: 15px;
-    }
-  </style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>3D Hoodie Designer</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.min.js"></script>
+    <style>
+        :root {
+            --primary: #4361ee;
+            --secondary: #3f37c9;
+            --dark: #212529;
+            --light: #f8f9fa;
+            --danger: #f72585;
+            --success: #4cc9f0;
+            --warning: #ffbe0b;
+        }
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #1a2a6c, #b21f1f, #1a2a6c);
+            color: white;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            overflow-x: hidden;
+        }
+        
+        header {
+            background: rgba(0, 0, 0, 0.7);
+            padding: 1rem 2rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+            position: relative;
+            z-index: 10;
+        }
+        
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 1.8rem;
+            font-weight: 700;
+        }
+        
+        .logo span {
+            font-size: 2.2rem;
+        }
+        
+        .nav-links {
+            display: flex;
+            gap: 1.5rem;
+        }
+        
+        .nav-links a {
+            color: white;
+            text-decoration: none;
+            font-weight: 500;
+            padding: 0.5rem 1rem;
+            border-radius: 4px;
+            transition: all 0.3s ease;
+        }
+        
+        .nav-links a:hover {
+            background: rgba(255, 255, 255, 0.1);
+        }
+        
+        .container {
+            display: flex;
+            flex: 1;
+            padding: 1.5rem;
+            gap: 1.5rem;
+            max-width: 1600px;
+            margin: 0 auto;
+            width: 100%;
+        }
+        
+        #viewer-container {
+            flex: 1;
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+            display: flex;
+            flex-direction: column;
+            min-height: 600px;
+        }
+        
+        #viewer-header {
+            padding: 1rem;
+            background: rgba(0, 0, 0, 0.5);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        #viewer {
+            flex: 1;
+            position: relative;
+        }
+        
+        .controls-container {
+            width: 350px;
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border-radius: 12px;
+            padding: 1.5rem;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+            display: flex;
+            flex-direction: column;
+            gap: 1.5rem;
+            overflow-y: auto;
+            max-height: 800px;
+        }
+        
+        .control-group {
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 10px;
+            padding: 1.2rem;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+        }
+        
+        .control-group h2 {
+            font-size: 1.4rem;
+            margin-bottom: 1.2rem;
+            padding-bottom: 0.8rem;
+            border-bottom: 2px solid var(--primary);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .control-group h2 i {
+            font-size: 1.6rem;
+        }
+        
+        .color-picker {
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+            margin-bottom: 1.5rem;
+        }
+        
+        .color-row {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+        
+        .color-label {
+            width: 120px;
+            font-weight: 500;
+        }
+        
+        .color-display {
+            width: 40px;
+            height: 40px;
+            border-radius: 8px;
+            border: 2px solid white;
+            cursor: pointer;
+            transition: transform 0.2s;
+        }
+        
+        .color-display:hover {
+            transform: scale(1.1);
+        }
+        
+        .color-slider {
+            flex: 1;
+            height: 40px;
+            border-radius: 8px;
+            cursor: pointer;
+        }
+        
+        .color-presets {
+            display: grid;
+            grid-template-columns: repeat(6, 1fr);
+            gap: 0.8rem;
+            margin-top: 1rem;
+        }
+        
+        .color-preset {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            cursor: pointer;
+            border: 2px solid transparent;
+            transition: all 0.2s ease;
+        }
+        
+        .color-preset:hover {
+            transform: scale(1.15);
+        }
+        
+        .color-preset.selected {
+            border-color: white;
+            transform: scale(1.15);
+            box-shadow: 0 0 12px rgba(255, 255, 255, 0.7);
+        }
+        
+        .material-controls {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1.5rem;
+        }
+        
+        .material-option {
+            background: rgba(0, 0, 0, 0.4);
+            border-radius: 8px;
+            padding: 1rem;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            border: 2px solid transparent;
+        }
+        
+        .material-option:hover {
+            transform: translateY(-5px);
+            border-color: var(--primary);
+        }
+        
+        .material-option.selected {
+            background: rgba(67, 97, 238, 0.3);
+            border-color: var(--primary);
+            transform: translateY(-5px);
+        }
+        
+        .material-icon {
+            font-size: 2.5rem;
+            margin-bottom: 0.5rem;
+        }
+        
+        .button-group {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1rem;
+            margin-top: 1rem;
+        }
+        
+        button {
+            padding: 0.8rem 1.2rem;
+            border: none;
+            border-radius: 8px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            font-size: 1rem;
+        }
+        
+        button.primary {
+            background: var(--primary);
+            color: white;
+        }
+        
+        button.primary:hover {
+            background: var(--secondary);
+            transform: translateY(-3px);
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+        }
+        
+        button.success {
+            background: var(--success);
+            color: var(--dark);
+        }
+        
+        button.warning {
+            background: var(--warning);
+            color: var(--dark);
+        }
+        
+        .view-controls {
+            display: flex;
+            gap: 0.8rem;
+        }
+        
+        .view-btn {
+            background: rgba(255, 255, 255, 0.1);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            padding: 0.6rem 1rem;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        
+        .view-btn:hover, .view-btn.active {
+            background: var(--primary);
+        }
+        
+        footer {
+            text-align: center;
+            padding: 1.5rem;
+            background: rgba(0, 0, 0, 0.7);
+            margin-top: auto;
+        }
+        
+        .status-bar {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 1rem;
+            font-size: 0.9rem;
+            color: rgba(255, 255, 255, 0.7);
+        }
+        
+        @media (max-width: 1024px) {
+            .container {
+                flex-direction: column;
+            }
+            
+            .controls-container {
+                width: 100%;
+            }
+            
+            #viewer-container {
+                min-height: 500px;
+            }
+        }
+        
+        @media (max-width: 768px) {
+            .material-controls {
+                grid-template-columns: 1fr;
+            }
+            
+            .nav-links {
+                display: none;
+            }
+            
+            .color-presets {
+                grid-template-columns: repeat(4, 1fr);
+            }
+        }
+        
+        .loading-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.8);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 100;
+            color: white;
+        }
+        
+        .spinner {
+            width: 50px;
+            height: 50px;
+            border: 5px solid rgba(255, 255, 255, 0.3);
+            border-radius: 50%;
+            border-top-color: var(--primary);
+            animation: spin 1s ease-in-out infinite;
+            margin-bottom: 1rem;
+        }
+        
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+        
+        .hoodie-preview {
+            display: flex;
+            justify-content: center;
+            margin: 1rem 0;
+        }
+        
+        .preview-item {
+            width: 80px;
+            height: 80px;
+            margin: 0 10px;
+            border-radius: 8px;
+            overflow: hidden;
+            border: 2px solid transparent;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        
+        .preview-item:hover, .preview-item.active {
+            border-color: var(--primary);
+            transform: scale(1.1);
+        }
+        
+        .preview-item img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+    </style>
 </head>
 <body>
-  <div class="app-container">
-    <div id="viewer"></div>
-    <div id="controls">
-      <div class="app-header">
-        <div class="app-title">
-          <span>🧥</span>
-          <h1>3D Hoodie Designer</h1>
+    <header>
+        <div class="logo">
+            <span>🧥</span>
+            <div>HOODIE DESIGNER PRO</div>
         </div>
-        <p class="app-subtitle">Drag to rotate | Scroll to zoom | Click to select sticker</p>
-      </div>
-      
-      <div class="section">
-        <h2 class="section-title">Hoodie Options</h2>
-        <div class="color-options">
-          <div class="color-option selected" style="background-color: #4361ee;" data-color="#4361ee"></div>
-          <div class="color-option" style="background-color: #f72585;" data-color="#f72585"></div>
-          <div class="color-option" style="background-color: #4cc9f0;" data-color="#4cc9f0"></div>
-          <div class="color-option" style="background-color: #06d6a0;" data-color="#06d6a0"></div>
-          <div class="color-option" style="background-color: #ffd166;" data-color="#ffd166"></div>
-          <div class="color-option" style="background-color: #073b4c;" data-color="#073b4c"></div>
-          <div class="color-option" style="background-color: #ff9e00;" data-color="#ff9e00"></div>
-          <div class="color-option" style="background-color: #7209b7;" data-color="#7209b7"></div>
+        <div class="nav-links">
+            <a href="#">Home</a>
+            <a href="#">Designs</a>
+            <a href="#">Templates</a>
+            <a href="#">Gallery</a>
+            <a href="#">Help</a>
         </div>
-      </div>
-      
-      <div class="section">
-        <h2 class="section-title">Stickers</h2>
-        <div class="sticker-controls-container" id="sticker-controls-container">
-          <div class="empty-state">
-            <p>No stickers added yet</p>
-            <p>Click "Add New Sticker" to start designing</p>
-          </div>
-        </div>
-        <button id="add-sticker-btn">+ Add New Sticker</button>
-      </div>
-      
-      <div class="action-buttons">
-        <button id="download-btn">📥 Download Design</button>
-      </div>
-    </div>
-  </div>
-  
-  <div class="info-panel">
-    <div class="uv-display">
-      <span>UV: (0.50, 0.50)</span>
-    </div>
-    <div class="region-display">
-      <span>Front Main Region</span>
-    </div>
-  </div>
-  
-  <div id="loading-overlay">
-    <div class="spinner"></div>
-    <div id="status">Loading 3D Hoodie Model...</div>
-    <div class="progress-bar">
-      <div class="progress" id="loading-progress"></div>
-    </div>
-  </div>
-
-  <script type="importmap">
-    {
-      "imports": {
-        "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
-        "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
-      }
-    }
-  </script>
-
-  <script type="module">
-    import * as THREE from 'three';
-    import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
-    import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
-    import { DRACOLoader } from 'three/addons/loaders/DRACOLoader.js';
-
-    // Main variables
-    let scene, camera, renderer, controls, hoodieModel, mixer, clock;
-    let decalMaterial, baseTexture;
-    let hoodieColor = '#4361ee';
+    </header>
     
-    // Placement presets for different hoodie areas
-    const PLACEMENT_PRESETS = [
-      { name: 'Front', position: { x: 0.00, y: 0.00 }, icon: '👕' },
-      { name: 'Chest', position: { x: 0.00, y: -0.15 }, icon: '👕' },
-      { name: 'Back', position: { x: 0.00, y: 0.00 }, icon: '👕' },
-      { name: 'Sleeve', position: { x: 0.25, y: -0.15 }, icon: '👕' },
-      { name: 'Hood', position: { x: 0.00, y: 0.20 }, icon: '🧢' }
-    ];
-    
-    // Array to store all stickers
-    let stickers = [];
-    let activeStickerIndex = -1;
-    const MAX_DECALS = 8; // Maximum number of decals we support
-    
-    // Hoodie color options
-    const HOODIE_COLORS = [
-      '#4361ee', '#f72585', '#4cc9f0', '#06d6a0', 
-      '#ffd166', '#073b4c', '#ff9e00', '#7209b7'
-    ];
-
-    // Hoodie model URL (using an animated hoodie model)
-    const HOODIE_MODEL_URL = 'https://cdn.jsdelivr.net/gh/mrdoob/three.js@r159/examples/models/gltf/Flamingo.glb';
-
-    // Initialize the application
-    init();
-
-    function init() {
-      // Setup scene
-      scene = new THREE.Scene();
-      scene.background = new THREE.Color(0xf0f8ff);
-      scene.fog = new THREE.Fog(0xf0f8ff, 10, 20);
-
-      // Setup camera
-      camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
-      camera.position.set(0, 1, 5);
-
-      // Setup renderer
-      renderer = new THREE.WebGLRenderer({ 
-        antialias: true,
-        preserveDrawingBuffer: true // Required for screenshot capture
-      });
-      renderer.setSize(window.innerWidth, window.innerHeight);
-      renderer.setPixelRatio(window.devicePixelRatio);
-      renderer.shadowMap.enabled = true;
-      renderer.shadowMap.type = THREE.PCFSoftShadowMap;
-      document.getElementById('viewer').appendChild(renderer.domElement);
-
-      // Lights
-      const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
-      scene.add(ambientLight);
-      
-      const directionalLight = new THREE.DirectionalLight(0xffffff, 1);
-      directionalLight.position.set(3, 5, 3);
-      directionalLight.castShadow = true;
-      directionalLight.shadow.mapSize.width = 1024;
-      directionalLight.shadow.mapSize.height = 1024;
-      scene.add(directionalLight);
-
-      const backLight = new THREE.DirectionalLight(0xffffff, 0.4);
-      backLight.position.set(-3, 2, -3);
-      scene.add(backLight);
-
-      // Controls
-      controls = new OrbitControls(camera, renderer.domElement);
-      controls.enableDamping = true;
-      controls.dampingFactor = 0.05;
-      controls.minDistance = 2;
-      controls.maxDistance = 10;
-
-      // Clock for animations
-      clock = new THREE.Clock();
-
-      // Add event listeners
-      document.getElementById('add-sticker-btn').addEventListener('click', addNewSticker);
-      document.getElementById('download-btn').addEventListener('click', downloadDesign);
-      
-      // Add color selection
-      document.querySelectorAll('.color-option').forEach(option => {
-        option.addEventListener('click', (e) => {
-          const color = e.currentTarget.dataset.color;
-          setHoodieColor(color);
-        });
-      });
-
-      // Load model
-      loadModel();
-
-      // Start animation loop
-      animate();
-
-      // Handle window resize
-      window.addEventListener('resize', onWindowResize);
-    }
-
-    function setHoodieColor(color) {
-      hoodieColor = color;
-      
-      // Update UI
-      document.querySelectorAll('.color-option').forEach(option => {
-        option.classList.toggle('selected', option.dataset.color === color);
-      });
-      
-      // Update material
-      if (baseTexture) {
-        baseTexture.dispose();
-        baseTexture = createHoodieTexture(color);
-        decalMaterial.uniforms.baseTexture.value = baseTexture;
-        decalMaterial.needsUpdate = true;
-      }
-    }
-
-    async function loadModel() {
-      // Show loading overlay
-      document.getElementById('loading-overlay').style.display = 'flex';
-      document.getElementById('loading-overlay').style.opacity = '1';
-      updateStatus('Loading 3D hoodie model...');
-      
-      try {
-        const loader = new GLTFLoader();
-        const dracoLoader = new DRACOLoader();
-        dracoLoader.setDecoderPath('https://www.gstatic.com/draco/versioned/decoders/1.5.6/');
-        loader.setDRACOLoader(dracoLoader);
-        
-        // Add loading progress
-        loader.manager.onProgress = (url, loaded, total) => {
-          const progress = (loaded / total) * 100;
-          document.getElementById('loading-progress').style.width = `${progress}%`;
-          updateStatus(`Loading model: ${Math.round(progress)}%`);
-        };
-        
-        // Load the model
-        const gltf = await loader.loadAsync(HOODIE_MODEL_URL);
-        hoodieModel = gltf.scene;
-        
-        // Set up animations if available
-        if (gltf.animations && gltf.animations.length) {
-          mixer = new THREE.AnimationMixer(hoodieModel);
-          const action = mixer.clipAction(gltf.animations[0]);
-          action.play();
-        }
-        
-        scene.add(hoodieModel);
-
-        // Create hoodie texture
-        baseTexture = createHoodieTexture(hoodieColor);
-        
-        // Create decal material
-        decalMaterial = createDecalMaterial(baseTexture);
-        
-        // Apply material to all meshes
-        hoodieModel.traverse((child) => {
-          if (child.isMesh) {
-            child.material = decalMaterial;
-            child.castShadow = true;
-            child.receiveShadow = true;
-          }
-        });
-
-        // Center model and scale appropriately
-        const box = new THREE.Box3().setFromObject(hoodieModel);
-        const center = box.getCenter(new THREE.Vector3());
-        const size = box.getSize(new THREE.Vector3()).length();
-        
-        hoodieModel.position.sub(center);
-        hoodieModel.position.y += size * 0.2; // Adjust position slightly above center
-        
-        // Scale the model based on its size
-        const targetSize = 5;
-        const scale = targetSize / size;
-        hoodieModel.scale.set(scale, scale, scale);
-        
-        camera.position.z = size * 1.5;
-        controls.update();
-
-        // Hide loading overlay
-        setTimeout(() => {
-          document.getElementById('loading-overlay').style.opacity = '0';
-          setTimeout(() => {
-            document.getElementById('loading-overlay').style.display = 'none';
-          }, 500);
-        }, 500);
-        
-        // Add a default sticker to start with
-        if (stickers.length === 0) {
-          addNewSticker();
-        }
-      } catch (error) {
-        updateStatus('Failed to load model. Using placeholder.');
-        console.error('Model loading error:', error);
-        
-        // Hide loading overlay
-        setTimeout(() => {
-          document.getElementById('loading-overlay').style.opacity = '0';
-          setTimeout(() => {
-            document.getElementById('loading-overlay').style.display = 'none';
-          }, 500);
-        }, 1000);
-      }
-    }
-
-    function createHoodieTexture(color) {
-      const canvas = document.createElement('canvas');
-      canvas.width = canvas.height = 1024;
-      const ctx = canvas.getContext('2d');
-      
-      // Draw hoodie texture
-      ctx.fillStyle = color;
-      ctx.fillRect(0, 0, canvas.width, canvas.height);
-      
-      // Add fabric texture effect
-      ctx.fillStyle = 'rgba(0, 0, 0, 0.05)';
-      for (let i = 0; i < 5000; i++) {
-        const x = Math.random() * canvas.width;
-        const y = Math.random() * canvas.height;
-        const w = Math.random() * 3 + 1;
-        const h = Math.random() * 3 + 1;
-        ctx.fillRect(x, y, w, h);
-      }
-      
-      return new THREE.CanvasTexture(canvas);
-    }
-
-    function createDecalMaterial(baseTexture) {
-      // Create uniforms object
-      const uniforms = {
-        baseTexture: { value: baseTexture },
-        decalCount: { value: 0 }
-      };
-
-      // Add texture slots for up to MAX_DECALS decals
-      for (let i = 0; i < MAX_DECALS; i++) {
-        uniforms[`decalTexture${i}`] = { value: null };
-        uniforms[`decalPosition${i}`] = { value: new THREE.Vector2(0, 0) };
-        uniforms[`decalScale${i}`] = { value: 1.0 };
-        uniforms[`decalRotation${i}`] = { value: 0.0 };
-      }
-
-      // Generate the fragment shader dynamically based on MAX_DECALS
-      let fragmentShader = `
-        uniform sampler2D baseTexture;
-        uniform int decalCount;
-        varying vec2 vUV;
-        
-        // Declare all decal uniforms
-      `;
-
-      // Add uniform declarations
-      for (let i = 0; i < MAX_DECALS; i++) {
-        fragmentShader += `
-          uniform sampler2D decalTexture${i};
-          uniform vec2 decalPosition${i};
-          uniform float decalScale${i};
-          uniform float decalRotation${i};
-        `;
-      }
-
-      fragmentShader += `
-        void main() {
-          vec4 baseColor = texture2D(baseTexture, vUV);
-          vec4 finalColor = baseColor;
-          
-          // Apply decals in order
-      `;
-
-      // Add decal application logic
-      for (let i = 0; i < MAX_DECALS; i++) {
-        fragmentShader += `
-          if (decalCount > ${i}) {
-            vec2 center = vec2(0.5);
-            vec2 uv = vUV - center;
-            
-            // Apply rotation
-            float cosRot = cos(decalRotation${i});
-            float sinRot = sin(decalRotation${i});
-            uv = vec2(
-              uv.x * cosRot - uv.y * sinRot,
-              uv.x * sinRot + uv.y * cosRot
-            );
-            
-            // Apply scale and position
-            uv = uv / decalScale${i} + decalPosition${i} + center;
-            
-            if (uv.x >= 0.0 && uv.x <= 1.0 && uv.y >= 0.0 && uv.y <= 1.0) {
-              vec4 decalColor = texture2D(decalTexture${i}, uv);
-              finalColor = mix(finalColor, decalColor, decalColor.a);
-            }
-          }
-        `;
-      }
-
-      fragmentShader += `
-          gl_FragColor = finalColor;
-        }
-      `;
-
-      const vertexShader = `
-        varying vec2 vUV;
-        void main() {
-          vUV = uv;
-          gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
-        }
-      `;
-
-      return new THREE.ShaderMaterial({
-        uniforms: uniforms,
-        vertexShader: vertexShader,
-        fragmentShader: fragmentShader,
-        transparent: true
-      });
-    }
-
-    function addNewSticker() {
-      if (stickers.length >= MAX_DECALS) {
-        alert(`Maximum number of stickers (${MAX_DECALS}) reached`);
-        return;
-      }
-
-      // Remove empty state if it exists
-      const emptyState = document.querySelector('.empty-state');
-      if (emptyState) emptyState.remove();
-
-      const stickerId = 'sticker-' + Date.now();
-      const newSticker = {
-        id: stickerId,
-        texture: null,
-        position: new THREE.Vector2(0, 0),
-        scale: 0.5,
-        rotation: 0,
-        element: null,
-        index: stickers.length,
-        previewUrl: null
-      };
-      
-      stickers.push(newSticker);
-      activeStickerIndex = stickers.length - 1;
-      
-      createStickerControls(newSticker);
-      updateDecalUniforms();
-    }
-
-    function createStickerControls(sticker) {
-      const container = document.getElementById('sticker-controls-container');
-      
-      const stickerDiv = document.createElement('div');
-      stickerDiv.className = 'sticker-controls';
-      stickerDiv.id = sticker.id + '-controls';
-      if (stickers.length - 1 === activeStickerIndex) {
-        stickerDiv.classList.add('active');
-      }
-      
-      stickerDiv.innerHTML = `
-        <div class="sticker-header">
-          <span>Sticker ${sticker.index + 1}</span>
-          <span class="remove-sticker" data-id="${sticker.id}">×</span>
-        </div>
-        
-        <div class="sticker-upload">
-          <span>Click to upload sticker image</span>
-          <input type="file" style="display: none;" accept="image/*" data-id="${sticker.id}">
-        </div>
-        
-        <div class="sticker-preview">
-          ${sticker.previewUrl ? `<img src="${sticker.previewUrl}" alt="Sticker Preview">` : 'No sticker selected'}
-        </div>
-        
-        <div class="position-controls">
-          <h4>Position Presets</h4>
-          <div class="position-presets">
-            ${PLACEMENT_PRESETS.map((preset, i) => `
-              <button class="preset-btn" data-preset="${i}" data-id="${sticker.id}">
-                ${preset.icon}<br>${preset.name}
-              </button>
-            `).join('')}
-          </div>
-        </div>
-        
-        <div class="slider-control">
-          <label>
-            <span>Position X:</span>
-            <span id="${sticker.id}-pos-x">0.00</span>
-          </label>
-          <input type="range" class="position-x" min="-0.5" max="0.5" step="0.01" value="0" data-id="${sticker.id}">
-        </div>
-        
-        <div class="slider-control">
-          <label>
-            <span>Position Y:</span>
-            <span id="${sticker.id}-pos-y">0.00</span>
-          </label>
-          <input type="range" class="position-y" min="-0.5" max="0.5" step="0.01" value="0" data-id="${sticker.id}">
-        </div>
-        
-        <div class="slider-control">
-          <label>
-            <span>Scale:</span>
-            <span id="${sticker.id}-scale">0.50</span>
-          </label>
-          <input type="range" class="scale" min="0.1" max="1.5" step="0.05" value="0.5" data-id="${sticker.id}">
-        </div>
-        
-        <div class="slider-control">
-          <label>
-            <span>Rotation:</span>
-            <span id="${sticker.id}-rotation">0°</span>
-          </label>
-          <input type="range" class="rotation" min="0" max="360" step="1" value="0" data-id="${sticker.id}">
-        </div>
-      `;
-      
-      container.appendChild(stickerDiv);
-      sticker.element = stickerDiv;
-      
-      // Add event listeners
-      const fileInput = stickerDiv.querySelector('.sticker-upload input');
-      stickerDiv.querySelector('.sticker-upload').addEventListener('click', () => fileInput.click());
-      fileInput.addEventListener('change', (e) => handleStickerUpload(e, sticker.id));
-      
-      stickerDiv.querySelector('.position-x').addEventListener('input', (e) => updateStickerPosition(e, sticker.id, 'x'));
-      stickerDiv.querySelector('.position-y').addEventListener('input', (e) => updateStickerPosition(e, sticker.id, 'y'));
-      stickerDiv.querySelector('.scale').addEventListener('input', (e) => updateStickerScale(e, sticker.id));
-      stickerDiv.querySelector('.rotation').addEventListener('input', (e) => updateStickerRotation(e, sticker.id));
-      stickerDiv.querySelector('.remove-sticker').addEventListener('click', (e) => removeSticker(e, sticker.id));
-      
-      // Add event listeners for preset buttons
-      stickerDiv.querySelectorAll('.preset-btn').forEach(btn => {
-        btn.addEventListener('click', (e) => {
-          const presetIndex = parseInt(e.currentTarget.dataset.preset);
-          applyPresetPosition(sticker.id, presetIndex);
-        });
-      });
-      
-      // Make sticker active when clicked
-      stickerDiv.addEventListener('click', () => {
-        setActiveSticker(sticker.id);
-      });
-    }
-
-    function applyPresetPosition(stickerId, presetIndex) {
-      const stickerIndex = stickers.findIndex(s => s.id === stickerId);
-      if (stickerIndex !== -1) {
-        const preset = PLACEMENT_PRESETS[presetIndex];
-        stickers[stickerIndex].position.x = preset.position.x;
-        stickers[stickerIndex].position.y = preset.position.y;
-        
-        // Update sliders
-        const stickerDiv = document.getElementById(stickerId + '-controls');
-        stickerDiv.querySelector('.position-x').value = preset.position.x;
-        stickerDiv.querySelector('.position-y').value = preset.position.y;
-        stickerDiv.querySelector(`#${stickerId}-pos-x`).textContent = preset.position.x.toFixed(2);
-        stickerDiv.querySelector(`#${stickerId}-pos-y`).textContent = preset.position.y.toFixed(2);
-        
-        updateDecalUniforms();
-      }
-    }
-
-    function setActiveSticker(stickerId) {
-      const index = stickers.findIndex(s => s.id === stickerId);
-      if (index !== -1) {
-        activeStickerIndex = index;
-        
-        // Update UI to show active sticker
-        document.querySelectorAll('.sticker-controls').forEach(div => {
-          div.classList.remove('active');
-        });
-        document.getElementById(stickerId + '-controls').classList.add('active');
-      }
-    }
-
-    function handleStickerUpload(event, stickerId) {
-      const file = event.target.files[0];
-      if (!file) return;
-
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        const img = new Image();
-        img.onload = () => {
-          const texture = new THREE.Texture(img);
-          texture.needsUpdate = true;
-          
-          const stickerIndex = stickers.findIndex(s => s.id === stickerId);
-          if (stickerIndex !== -1) {
-            stickers[stickerIndex].texture = texture;
-            stickers[stickerIndex].previewUrl = e.target.result;
-            
-            // Update preview
-            const previewDiv = document.querySelector(`#${stickerId}-controls .sticker-preview`);
-            previewDiv.innerHTML = `<img src="${e.target.result}" alt="Sticker Preview">`;
-            
-            updateDecalUniforms();
-          }
-        };
-        img.src = e.target.result;
-      };
-      reader.readAsDataURL(file);
-    }
-
-    function updateStickerPosition(event, stickerId, axis) {
-      const value = parseFloat(event.target.value);
-      const stickerIndex = stickers.findIndex(s => s.id === stickerId);
-      
-      if (stickerIndex !== -1) {
-        if (axis === 'x') {
-          stickers[stickerIndex].position.x = value;
-          document.querySelector(`#${stickerId}-pos-x`).textContent = value.toFixed(2);
-        } else {
-          stickers[stickerIndex].position.y = value;
-          document.querySelector(`#${stickerId}-pos-y`).textContent = value.toFixed(2);
-        }
-        
-        updateDecalUniforms();
-      }
-    }
-
-    function updateStickerScale(event, stickerId) {
-      const value = parseFloat(event.target.value);
-      const stickerIndex = stickers.findIndex(s => s.id === stickerId);
-      
-      if (stickerIndex !== -1) {
-        stickers[stickerIndex].scale = value;
-        document.querySelector(`#${stickerId}-scale`).textContent = value.toFixed(2);
-        updateDecalUniforms();
-      }
-    }
-
-    function updateStickerRotation(event, stickerId) {
-      const value = parseFloat(event.target.value);
-      const stickerIndex = stickers.findIndex(s => s.id === stickerId);
-      
-      if (stickerIndex !== -1) {
-        stickers[stickerIndex].rotation = THREE.MathUtils.degToRad(value);
-        document.querySelector(`#${stickerId}-rotation`).textContent = `${value}°`;
-        updateDecalUniforms();
-      }
-    }
-
-    function removeSticker(event, stickerId) {
-      event.stopPropagation();
-      
-      const stickerIndex = stickers.findIndex(s => s.id === stickerId);
-      if (stickerIndex !== -1) {
-        // Remove from DOM
-        const element = document.getElementById(stickerId + '-controls');
-        if (element) element.remove();
-        
-        // Remove from array
-        stickers.splice(stickerIndex, 1);
-        
-        // Update indices of remaining stickers
-        stickers.forEach((sticker, index) => {
-          sticker.index = index;
-          if (sticker.element) {
-            sticker.element.querySelector('.sticker-header span:first-child').textContent = `Sticker ${index + 1}`;
-          }
-        });
-        
-        // Update active sticker index if needed
-        if (activeStickerIndex >= stickerIndex) {
-          activeStickerIndex = Math.max(0, activeStickerIndex - 1);
-        }
-        
-        // Show empty state if no stickers
-        if (stickers.length === 0) {
-          const container = document.getElementById('sticker-controls-container');
-          container.innerHTML = `
-            <div class="empty-state">
-              <p>No stickers added yet</p>
-              <p>Click "Add New Sticker" to start designing</p>
+    <div class="container">
+        <div id="viewer-container">
+            <div id="viewer-header">
+                <h2>Custom Hoodie Preview</h2>
+                <div class="view-controls">
+                    <button class="view-btn active">Front</button>
+                    <button class="view-btn">Back</button>
+                    <button class="view-btn">Left</button>
+                    <button class="view-btn">Right</button>
+                </div>
             </div>
-          `;
-        }
+            <div id="viewer">
+                <div class="loading-overlay">
+                    <div class="spinner"></div>
+                    <div>Loading 3D Hoodie Designer...</div>
+                </div>
+            </div>
+        </div>
         
-        // Update the material
-        updateDecalUniforms();
-      }
-    }
+        <div class="controls-container">
+            <div class="control-group">
+                <h2><i>🎨</i> Color Customization</h2>
+                <div class="color-picker">
+                    <div class="color-row">
+                        <div class="color-label">Main Color</div>
+                        <div class="color-display" id="mainColorDisplay" style="background: #4361ee;"></div>
+                        <div class="color-slider" id="mainColorSlider"></div>
+                    </div>
+                    <div class="color-row">
+                        <div class="color-label">Secondary Color</div>
+                        <div class="color-display" id="secondaryColorDisplay" style="background: #3f37c9;"></div>
+                        <div class="color-slider" id="secondaryColorSlider"></div>
+                    </div>
+                    <div class="color-row">
+                        <div class="color-label">Accent Color</div>
+                        <div class="color-display" id="accentColorDisplay" style="background: #f72585;"></div>
+                        <div class="color-slider" id="accentColorSlider"></div>
+                    </div>
+                </div>
+                
+                <h3>Color Presets</h3>
+                <div class="color-presets">
+                    <div class="color-preset selected" style="background: #4361ee;"></div>
+                    <div class="color-preset" style="background: #3a0ca3;"></div>
+                    <div class="color-preset" style="background: #7209b7;"></div>
+                    <div class="color-preset" style="background: #f72585;"></div>
+                    <div class="color-preset" style="background: #4cc9f0;"></div>
+                    <div class="color-preset" style="background: #4895ef;"></div>
+                    <div class="color-preset" style="background: #560bad;"></div>
+                    <div class="color-preset" style="background: #b5179e;"></div>
+                    <div class="color-preset" style="background: #f15bb5;"></div>
+                    <div class="color-preset" style="background: #fee440;"></div>
+                    <div class="color-preset" style="background: #00bbf9;"></div>
+                    <div class="color-preset" style="background: #00f5d4;"></div>
+                </div>
+            </div>
+            
+            <div class="control-group">
+                <h2><i>🧵</i> Material & Texture</h2>
+                <div class="material-controls">
+                    <div class="material-option selected">
+                        <div class="material-icon">👕</div>
+                        <div>Cotton</div>
+                    </div>
+                    <div class="material-option">
+                        <div class="material-icon">🧶</div>
+                        <div>Wool</div>
+                    </div>
+                    <div class="material-option">
+                        <div class="material-icon">🧊</div>
+                        <div>Polyester</div>
+                    </div>
+                    <div class="material-option">
+                        <div class="material-icon">💎</div>
+                        <div>Velvet</div>
+                    </div>
+                </div>
+                
+                <div class="slider-control">
+                    <label>Roughness</label>
+                    <input type="range" min="0" max="1" step="0.01" value="0.7" class="slider">
+                </div>
+                
+                <div class="slider-control">
+                    <label>Shininess</label>
+                    <input type="range" min="0" max="1" step="0.01" value="0.2" class="slider">
+                </div>
+            </div>
+            
+            <div class="control-group">
+                <h2><i>👕</i> Hoodie Styles</h2>
+                <div class="hoodie-preview">
+                    <div class="preview-item active">
+                        <img src="https://images.unsplash.com/photo-1521223890158-f9f7c3d5d504?crop=entropy&cs=tinysrgb&fit=crop&fm=jpg&h=80&w=80" alt="Classic Hoodie">
+                    </div>
+                    <div class="preview-item">
+                        <img src="https://images.unsplash.com/photo-1620799140408-edc6dcb6d633?crop=entropy&cs=tinysrgb&fit=crop&fm=jpg&h=80&w=80" alt="Zip Hoodie">
+                    </div>
+                    <div class="preview-item">
+                        <img src="https://images.unsplash.com/photo-1609172795052-05bfe4a119e0?crop=entropy&cs=tinysrgb&fit=crop&fm=jpg&h=80&w=80" alt="Oversized Hoodie">
+                    </div>
+                    <div class="preview-item">
+                        <img src="https://images.unsplash.com/photo-1624206112918-140ceb8e1470?crop=entropy&cs=tinysrgb&fit=crop&fm=jpg&h=80&w=80" alt="Sport Hoodie">
+                    </div>
+                </div>
+            </div>
+            
+            <div class="control-group">
+                <h2><i>💾</i> Actions</h2>
+                <div class="button-group">
+                    <button class="primary">
+                        <span>💾</span> Save Design
+                    </button>
+                    <button class="success">
+                        <span>📸</span> Screenshot
+                    </button>
+                    <button class="warning">
+                        <span>🔄</span> Reset
+                    </button>
+                    <button class="primary">
+                        <span>🛒</span> Order Now
+                    </button>
+                </div>
+            </div>
+            
+            <div class="status-bar">
+                <div id="status">Ready to design</div>
+                <div>v1.0.0</div>
+            </div>
+        </div>
+    </div>
+    
+    <footer>
+        <p>© 2023 Hoodie Designer Pro | Create your custom hoodie in 3D</p>
+    </footer>
 
-    function updateDecalUniforms() {
-      if (!decalMaterial) return;
-      
-      decalMaterial.uniforms.decalCount.value = stickers.length;
-      
-      // Reset all uniforms first
-      for (let i = 0; i < MAX_DECALS; i++) {
-        decalMaterial.uniforms[`decalTexture${i}`].value = null;
-        decalMaterial.uniforms[`decalPosition${i}`].value.set(0, 0);
-        decalMaterial.uniforms[`decalScale${i}`].value = 1.0;
-        decalMaterial.uniforms[`decalRotation${i}`].value = 0.0;
-      }
-      
-      // Update active stickers
-      stickers.forEach((sticker, index) => {
-        if (sticker.texture) {
-          decalMaterial.uniforms[`decalTexture${index}`].value = sticker.texture;
-        }
-        decalMaterial.uniforms[`decalPosition${index}`].value.copy(sticker.position);
-        decalMaterial.uniforms[`decalScale${index}`].value = sticker.scale;
-        decalMaterial.uniforms[`decalRotation${index}`].value = sticker.rotation;
-      });
-      
-      decalMaterial.needsUpdate = true;
-    }
-
-    function downloadDesign() {
-      try {
-        // Show loading
-        updateStatus('Preparing your design for download...');
-        document.getElementById('loading-overlay').style.display = 'flex';
-        document.getElementById('loading-overlay').style.opacity = '1';
+    <script>
+        // Initialize Three.js scene
+        let scene, camera, renderer, hoodie;
         
-        // Add a small delay to ensure the overlay is visible
-        setTimeout(() => {
-          // Capture screenshot
-          renderer.render(scene, camera);
-          const dataURL = renderer.domElement.toDataURL('image/png');
-          
-          // Create download link
-          const link = document.createElement('a');
-          link.href = dataURL;
-          link.download = 'custom-hoodie-design.png';
-          document.body.appendChild(link);
-          link.click();
-          document.body.removeChild(link);
-          
-          // Hide loading
-          setTimeout(() => {
-            document.getElementById('loading-overlay').style.opacity = '0';
+        // Colors for the hoodie
+        const colors = {
+            main: new THREE.Color(0x4361ee),
+            secondary: new THREE.Color(0x3f37c9),
+            accent: new THREE.Color(0xf72585)
+        };
+        
+        function init() {
+            // Create scene
+            scene = new THREE.Scene();
+            scene.background = new THREE.Color(0x1a1a2e);
+            scene.fog = new THREE.Fog(0x1a1a2e, 15, 25);
+            
+            // Create camera
+            camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+            camera.position.z = 5;
+            camera.position.y = 1.5;
+            
+            // Create renderer
+            renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+            renderer.setSize(document.getElementById('viewer').offsetWidth, document.getElementById('viewer').offsetHeight);
+            renderer.shadowMap.enabled = true;
+            renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+            document.getElementById('viewer').appendChild(renderer.domElement);
+            
+            // Add lighting
+            const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
+            scene.add(ambientLight);
+            
+            const directionalLight = new THREE.DirectionalLight(0xffffff, 0.8);
+            directionalLight.position.set(5, 10, 7);
+            directionalLight.castShadow = true;
+            directionalLight.shadow.mapSize.width = 1024;
+            directionalLight.shadow.mapSize.height = 1024;
+            scene.add(directionalLight);
+            
+            const backLight = new THREE.DirectionalLight(0xffffff, 0.4);
+            backLight.position.set(-5, -5, -5);
+            scene.add(backLight);
+            
+            // Create hoodie
+            createHoodie();
+            
+            // Add orbit controls
+            const controls = new THREE.OrbitControls(camera, renderer.domElement);
+            controls.enableDamping = true;
+            controls.dampingFactor = 0.05;
+            controls.minDistance = 3;
+            controls.maxDistance = 10;
+            
+            // Handle window resize
+            window.addEventListener('resize', onWindowResize);
+            
+            // Hide loading overlay
             setTimeout(() => {
-              document.getElementById('loading-overlay').style.display = 'none';
-            }, 500);
-          }, 500);
-        }, 100);
-      } catch (error) {
-        console.error('Error capturing design:', error);
-        updateStatus('Failed to capture design. Please try again.');
-        setTimeout(() => {
-          document.getElementById('loading-overlay').style.opacity = '0';
-          setTimeout(() => {
-            document.getElementById('loading-overlay').style.display = 'none';
-          }, 500);
-        }, 2000);
-      }
-    }
-
-    function updateStatus(msg) {
-      document.getElementById('status').textContent = msg;
-    }
-
-    function onWindowResize() {
-      camera.aspect = window.innerWidth / window.innerHeight;
-      camera.updateProjectionMatrix();
-      renderer.setSize(window.innerWidth, window.innerHeight);
-    }
-
-    function animate() {
-      requestAnimationFrame(animate);
-      const delta = clock.getDelta();
-      
-      // Update animations
-      if (mixer) {
-        mixer.update(delta);
-      }
-      
-      controls.update();
-      renderer.render(scene, camera);
-    }
-  </script>
+                document.querySelector('.loading-overlay').style.opacity = '0';
+                setTimeout(() => {
+                    document.querySelector('.loading-overlay').style.display = 'none';
+                }, 500);
+            }, 1500);
+            
+            // Start animation loop
+            animate();
+            
+            // Set up color pickers
+            setupColorPickers();
+        }
+        
+        function createHoodie() {
+            // Remove existing hoodie if present
+            if (hoodie) {
+                scene.remove(hoodie);
+            }
+            
+            hoodie = new THREE.Group();
+            
+            // Body
+            const bodyGeometry = new THREE.BoxGeometry(2, 3, 1.2);
+            const bodyMaterial = new THREE.MeshPhongMaterial({ 
+                color: colors.main,
+                shininess: 30,
+                flatShading: false
+            });
+            const body = new THREE.Mesh(bodyGeometry, bodyMaterial);
+            body.position.y = 0.2;
+            body.castShadow = true;
+            body.receiveShadow = true;
+            hoodie.add(body);
+            
+            // Hood
+            const hoodGeometry = new THREE.ConeGeometry(1.1, 1.8, 4);
+            hoodGeometry.rotateX(Math.PI);
+            hoodGeometry.translate(0, 2.2, 0.1);
+            const hoodMaterial = new THREE.MeshPhongMaterial({ 
+                color: colors.main,
+                shininess: 30
+            });
+            const hood = new THREE.Mesh(hoodGeometry, hoodMaterial);
+            hood.castShadow = true;
+            hood.receiveShadow = true;
+            hoodie.add(hood);
+            
+            // Sleeves
+            const sleeveGeometry = new THREE.CylinderGeometry(0.3, 0.3, 1.5, 16);
+            const sleeveMaterial = new THREE.MeshPhongMaterial({ 
+                color: colors.main,
+                shininess: 30
+            });
+            
+            const leftSleeve = new THREE.Mesh(sleeveGeometry, sleeveMaterial);
+            leftSleeve.position.set(-1.3, 0, 0);
+            leftSleeve.rotation.z = Math.PI / 2;
+            leftSleeve.castShadow = true;
+            leftSleeve.receiveShadow = true;
+            hoodie.add(leftSleeve);
+            
+            const rightSleeve = new THREE.Mesh(sleeveGeometry, sleeveMaterial);
+            rightSleeve.position.set(1.3, 0, 0);
+            rightSleeve.rotation.z = -Math.PI / 2;
+            rightSleeve.castShadow = true;
+            rightSleeve.receiveShadow = true;
+            hoodie.add(rightSleeve);
+            
+            // Pocket
+            const pocketGeometry = new THREE.BoxGeometry(1.2, 1, 0.2);
+            const pocketMaterial = new THREE.MeshPhongMaterial({ 
+                color: colors.secondary,
+                shininess: 20
+            });
+            const pocket = new THREE.Mesh(pocketGeometry, pocketMaterial);
+            pocket.position.set(0, -0.5, 0.6);
+            pocket.castShadow = true;
+            pocket.receiveShadow = true;
+            hoodie.add(pocket);
+            
+            // Strings
+            const stringGeometry = new THREE.CylinderGeometry(0.02, 0.02, 0.8, 8);
+            const stringMaterial = new THREE.MeshPhongMaterial({ 
+                color: colors.accent,
+                shininess: 80
+            });
+            
+            const leftString = new THREE.Mesh(stringGeometry, stringMaterial);
+            leftString.position.set(-0.4, 1.8, 0.8);
+            leftString.rotation.z = Math.PI / 8;
+            hoodie.add(leftString);
+            
+            const rightString = new THREE.Mesh(stringGeometry, stringMaterial);
+            rightString.position.set(0.4, 1.8, 0.8);
+            rightString.rotation.z = -Math.PI / 8;
+            hoodie.add(rightString);
+            
+            scene.add(hoodie);
+            
+            // Add a simple floor
+            const floorGeometry = new THREE.PlaneGeometry(20, 20);
+            const floorMaterial = new THREE.MeshStandardMaterial({ 
+                color: 0x222222,
+                roughness: 0.8,
+                metalness: 0.2
+            });
+            const floor = new THREE.Mesh(floorGeometry, floorMaterial);
+            floor.rotation.x = -Math.PI / 2;
+            floor.position.y = -1.8;
+            floor.receiveShadow = true;
+            scene.add(floor);
+        }
+        
+        function setupColorPickers() {
+            // Main color
+            document.getElementById('mainColorDisplay').addEventListener('click', function() {
+                colors.main.set(this.style.backgroundColor);
+                updateHoodieColors();
+            });
+            
+            // Secondary color
+            document.getElementById('secondaryColorDisplay').addEventListener('click', function() {
+                colors.secondary.set(this.style.backgroundColor);
+                updateHoodieColors();
+            });
+            
+            // Accent color
+            document.getElementById('accentColorDisplay').addEventListener('click', function() {
+                colors.accent.set(this.style.backgroundColor);
+                updateHoodieColors();
+            });
+            
+            // Color presets
+            document.querySelectorAll('.color-preset').forEach(preset => {
+                preset.addEventListener('click', function() {
+                    // Remove selected class from all
+                    document.querySelectorAll('.color-preset').forEach(p => {
+                        p.classList.remove('selected');
+                    });
+                    
+                    // Add selected class to clicked
+                    this.classList.add('selected');
+                    
+                    // Set as main color
+                    colors.main.set(this.style.backgroundColor);
+                    document.getElementById('mainColorDisplay').style.backgroundColor = this.style.backgroundColor;
+                    
+                    updateHoodieColors();
+                });
+            });
+        }
+        
+        function updateHoodieColors() {
+            if (!hoodie) return;
+            
+            // Update hoodie materials
+            hoodie.traverse(child => {
+                if (child.isMesh) {
+                    if (child.material.name === 'body' || child.material.name === 'hood' || child.material.name === 'sleeve') {
+                        child.material.color.copy(colors.main);
+                    } else if (child.material.name === 'pocket') {
+                        child.material.color.copy(colors.secondary);
+                    } else if (child.material.name === 'string') {
+                        child.material.color.copy(colors.accent);
+                    }
+                }
+            });
+        }
+        
+        function onWindowResize() {
+            camera.aspect = document.getElementById('viewer').offsetWidth / document.getElementById('viewer').offsetHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(document.getElementById('viewer').offsetWidth, document.getElementById('viewer').offsetHeight);
+        }
+        
+        function animate() {
+            requestAnimationFrame(animate);
+            
+            // Rotate hoodie slightly
+            if (hoodie) {
+                hoodie.rotation.y += 0.002;
+            }
+            
+            renderer.render(scene, camera);
+        }
+        
+        // Initialize the app
+        init();
+        
+        // Add some interactivity to the UI
+        document.querySelectorAll('.view-btn').forEach(btn => {
+            btn.addEventListener('click', function() {
+                document.querySelectorAll('.view-btn').forEach(b => b.classList.remove('active'));
+                this.classList.add('active');
+            });
+        });
+        
+        document.querySelectorAll('.preview-item').forEach(item => {
+            item.addEventListener('click', function() {
+                document.querySelectorAll('.preview-item').forEach(i => i.classList.remove('active'));
+                this.classList.add('active');
+            });
+        });
+        
+        document.querySelectorAll('.material-option').forEach(option => {
+            option.addEventListener('click', function() {
+                document.querySelectorAll('.material-option').forEach(o => o.classList.remove('selected'));
+                this.classList.add('selected');
+                document.getElementById('status').textContent = `Material: ${this.querySelector('div:last-child').textContent}`;
+            });
+        });
+        
+        document.querySelectorAll('button.primary, button.success, button.warning').forEach(btn => {
+            btn.addEventListener('click', function() {
+                this.style.transform = 'scale(0.95)';
+                setTimeout(() => {
+                    this.style.transform = '';
+                }, 150);
+                
+                if (this.textContent.includes('Screenshot')) {
+                    document.getElementById('status').textContent = 'Screenshot saved!';
+                } else if (this.textContent.includes('Reset')) {
+                    // Reset colors
+                    colors.main.set(0x4361ee);
+                    colors.secondary.set(0x3f37c9);
+                    colors.accent.set(0xf72585);
+                    
+                    // Reset displays
+                    document.getElementById('mainColorDisplay').style.backgroundColor = '#4361ee';
+                    document.getElementById('secondaryColorDisplay').style.backgroundColor = '#3f37c9';
+                    document.getElementById('accentColorDisplay').style.backgroundColor = '#f72585';
+                    
+                    // Reset presets
+                    document.querySelectorAll('.color-preset').forEach((p, i) => {
+                        p.classList.remove('selected');
+                        if (i === 0) p.classList.add('selected');
+                    });
+                    
+                    updateHoodieColors();
+                    document.getElementById('status').textContent = 'Design reset to default';
+                }
+            });
+        });
+    </script>
 </body>
 </html>
