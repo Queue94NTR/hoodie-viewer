@@ -106,7 +106,9 @@
   </div>
   
   <div id="uv-display">
-    Current UV: (0.5, 0.5)
+    Current UV: (0.5, 0.5)<br>
+    Scale: 0.5<br>
+    Rotation: 0.0
   </div>
   
   <div id="uv-region-display">
@@ -295,13 +297,20 @@
       // Update UV display for active sticker
       if (stickers.length > 0) {
         const activeSticker = stickers[activeStickerIndex];
-        updateUVDisplay(0.5 + activeSticker.position.x, 0.5 + activeSticker.position.y);
+        updateUVDisplay(
+          0.5 + activeSticker.position.x, 
+          0.5 + activeSticker.position.y,
+          activeSticker.scale,
+          activeSticker.rotation
+        );
       }
     }
 
-    function updateUVDisplay(u, v) {
-      document.getElementById('uv-display').textContent = 
-        `Current UV: (${u.toFixed(2)}, ${v.toFixed(2)})`;
+    function updateUVDisplay(u, v, scale, rotation) {
+      document.getElementById('uv-display').innerHTML = 
+        `Current UV: (${u.toFixed(2)}, ${v.toFixed(2)})<br>
+         Scale: ${scale.toFixed(2)}<br>
+         Rotation: ${rotation.toFixed(2)}`;
     }
 
     async function loadModel() {
@@ -625,6 +634,7 @@
       if (stickerIndex !== -1) {
         stickers[stickerIndex].rotation = value;
         updateDecalUniforms();
+        drawUVRegion();
       }
     }
 
