@@ -379,7 +379,7 @@
 
       // Setup PMREM generator for environment maps
       pmremGenerator = new PMREMGenerator(renderer);
-      pmremGenerator.compileEquirectangularShader();
+      pmremGenerator.compileCubemapShader();
 
       // Setup UV region display
       uvRegionCanvas = document.getElementById('uv-region-canvas');
@@ -432,6 +432,10 @@
       
       if (envType === 'none') {
         scene.environment = null;
+        if (hoodieMaterial) {
+          hoodieMaterial.envMap = null;
+          hoodieMaterial.needsUpdate = true;
+        }
         return;
       }
       
@@ -449,6 +453,9 @@
             hoodieMaterial.envMap = envMap;
             hoodieMaterial.needsUpdate = true;
           }
+        }, undefined, (error) => {
+          console.error('Error loading environment map:', error);
+          updateStatus('Failed to load environment map');
         });
     }
 
