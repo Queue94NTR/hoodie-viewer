@@ -74,6 +74,23 @@
     .position-preset-btn:hover {
       background: #e0e0e0;
     }
+    #animation-controls {
+      position: absolute;
+      top: 10px;
+      right: 10px;
+      z-index: 100;
+      background: rgba(255,255,255,0.8);
+      padding: 10px;
+      border-radius: 5px;
+    }
+    #animation-toggle {
+      padding: 5px 10px;
+      background: #4361ee;
+      color: white;
+      border: none;
+      border-radius: 3px;
+      cursor: pointer;
+    }
   </style>
 </head>
 <body>
@@ -82,6 +99,10 @@
       <!-- Sticker controls will be added here dynamically -->
     </div>
     <button id="add-sticker-btn">Add New Sticker</button>
+  </div>
+  
+  <div id="animation-controls">
+    <button id="animation-toggle">Pause Animation</button>
   </div>
   
   <div id="uv-display">
@@ -139,6 +160,8 @@
     let stickers = [];
     let activeStickerIndex = 0;
     const MAX_DECALS = 10; // Maximum number of decals we support
+    let isAnimationPlaying = true;
+    let currentAnimationAction = null;
 
     init();
 
@@ -181,6 +204,9 @@
       // Add event listener for adding new stickers
       document.getElementById('add-sticker-btn').addEventListener('click', addNewSticker);
 
+      // Add event listener for animation toggle
+      document.getElementById('animation-toggle').addEventListener('click', toggleAnimation);
+
       // Load model
       loadModel();
 
@@ -189,6 +215,20 @@
 
       // Handle window resize
       window.addEventListener('resize', onWindowResize);
+    }
+
+    function toggleAnimation() {
+      isAnimationPlaying = !isAnimationPlaying;
+      
+      if (currentAnimationAction) {
+        if (isAnimationPlaying) {
+          currentAnimationAction.play();
+          document.getElementById('animation-toggle').textContent = 'Pause Animation';
+        } else {
+          currentAnimationAction.pause();
+          document.getElementById('animation-toggle').textContent = 'Play Animation';
+        }
+      }
     }
 
     function drawUVRegion() {
@@ -280,10 +320,12 @@
         // Setup animations if available
         if (gltf.animations && gltf.animations.length > 0) {
           mixer = new THREE.AnimationMixer(hoodieModel);
-          mixer.clipAction(gltf.animations[0]).play();
+          currentAnimationAction = mixer.clipAction(gltf.animations[0]);
+          currentAnimationAction.play();
           updateStatus('Model loaded with animation');
         } else {
           updateStatus('Model loaded');
+          document.getElementById('animation-toggle').style.display = 'none';
         }
 
         // Create a default white texture
@@ -315,6 +357,7 @@
         updateStatus('Failed to load model');
         console.error(error);
         createFallbackModel();
+        document.getElementById('animation-toggle').style.display = 'none';
       }
     }
 
@@ -663,7 +706,9 @@
     function animate() {
       requestAnimationFrame(animate);
       const delta = clock.getDelta();
-      if (mixer) mixer.update(delta);
+      if (mixer && isAnimationPlaying) {
+        mixer.update(delta);
+      }
       controls.update();
       renderer.render(scene, camera);
     }
