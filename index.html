@@ -112,6 +112,7 @@
     // Array to store all stickers
     let stickers = [];
     let activeStickerIndex = 0;
+    const MAX_DECALS = 10; // Maximum number of decals we support
 
     init();
 
@@ -301,68 +302,100 @@
     }
 
     function createDecalMaterial(baseTexture) {
-      return new THREE.ShaderMaterial({
-        uniforms: {
-          baseTexture: { value: baseTexture },
-          decals: { value: [] },
-          decalCount: { value: 0 }
-        },
-        vertexShader: `
-          varying vec2 vUV;
-          void main() {
-            vUV = uv;
-            gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
-          }
-        `,
-        fragmentShader: `
-          uniform sampler2D baseTexture;
-          uniform sampler2D decals[10]; // Maximum 10 decals
-          uniform int decalCount;
-          
-          struct Decal {
-            vec2 position;
-            float scale;
-            float rotation;
-          };
-          uniform Decal decalParams[10];
-          
-          varying vec2 vUV;
+      // Create uniforms object
+      const uniforms = {
+        baseTexture: { value: baseTexture },
+        decalCount: { value: 0 }
+      };
 
-          void main() {
-            vec4 baseColor = texture2D(baseTexture, vUV);
-            vec4 finalColor = baseColor;
+      // Add texture slots for up to MAX_DECALS decals
+      for (let i = 0; i < MAX_DECALS; i++) {
+        uniforms[`decalTexture${i}`] = { value: null };
+        uniforms[`decalPosition${i}`] = { value: new THREE.Vector2(0, 0) };
+        uniforms[`decalScale${i}`] = { value: 1.0 };
+        uniforms[`decalRotation${i}`] = { value: 0.0 };
+      }
+
+      // Generate the fragment shader dynamically based on MAX_DECALS
+      let fragmentShader = `
+        uniform sampler2D baseTexture;
+        uniform int decalCount;
+        varying vec2 vUV;
+        
+        // Declare all decal uniforms
+      `;
+
+      // Add uniform declarations
+      for (let i = 0; i < MAX_DECALS; i++) {
+        fragmentShader += `
+          uniform sampler2D decalTexture${i};
+          uniform vec2 decalPosition${i};
+          uniform float decalScale${i};
+          uniform float decalRotation${i};
+        `;
+      }
+
+      fragmentShader += `
+        void main() {
+          vec4 baseColor = texture2D(baseTexture, vUV);
+          vec4 finalColor = baseColor;
+          
+          // Apply decals in order
+      `;
+
+      // Add decal application logic
+      for (let i = 0; i < MAX_DECALS; i++) {
+        fragmentShader += `
+          if (decalCount > ${i}) {
+            vec2 center = vec2(0.5);
+            vec2 uv = vUV - center;
             
-            for (int i = 0; i < 10; i++) {
-              if (i >= decalCount) break;
-              
-              vec2 center = vec2(0.5);
-              vec2 uv = vUV - center;
-              
-              // Apply rotation
-              float cosRot = cos(decalParams[i].rotation);
-              float sinRot = sin(decalParams[i].rotation);
-              uv = vec2(
-                uv.x * cosRot - uv.y * sinRot,
-                uv.x * sinRot + uv.y * cosRot
-              );
-              
-              // Apply scale and position
-              uv = uv / decalParams[i].scale + decalParams[i].position + center;
-              
-              if (uv.x >= 0.0 && uv.x <= 1.0 && uv.y >= 0.0 && uv.y <= 1.0) {
-                vec4 decalColor = texture2D(decals[i], uv);
-                finalColor = mix(finalColor, decalColor, decalColor.a);
-              }
+            // Apply rotation
+            float cosRot = cos(decalRotation${i});
+            float sinRot = sin(decalRotation${i});
+            uv = vec2(
+              uv.x * cosRot - uv.y * sinRot,
+              uv.x * sinRot + uv.y * cosRot
+            );
+            
+            // Apply scale and position
+            uv = uv / decalScale${i} + decalPosition${i} + center;
+            
+            if (uv.x >= 0.0 && uv.x <= 1.0 && uv.y >= 0.0 && uv.y <= 1.0) {
+              vec4 decalColor = texture2D(decalTexture${i}, uv);
+              finalColor = mix(finalColor, decalColor, decalColor.a);
             }
-            
-            gl_FragColor = finalColor;
           }
-        `,
+        `;
+      }
+
+      fragmentShader += `
+          gl_FragColor = finalColor;
+        }
+      `;
+
+      const vertexShader = `
+        varying vec2 vUV;
+        void main() {
+          vUV = uv;
+          gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+        }
+      `;
+
+      return new THREE.ShaderMaterial({
+        uniforms: uniforms,
+        vertexShader: vertexShader,
+        fragmentShader: fragmentShader,
         transparent: true
       });
     }
 
     function addNewSticker() {
+      if (stickers.length >= MAX_DECALS) {
+        alert(`Maximum number of stickers (${MAX_DECALS}) reached`);
+        return;
+      }
+
       const stickerId = 'sticker-' + Date.now();
       const newSticker = {
         id: stickerId,
@@ -370,7 +403,8 @@
         position: new THREE.Vector2(0, 0),
         scale: 0.5,
         rotation: 0,
-        element: null
+        element: null,
+        index: stickers.length
       };
       
       stickers.push(newSticker);
@@ -393,7 +427,7 @@
       
       stickerDiv.innerHTML = `
         <div class="sticker-header">
-          <span>Sticker ${stickers.length}</span>
+          <span>Sticker ${sticker.index + 1}</span>
           <span class="remove-sticker" data-id="${sticker.id}">×</span>
         </div>
         <input type="file" class="sticker-upload" accept="image/*" data-id="${sticker.id}">
@@ -506,6 +540,14 @@
         // Remove from array
         stickers.splice(stickerIndex, 1);
         
+        // Update indices of remaining stickers
+        stickers.forEach((sticker, index) => {
+          sticker.index = index;
+          if (sticker.element) {
+            sticker.element.querySelector('.sticker-header span:first-child').textContent = `Sticker ${index + 1}`;
+          }
+        });
+        
         // Update active sticker index if needed
         if (activeStickerIndex >= stickerIndex) {
           activeStickerIndex = Math.max(0, activeStickerIndex - 1);
@@ -520,35 +562,23 @@
     function updateDecalUniforms() {
       if (!decalMaterial) return;
       
-      // Update the uniforms with all sticker data
-      const decalTextures = [];
-      const decalParams = [];
-      
-      stickers.forEach(sticker => {
-        decalTextures.push(sticker.texture || createDefaultTexture());
-        decalParams.push({
-          position: sticker.position,
-          scale: sticker.scale,
-          rotation: sticker.rotation
-        });
-      });
-      
-      decalMaterial.uniforms.decals.value = decalTextures;
       decalMaterial.uniforms.decalCount.value = stickers.length;
       
-      // We need to manually set each decal parameter
-      for (let i = 0; i < 10; i++) {
-        if (i < stickers.length) {
-          decalMaterial.uniforms[`decalParams[${i}].position`] = { value: stickers[i].position };
-          decalMaterial.uniforms[`decalParams[${i}].scale`] = { value: stickers[i].scale };
-          decalMaterial.uniforms[`decalParams[${i}].rotation`] = { value: stickers[i].rotation };
-        } else {
-          // Clear unused slots
-          decalMaterial.uniforms[`decalParams[${i}].position`] = { value: new THREE.Vector2(0, 0) };
-          decalMaterial.uniforms[`decalParams[${i}].scale`] = { value: 1.0 };
-          decalMaterial.uniforms[`decalParams[${i}].rotation`] = { value: 0.0 };
-        }
+      // Reset all uniforms first
+      for (let i = 0; i < MAX_DECALS; i++) {
+        decalMaterial.uniforms[`decalTexture${i}`].value = null;
+        decalMaterial.uniforms[`decalPosition${i}`].value.set(0, 0);
+        decalMaterial.uniforms[`decalScale${i}`].value = 1.0;
+        decalMaterial.uniforms[`decalRotation${i}`].value = 0.0;
       }
+      
+      // Update active stickers
+      stickers.forEach((sticker, index) => {
+        decalMaterial.uniforms[`decalTexture${index}`].value = sticker.texture || createDefaultTexture();
+        decalMaterial.uniforms[`decalPosition${index}`].value.copy(sticker.position);
+        decalMaterial.uniforms[`decalScale${index}`].value = sticker.scale;
+        decalMaterial.uniforms[`decalRotation${index}`].value = sticker.rotation;
+      });
       
       decalMaterial.needsUpdate = true;
     }
