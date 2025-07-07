@@ -149,13 +149,38 @@
       height: 0.4         // Height of the region (0-1)
     }];
 
-    // Position presets
+    // Updated position presets with scale and rotation
     const positionPresets = [
-      { name: "Front", position: { x: 1.50, y: 1.32 } },
-      { name: "Back", position: { x: 0.25, y: 1.38 } },
-      { name: "Right", position: { x: 1.41, y: -0.21 } },
-      { name: "Left", position: { x: 0.81, y: -0.51 } },
-      { name: "Bottom", position: { x: -0.50, y: -0.20 } }
+      { 
+        name: "Back", 
+        position: { x: 0.83, y: -0.36 },
+        scale: 0.30,
+        rotation: 3.20
+      },
+      { 
+        name: "Front", 
+        position: { x: -0.42, y: -0.36 },
+        scale: 0.30,
+        rotation: 3.20
+      },
+      { 
+        name: "Left Arm", 
+        position: { x: 0.44, y: 1.50 },
+        scale: 0.25,
+        rotation: 2.90
+      },
+      { 
+        name: "Right Arm", 
+        position: { x: -0.50, y: 1.50 },
+        scale: 0.35,
+        rotation: 3.00
+      },
+      { 
+        name: "Hood", 
+        position: { x: 1.50, y: 0.85 },
+        scale: 0.20,
+        rotation: 3.30
+      }
     ];
 
     // Array to store all stickers
@@ -515,7 +540,11 @@
         <div>Rotation: <input type="range" class="rotation" min="0" max="6.28" step="0.1" value="0" data-id="${sticker.id}"></div>
         <div class="position-presets">
           ${positionPresets.map(preset => 
-            `<button class="position-preset-btn" data-x="${preset.position.x}" data-y="${preset.position.y}">${preset.name}</button>`
+            `<button class="position-preset-btn" 
+              data-x="${preset.position.x}" 
+              data-y="${preset.position.y}"
+              data-scale="${preset.scale}"
+              data-rotation="${preset.rotation}">${preset.name}</button>`
           ).join('')}
         </div>
       `;
@@ -536,7 +565,9 @@
         btn.addEventListener('click', (e) => {
           const x = parseFloat(e.target.dataset.x);
           const y = parseFloat(e.target.dataset.y);
-          applyPositionPreset(sticker.id, x, y);
+          const scale = parseFloat(e.target.dataset.scale);
+          const rotation = parseFloat(e.target.dataset.rotation);
+          applyPositionPreset(sticker.id, x, y, scale, rotation);
         });
       });
       
@@ -546,16 +577,20 @@
       });
     }
 
-    function applyPositionPreset(stickerId, x, y) {
+    function applyPositionPreset(stickerId, x, y, scale, rotation) {
       const stickerIndex = stickers.findIndex(s => s.id === stickerId);
       if (stickerIndex !== -1) {
         stickers[stickerIndex].position.set(x, y);
+        stickers[stickerIndex].scale = scale;
+        stickers[stickerIndex].rotation = rotation;
         
-        // Update the slider controls to reflect the new position
+        // Update the slider controls to reflect the new values
         const stickerDiv = document.getElementById(stickerId + '-controls');
         if (stickerDiv) {
           stickerDiv.querySelector('.position-x').value = x;
           stickerDiv.querySelector('.position-y').value = y;
+          stickerDiv.querySelector('.scale').value = scale;
+          stickerDiv.querySelector('.rotation').value = rotation;
         }
         
         updateDecalUniforms();
