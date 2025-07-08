@@ -91,6 +91,37 @@
       border-radius: 3px;
       cursor: pointer;
     }
+    #color-controls {
+      position: absolute;
+      top: 60px;
+      right: 10px;
+      z-index: 100;
+      background: rgba(255,255,255,0.8);
+      padding: 10px;
+      border-radius: 5px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+    #color-presets {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 5px;
+    }
+    .color-preset {
+      width: 30px;
+      height: 30px;
+      border: 1px solid #ccc;
+      cursor: pointer;
+    }
+    #apply-color-btn {
+      padding: 5px 10px;
+      background: #4361ee;
+      color: white;
+      border: none;
+      border-radius: 3px;
+      cursor: pointer;
+    }
   </style>
 </head>
 <body>
@@ -103,6 +134,22 @@
   
   <div id="animation-controls">
     <button id="animation-toggle">Pause Animation</button>
+  </div>
+  
+  <div id="color-controls">
+    <label for="hoodieColor">Hoodie Color:</label>
+    <input type="color" id="hoodieColor" value="#4361ee">
+    <div id="color-presets">
+      <div class="color-preset" style="background-color: #4361ee;" data-color="#4361ee"></div>
+      <div class="color-preset" style="background-color: #3a0ca3;" data-color="#3a0ca3"></div>
+      <div class="color-preset" style="background-color: #7209b7;" data-color="#7209b7"></div>
+      <div class="color-preset" style="background-color: #f72585;" data-color="#f72585"></div>
+      <div class="color-preset" style="background-color: #4cc9f0;" data-color="#4cc9f0"></div>
+      <div class="color-preset" style="background-color: #4895ef;" data-color="#4895ef"></div>
+      <div class="color-preset" style="background-color: #3f37c9;" data-color="#3f37c9"></div>
+      <div class="color-preset" style="background-color: #560bad;" data-color="#560bad"></div>
+    </div>
+    <button id="apply-color-btn">Apply Color</button>
   </div>
   
   <div id="uv-display">
@@ -138,7 +185,7 @@
     import { DRACOLoader } from 'three/addons/loaders/DRACOLoader.js';
 
     let scene, camera, renderer, controls, hoodieModel, mixer, clock;
-    let decalMaterial, baseTexture;
+    let decalMaterial, baseTexture, hoodieMaterial;
     let uvRegionCanvas, uvRegionCtx;
     const uvRegions = [{
       id: 'front',         // Internal identifier (must be unique)
@@ -234,6 +281,14 @@
       // Add event listener for animation toggle
       document.getElementById('animation-toggle').addEventListener('click', toggleAnimation);
 
+      // Add event listeners for color controls
+      document.getElementById('apply-color-btn').addEventListener('click', applyColor);
+      document.querySelectorAll('.color-preset').forEach(preset => {
+        preset.addEventListener('click', function() {
+          document.getElementById('hoodieColor').value = this.dataset.color;
+        });
+      });
+
       // Load model
       loadModel();
 
@@ -242,6 +297,14 @@
 
       // Handle window resize
       window.addEventListener('resize', onWindowResize);
+    }
+
+    function applyColor() {
+      const colorValue = document.getElementById('hoodieColor').value;
+      if (hoodieMaterial) {
+        hoodieMaterial.color.set(colorValue);
+        hoodieMaterial.needsUpdate = true;
+      }
     }
 
     function toggleAnimation() {
@@ -365,12 +428,22 @@
         // Create a default white texture
         baseTexture = createDefaultTexture();
         
-        // Create decal material
-        decalMaterial = createDecalMaterial(baseTexture);
+        // Create base material for the hoodie
+        hoodieMaterial = new THREE.MeshStandardMaterial({
+          color: new THREE.Color(document.getElementById('hoodieColor').value),
+          roughness: 0.7,
+          metalness: 0.1
+        });
         
-        // Apply material to all meshes
+        // Create decal material
+        decalMaterial = createDecalMaterial(baseTexture, hoodieMaterial);
+        
+        // Apply materials to all meshes
         hoodieModel.traverse((child) => {
           if (child.isMesh) {
+            // Store the original material
+            child.userData.originalMaterial = child.material;
+            // Apply our custom material
             child.material = decalMaterial;
           }
         });
@@ -404,10 +477,11 @@
       return new THREE.CanvasTexture(canvas);
     }
 
-    function createDecalMaterial(baseTexture) {
+    function createDecalMaterial(baseTexture, baseMaterial) {
       // Create uniforms object
       const uniforms = {
         baseTexture: { value: baseTexture },
+        baseColor: { value: baseMaterial.color },
         decalCount: { value: 0 }
       };
 
@@ -422,6 +496,7 @@
       // Generate the fragment shader dynamically based on MAX_DECALS
       let fragmentShader = `
         uniform sampler2D baseTexture;
+        uniform vec3 baseColor;
         uniform int decalCount;
         varying vec2 vUV;
         
@@ -440,8 +515,9 @@
 
       fragmentShader += `
         void main() {
-          vec4 baseColor = texture2D(baseTexture, vUV);
-          vec4 finalColor = baseColor;
+          vec4 baseTexColor = texture2D(baseTexture, vUV);
+          vec4 baseColorWithAlpha = vec4(baseColor, 1.0);
+          vec4 finalColor = mix(baseTexColor, baseColorWithAlpha, 0.5);
           
           // Apply decals in order
       `;
@@ -708,6 +784,7 @@
       if (!decalMaterial) return;
       
       decalMaterial.uniforms.decalCount.value = stickers.length;
+      decalMaterial.uniforms.baseColor.value = hoodieMaterial.color;
       
       // Reset all uniforms first
       for (let i = 0; i < MAX_DECALS; i++) {
@@ -730,8 +807,12 @@
 
     function createFallbackModel() {
       const geometry = new THREE.BoxGeometry(1, 1, 1);
-      const material = new THREE.MeshBasicMaterial({ color: 0x4361ee });
-      hoodieModel = new THREE.Mesh(geometry, material);
+      hoodieMaterial = new THREE.MeshStandardMaterial({ 
+        color: new THREE.Color(document.getElementById('hoodieColor').value),
+        roughness: 0.7,
+        metalness: 0.1
+      });
+      hoodieModel = new THREE.Mesh(geometry, hoodieMaterial);
       scene.add(hoodieModel);
       
       document.getElementById('loading-overlay').style.display = 'none';
