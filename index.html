@@ -95,14 +95,33 @@
     .size-controls input {
       width: 100%;
     }
+    #instructions {
+      position: absolute;
+      bottom: 10px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: rgba(255,255,255,0.8);
+      padding: 10px;
+      border-radius: 5px;
+      z-index: 100;
+      text-align: center;
+    }
   </style>
 </head>
 <body>
   <div id="controls">
     <div id="sticker-controls-container">
-      <!-- Sticker controls will be added here dynamically -->
+      <div class="sticker-controls">
+        <div class="sticker-header">
+          <span>Current Decal</span>
+        </div>
+        <input type="file" id="sticker-upload" accept="image/*">
+        <div class="size-controls">
+          <div>Size: <input type="range" id="decal-size" min="0.1" max="1" step="0.05" value="0.3"></div>
+          <div>Rotation: <input type="range" id="decal-rotation" min="0" max="6.28" step="0.1" value="0"></div>
+        </div>
+      </div>
     </div>
-    <button id="add-sticker-btn">Add New Decal</button>
   </div>
   
   <div id="animation-controls">
@@ -123,6 +142,10 @@
       <div class="color-preset" style="background-color: #560bad;" data-color="#560bad"></div>
     </div>
     <button id="apply-color-btn">Apply Color</button>
+  </div>
+  
+  <div id="instructions">
+    Upload an image, then click anywhere on the hoodie to place it
   </div>
   
   <div id="loading-overlay">
@@ -152,6 +175,13 @@
     let decalMeshes = [];
     let isAnimationPlaying = true;
     let currentAnimationAction = null;
+    let uploadedTexture = null;
+    let currentDecalSize = 0.3;
+    let currentDecalRotation = 0;
+    
+    // For raycasting
+    const raycaster = new THREE.Raycaster();
+    const mouse = new THREE.Vector2();
 
     init();
 
@@ -186,8 +216,8 @@
       // Clock for animations
       clock = new THREE.Clock();
 
-      // Add event listener for adding new decals
-      document.getElementById('add-sticker-btn').addEventListener('click', addNewDecalControl);
+      // Add event listener for image upload
+      document.getElementById('sticker-upload').addEventListener('change', handleStickerUpload);
 
       // Add event listener for animation toggle
       document.getElementById('animation-toggle').addEventListener('click', toggleAnimation);
@@ -200,6 +230,17 @@
         });
       });
 
+      // Add event listeners for decal size and rotation
+      document.getElementById('decal-size').addEventListener('input', (e) => {
+        currentDecalSize = parseFloat(e.target.value);
+      });
+      document.getElementById('decal-rotation').addEventListener('input', (e) => {
+        currentDecalRotation = parseFloat(e.target.value);
+      });
+
+      // Add click event for placing decals
+      window.addEventListener('click', onClick, false);
+
       // Load model
       loadModel();
 
@@ -208,6 +249,76 @@
 
       // Handle window resize
       window.addEventListener('resize', onWindowResize);
+    }
+
+    function onClick(event) {
+      // Only place decals if we have an image uploaded
+      if (!uploadedTexture || !hoodieModel) return;
+
+      // Calculate mouse position in normalized device coordinates
+      const rect = renderer.domElement.getBoundingClientRect();
+      mouse.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
+      mouse.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
+
+      // Update the raycaster
+      raycaster.setFromCamera(mouse, camera);
+
+      // Calculate objects intersecting the picking ray
+      const intersects = raycaster.intersectObject(hoodieModel, true);
+      
+      if (intersects.length > 0) {
+        const hit = intersects[0];
+        placeDecalAt(hit.point, hit.face.normal, hit.object);
+      }
+    }
+
+    function placeDecalAt(position, normal, targetMesh) {
+      // Create orientation from the normal
+      const orientation = new THREE.Euler().setFromQuaternion(
+        new THREE.Quaternion().setFromUnitVectors(new THREE.Vector3(0, 0, 1), normal)
+      );
+      
+      // Apply additional rotation from the slider
+      orientation.z += currentDecalRotation;
+      
+      const size = new THREE.Vector3(currentDecalSize, currentDecalSize, currentDecalSize);
+
+      const decalMaterial = new THREE.MeshPhongMaterial({
+        map: uploadedTexture,
+        transparent: true,
+        depthTest: true,
+        depthWrite: false,
+        polygonOffset: true,
+        polygonOffsetFactor: -4,
+        shininess: 30
+      });
+
+      const decalGeo = new DecalGeometry(targetMesh, position, orientation, size);
+      const decalMesh = new THREE.Mesh(decalGeo, decalMaterial);
+      decalMesh.userData = { size: currentDecalSize, rotation: currentDecalRotation };
+      decalMesh.castShadow = true;
+      scene.add(decalMesh);
+      
+      // Store reference to this decal
+      decalMeshes.push(decalMesh);
+    }
+
+    function handleStickerUpload(event) {
+      const file = event.target.files[0];
+      if (!file) return;
+
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        uploadedTexture = new THREE.TextureLoader().load(e.target.result, () => {
+          // Show instructions
+          document.getElementById('instructions').style.display = 'block';
+          setTimeout(() => {
+            document.getElementById('instructions').style.display = 'none';
+          }, 3000);
+        });
+        uploadedTexture.anisotropy = renderer.capabilities.getMaxAnisotropy();
+      };
+      reader.readAsDataURL(file);
     }
 
     function applyColor() {
@@ -284,140 +395,11 @@
 
         // Hide loading overlay
         document.getElementById('loading-overlay').style.display = 'none';
-        
-        // Add a default decal control to start with
-        addNewDecalControl();
       } catch (error) {
         updateStatus('Failed to load model');
         console.error(error);
         createFallbackModel();
         document.getElementById('animation-toggle').style.display = 'none';
-      }
-    }
-
-    function addNewDecalControl() {
-      const decalId = 'decal-' + Date.now();
-      const decalDiv = document.createElement('div');
-      decalDiv.className = 'sticker-controls';
-      decalDiv.id = decalId + '-controls';
-      
-      decalDiv.innerHTML = `
-        <div class="sticker-header">
-          <span>Decal ${decalMeshes.length + 1}</span>
-          <span class="remove-sticker" data-id="${decalId}">×</span>
-        </div>
-        <input type="file" class="sticker-upload" accept="image/*" data-id="${decalId}">
-        <div class="size-controls">
-          <div>Size: <input type="range" class="decal-size" min="0.1" max="1" step="0.05" value="0.4" data-id="${decalId}"></div>
-          <div>Rotation: <input type="range" class="decal-rotation" min="0" max="6.28" step="0.1" value="0" data-id="${decalId}"></div>
-        </div>
-      `;
-      
-      document.getElementById('sticker-controls-container').appendChild(decalDiv);
-      
-      // Add event listeners
-      decalDiv.querySelector('.sticker-upload').addEventListener('change', (e) => handleDecalUpload(e, decalId));
-      decalDiv.querySelector('.decal-size').addEventListener('input', (e) => updateDecalSize(e, decalId));
-      decalDiv.querySelector('.decal-rotation').addEventListener('input', (e) => updateDecalRotation(e, decalId));
-      decalDiv.querySelector('.remove-sticker').addEventListener('click', (e) => removeDecal(e, decalId));
-    }
-
-    function handleDecalUpload(event, decalId) {
-      const file = event.target.files[0];
-      if (!file) return;
-
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        const texture = new THREE.TextureLoader().load(e.target.result, () => {
-          applyDecal(texture, decalId);
-        });
-        texture.anisotropy = renderer.capabilities.getMaxAnisotropy();
-      };
-      reader.readAsDataURL(file);
-    }
-
-    function applyDecal(texture, decalId) {
-      if (!hoodieModel) return;
-
-      // Find the first suitable mesh to apply the decal to
-      const targetMesh = hoodieModel.children.find(child => child.isMesh);
-      if (!targetMesh) return;
-
-      // Use the current camera target as decal position
-      const position = controls.target.clone();
-      
-      // Add some offset to place it on the front of the hoodie
-      position.add(new THREE.Vector3(0, 0.5, 0));
-      
-      // Get size from the control
-      const sizeControl = document.querySelector(`.decal-size[data-id="${decalId}"]`);
-      const sizeValue = sizeControl ? parseFloat(sizeControl.value) : 0.4;
-      const size = new THREE.Vector3(sizeValue, sizeValue, sizeValue);
-      
-      // Get rotation from the control
-      const rotationControl = document.querySelector(`.decal-rotation[data-id="${decalId}"]`);
-      const rotationValue = rotationControl ? parseFloat(rotationControl.value) : 0;
-      const orientation = new THREE.Euler(0, 0, rotationValue);
-
-      const decalMaterial = new THREE.MeshPhongMaterial({
-        map: texture,
-        transparent: true,
-        depthTest: true,
-        depthWrite: false,
-        polygonOffset: true,
-        polygonOffsetFactor: -4,
-        shininess: 30
-      });
-
-      const decalGeo = new DecalGeometry(targetMesh, position, orientation, size);
-      const decalMesh = new THREE.Mesh(decalGeo, decalMaterial);
-      decalMesh.userData.decalId = decalId;
-      decalMesh.castShadow = true;
-      scene.add(decalMesh);
-      
-      // Store reference to this decal
-      decalMeshes.push(decalMesh);
-    }
-
-    function updateDecalSize(event, decalId) {
-      const size = parseFloat(event.target.value);
-      const decalMesh = decalMeshes.find(mesh => mesh.userData.decalId === decalId);
-      if (decalMesh) {
-        // To change size, we need to recreate the decal with new size
-        const texture = decalMesh.material.map;
-        removeDecalMesh(decalId);
-        applyDecal(texture, decalId);
-      }
-    }
-
-    function updateDecalRotation(event, decalId) {
-      const rotation = parseFloat(event.target.value);
-      const decalMesh = decalMeshes.find(mesh => mesh.userData.decalId === decalId);
-      if (decalMesh) {
-        // To change rotation, we need to recreate the decal with new rotation
-        const texture = decalMesh.material.map;
-        removeDecalMesh(decalId);
-        applyDecal(texture, decalId);
-      }
-    }
-
-    function removeDecal(event, decalId) {
-      event.stopPropagation();
-      removeDecalMesh(decalId);
-      
-      // Remove the controls div
-      const element = document.getElementById(decalId + '-controls');
-      if (element) element.remove();
-    }
-
-    function removeDecalMesh(decalId) {
-      const index = decalMeshes.findIndex(mesh => mesh.userData.decalId === decalId);
-      if (index !== -1) {
-        const decalMesh = decalMeshes[index];
-        scene.remove(decalMesh);
-        if (decalMesh.geometry) decalMesh.geometry.dispose();
-        if (decalMesh.material) decalMesh.material.dispose();
-        decalMeshes.splice(index, 1);
       }
     }
 
