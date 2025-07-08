@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>3D Hoodie Viewer with Advanced Controls</title>
+  <title>3D Hoodie Viewer with Multiple Stickers</title>
   <style>
     body { margin: 0; overflow: hidden; font-family: Arial, sans-serif; }
     #viewer { width: 100vw; height: 100vh; }
@@ -91,76 +91,6 @@
       border-radius: 3px;
       cursor: pointer;
     }
-    #color-controls {
-      position: absolute;
-      top: 60px;
-      right: 10px;
-      z-index: 100;
-      background: rgba(255,255,255,0.8);
-      padding: 10px;
-      border-radius: 5px;
-      display: flex;
-      flex-direction: column;
-      gap: 10px;
-    }
-    #color-presets {
-      display: grid;
-      grid-template-columns: repeat(4, 1fr);
-      gap: 5px;
-    }
-    .color-preset {
-      width: 30px;
-      height: 30px;
-      border: 1px solid #ccc;
-      cursor: pointer;
-    }
-    #apply-color-btn {
-      padding: 5px 10px;
-      background: #4361ee;
-      color: white;
-      border: none;
-      border-radius: 3px;
-      cursor: pointer;
-    }
-    #environment-controls {
-      position: absolute;
-      top: 220px;
-      right: 10px;
-      z-index: 100;
-      background: rgba(255,255,255,0.8);
-      padding: 10px;
-      border-radius: 5px;
-      display: flex;
-      flex-direction: column;
-      gap: 10px;
-      width: 200px;
-    }
-    .control-group {
-      display: flex;
-      flex-direction: column;
-      gap: 5px;
-    }
-    .control-row {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-    }
-    select, input[type="range"] {
-      width: 100%;
-    }
-    #material-effects {
-      position: absolute;
-      top: 450px;
-      right: 10px;
-      z-index: 100;
-      background: rgba(255,255,255,0.8);
-      padding: 10px;
-      border-radius: 5px;
-      display: flex;
-      flex-direction: column;
-      gap: 10px;
-      width: 200px;
-    }
   </style>
 </head>
 <body>
@@ -175,89 +105,8 @@
     <button id="animation-toggle">Pause Animation</button>
   </div>
   
-  <div id="color-controls">
-    <label for="hoodieColor">Hoodie Color:</label>
-    <input type="color" id="hoodieColor" value="#4361ee">
-    <div id="color-presets">
-      <div class="color-preset" style="background-color: #4361ee;" data-color="#4361ee"></div>
-      <div class="color-preset" style="background-color: #3a0ca3;" data-color="#3a0ca3"></div>
-      <div class="color-preset" style="background-color: #7209b7;" data-color="#7209b7"></div>
-      <div class="color-preset" style="background-color: #f72585;" data-color="#f72585"></div>
-      <div class="color-preset" style="background-color: #4cc9f0;" data-color="#4cc9f0"></div>
-      <div class="color-preset" style="background-color: #4895ef;" data-color="#4895ef"></div>
-      <div class="color-preset" style="background-color: #3f37c9;" data-color="#3f37c9"></div>
-      <div class="color-preset" style="background-color: #560bad;" data-color="#560bad"></div>
-    </div>
-    <button id="apply-color-btn">Apply Color</button>
-  </div>
-  
-  <div id="environment-controls">
-    <div class="control-group">
-      <label for="environment-select">Environment:</label>
-      <select id="environment-select">
-        <option value="neutral">Neutral</option>
-        <option value="venice">Venice Sunset</option>
-        <option value="none">None</option>
-      </select>
-    </div>
-    <div class="control-group">
-      <label for="tone-mapping">Tone Mapping:</label>
-      <select id="tone-mapping">
-        <option value="aces">ACES Filmic</option>
-        <option value="linear">Linear</option>
-      </select>
-    </div>
-    <div class="control-group">
-      <div class="control-row">
-        <label for="exposure">Exposure:</label>
-        <span id="exposure-value">1.0</span>
-      </div>
-      <input type="range" id="exposure" min="0" max="2" step="0.1" value="1">
-    </div>
-    <div class="control-group">
-      <div class="control-row">
-        <label for="ambient-intensity">Ambient Intensity:</label>
-        <span id="ambient-intensity-value">0.5</span>
-      </div>
-      <input type="range" id="ambient-intensity" min="0" max="1" step="0.05" value="0.5">
-    </div>
-    <div class="control-group">
-      <div class="control-row">
-        <label for="direct-intensity">Direct Intensity:</label>
-        <span id="direct-intensity-value">1.0</span>
-      </div>
-      <input type="range" id="direct-intensity" min="0" max="2" step="0.1" value="1.0">
-    </div>
-  </div>
-  
-  <div id="material-effects">
-    <div class="control-group">
-      <label for="material-type">Material Effect:</label>
-      <select id="material-type">
-        <option value="default">Default</option>
-        <option value="wool">Wool</option>
-        <option value="leather">Leather</option>
-        <option value="polymer">Polymer</option>
-      </select>
-    </div>
-    <div class="control-group">
-      <div class="control-row">
-        <label for="roughness">Roughness:</label>
-        <span id="roughness-value">0.7</span>
-      </div>
-      <input type="range" id="roughness" min="0" max="1" step="0.05" value="0.7">
-    </div>
-    <div class="control-group">
-      <div class="control-row">
-        <label for="metalness">Metalness:</label>
-        <span id="metalness-value">0.1</span>
-      </div>
-      <input type="range" id="metalness" min="0" max="1" step="0.05" value="0.1">
-    </div>
-  </div>
-  
   <div id="uv-display">
-    Current UV: (0.0, 0.0)<br>
+    Current UV: (0.5, 0.5)<br>
     Scale: 0.5<br>
     Rotation: 0.0
   </div>
@@ -287,11 +136,9 @@
     import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
     import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
     import { DRACOLoader } from 'three/addons/loaders/DRACOLoader.js';
-    import { RGBELoader } from 'three/addons/loaders/RGBELoader.js';
-    import { PMREMGenerator } from 'three/addons/pmrem/PMREMGenerator.js';
 
     let scene, camera, renderer, controls, hoodieModel, mixer, clock;
-    let decalMaterial, baseTexture, hoodieMaterial, envMap, pmremGenerator;
+    let decalMaterial, baseTexture;
     let uvRegionCanvas, uvRegionCtx;
     const uvRegions = [{
       id: 'front',         // Internal identifier (must be unique)
@@ -302,35 +149,35 @@
       height: 0.4         // Height of the region (0-1)
     }];
 
-    // Updated position presets with absolute UV coordinates
+    // Updated position presets with scale and rotation
     const positionPresets = [
       { 
         name: "Back", 
-        uv: { u: 0.83, v: -0.36 }, // Absolute UV coordinates
+        position: { x: 0.83, y: -0.36 },
         scale: 0.30,
         rotation: 3.20
       },
       { 
         name: "Front", 
-        uv: { u: -0.42, v: -0.36 },
+        position: { x: -0.42, y: -0.36 },
         scale: 0.30,
         rotation: 3.20
       },
       { 
         name: "Left Arm", 
-        uv: { u: 0.44, v: 1.50 },
+        position: { x: 0.44, y: 1.50 },
         scale: 0.25,
         rotation: 2.90
       },
       { 
         name: "Right Arm", 
-        uv: { u: -0.50, v: 1.50 },
+        position: { x: -0.50, y: 1.50 },
         scale: 0.35,
         rotation: 3.00
       },
       { 
         name: "Hood", 
-        uv: { u: 1.50, v: 0.85 },
+        position: { x: 1.50, y: 0.85 },
         scale: 0.20,
         rotation: 3.30
       }
@@ -342,7 +189,6 @@
     const MAX_DECALS = 10; // Maximum number of decals we support
     let isAnimationPlaying = true;
     let currentAnimationAction = null;
-    let directionalLight, ambientLight;
 
     init();
 
@@ -355,18 +201,16 @@
       camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
       camera.position.z = 5;
 
-      // Setup renderer with tone mapping
+      // Setup renderer
       renderer = new THREE.WebGLRenderer({ antialias: true });
-      renderer.toneMapping = THREE.ACESFilmicToneMapping;
-      renderer.toneMappingExposure = 1.0;
       renderer.setSize(window.innerWidth, window.innerHeight);
       document.getElementById('viewer').appendChild(renderer.domElement);
 
       // Lights
-      ambientLight = new THREE.AmbientLight(0xffffff, 0.5);
+      const ambientLight = new THREE.AmbientLight(0xffffff, 0.5);
       scene.add(ambientLight);
       
-      directionalLight = new THREE.DirectionalLight(0xffffff, 1);
+      const directionalLight = new THREE.DirectionalLight(0xffffff, 1);
       directionalLight.position.set(1, 1, 1);
       scene.add(directionalLight);
 
@@ -377,10 +221,6 @@
       // Clock for animations
       clock = new THREE.Clock();
 
-      // Setup PMREM generator for environment maps
-      pmremGenerator = new PMREMGenerator(renderer);
-      pmremGenerator.compileCubemapShader();
-
       // Setup UV region display
       uvRegionCanvas = document.getElementById('uv-region-canvas');
       uvRegionCanvas.width = 200;
@@ -388,8 +228,11 @@
       uvRegionCtx = uvRegionCanvas.getContext('2d');
       drawUVRegion();
 
-      // Add event listeners
-      setupEventListeners();
+      // Add event listener for adding new stickers
+      document.getElementById('add-sticker-btn').addEventListener('click', addNewSticker);
+
+      // Add event listener for animation toggle
+      document.getElementById('animation-toggle').addEventListener('click', toggleAnimation);
 
       // Load model
       loadModel();
@@ -399,138 +242,6 @@
 
       // Handle window resize
       window.addEventListener('resize', onWindowResize);
-    }
-
-    function setupEventListeners() {
-      // Sticker controls
-      document.getElementById('add-sticker-btn').addEventListener('click', addNewSticker);
-      document.getElementById('animation-toggle').addEventListener('click', toggleAnimation);
-
-      // Color controls
-      document.getElementById('apply-color-btn').addEventListener('click', applyColor);
-      document.querySelectorAll('.color-preset').forEach(preset => {
-        preset.addEventListener('click', function() {
-          document.getElementById('hoodieColor').value = this.dataset.color;
-        });
-      });
-
-      // Environment controls
-      document.getElementById('environment-select').addEventListener('change', updateEnvironment);
-      document.getElementById('tone-mapping').addEventListener('change', updateToneMapping);
-      document.getElementById('exposure').addEventListener('input', updateExposure);
-      document.getElementById('ambient-intensity').addEventListener('input', updateAmbientLight);
-      document.getElementById('direct-intensity').addEventListener('input', updateDirectLight);
-
-      // Material effects
-      document.getElementById('material-type').addEventListener('change', updateMaterialEffect);
-      document.getElementById('roughness').addEventListener('input', updateMaterialProperties);
-      document.getElementById('metalness').addEventListener('input', updateMaterialProperties);
-    }
-
-    function updateEnvironment() {
-      const envType = document.getElementById('environment-select').value;
-      
-      if (envType === 'none') {
-        scene.environment = null;
-        if (hoodieMaterial) {
-          hoodieMaterial.envMap = null;
-          hoodieMaterial.needsUpdate = true;
-        }
-        return;
-      }
-      
-      const path = envType === 'venice' ? 
-        'https://cdn.jsdelivr.net/gh/mrdoob/three.js@dev/examples/textures/equirectangular/venice_sunset_1k.hdr' :
-        'https://cdn.jsdelivr.net/gh/mrdoob/three.js@dev/examples/textures/equirectangular/neutral.hdr';
-      
-      new RGBELoader()
-        .load(path, (texture) => {
-          envMap = pmremGenerator.fromEquirectangular(texture).texture;
-          scene.environment = envMap;
-          texture.dispose();
-          
-          if (hoodieMaterial) {
-            hoodieMaterial.envMap = envMap;
-            hoodieMaterial.needsUpdate = true;
-          }
-        }, undefined, (error) => {
-          console.error('Error loading environment map:', error);
-          updateStatus('Failed to load environment map');
-        });
-    }
-
-    function updateToneMapping() {
-      const mapping = document.getElementById('tone-mapping').value;
-      renderer.toneMapping = mapping === 'aces' ? THREE.ACESFilmicToneMapping : THREE.LinearToneMapping;
-    }
-
-    function updateExposure() {
-      const value = parseFloat(document.getElementById('exposure').value);
-      renderer.toneMappingExposure = value;
-      document.getElementById('exposure-value').textContent = value.toFixed(1);
-    }
-
-    function updateAmbientLight() {
-      const value = parseFloat(document.getElementById('ambient-intensity').value);
-      ambientLight.intensity = value;
-      document.getElementById('ambient-intensity-value').textContent = value.toFixed(2);
-    }
-
-    function updateDirectLight() {
-      const value = parseFloat(document.getElementById('direct-intensity').value);
-      directionalLight.intensity = value;
-      document.getElementById('direct-intensity-value').textContent = value.toFixed(1);
-    }
-
-    function updateMaterialEffect() {
-      const effect = document.getElementById('material-type').value;
-      if (!hoodieMaterial) return;
-      
-      switch(effect) {
-        case 'wool':
-          hoodieMaterial.roughness = 0.9;
-          hoodieMaterial.metalness = 0.0;
-          break;
-        case 'leather':
-          hoodieMaterial.roughness = 0.5;
-          hoodieMaterial.metalness = 0.1;
-          break;
-        case 'polymer':
-          hoodieMaterial.roughness = 0.3;
-          hoodieMaterial.metalness = 0.8;
-          break;
-        default:
-          hoodieMaterial.roughness = 0.7;
-          hoodieMaterial.metalness = 0.1;
-      }
-      
-      // Update sliders to match new values
-      document.getElementById('roughness').value = hoodieMaterial.roughness;
-      document.getElementById('metalness').value = hoodieMaterial.metalness;
-      document.getElementById('roughness-value').textContent = hoodieMaterial.roughness.toFixed(2);
-      document.getElementById('metalness-value').textContent = hoodieMaterial.metalness.toFixed(2);
-      
-      hoodieMaterial.needsUpdate = true;
-    }
-
-    function updateMaterialProperties() {
-      if (!hoodieMaterial) return;
-      
-      hoodieMaterial.roughness = parseFloat(document.getElementById('roughness').value);
-      hoodieMaterial.metalness = parseFloat(document.getElementById('metalness').value);
-      
-      document.getElementById('roughness-value').textContent = hoodieMaterial.roughness.toFixed(2);
-      document.getElementById('metalness-value').textContent = hoodieMaterial.metalness.toFixed(2);
-      
-      hoodieMaterial.needsUpdate = true;
-    }
-
-    function applyColor() {
-      const colorValue = document.getElementById('hoodieColor').value;
-      if (hoodieMaterial) {
-        hoodieMaterial.color.set(colorValue);
-        hoodieMaterial.needsUpdate = true;
-      }
     }
 
     function toggleAnimation() {
@@ -612,8 +323,8 @@
       if (stickers.length > 0) {
         const activeSticker = stickers[activeStickerIndex];
         updateUVDisplay(
-          activeSticker.position.x, 
-          activeSticker.position.y,
+          0.5 + activeSticker.position.x, 
+          0.5 + activeSticker.position.y,
           activeSticker.scale,
           activeSticker.rotation
         );
@@ -654,23 +365,12 @@
         // Create a default white texture
         baseTexture = createDefaultTexture();
         
-        // Create base material for the hoodie
-        hoodieMaterial = new THREE.MeshStandardMaterial({
-          color: new THREE.Color(document.getElementById('hoodieColor').value),
-          roughness: parseFloat(document.getElementById('roughness').value),
-          metalness: parseFloat(document.getElementById('metalness').value),
-          envMap: scene.environment
-        });
-        
         // Create decal material
-        decalMaterial = createDecalMaterial(baseTexture, hoodieMaterial);
+        decalMaterial = createDecalMaterial(baseTexture);
         
-        // Apply materials to all meshes
+        // Apply material to all meshes
         hoodieModel.traverse((child) => {
           if (child.isMesh) {
-            // Store the original material
-            child.userData.originalMaterial = child.material;
-            // Apply our custom material
             child.material = decalMaterial;
           }
         });
@@ -681,9 +381,6 @@
         hoodieModel.position.sub(center);
         camera.position.z = box.getSize(new THREE.Vector3()).length() * 1.5;
         controls.update();
-
-        // Load default environment
-        updateEnvironment();
 
         // Hide loading overlay
         document.getElementById('loading-overlay').style.display = 'none';
@@ -707,11 +404,10 @@
       return new THREE.CanvasTexture(canvas);
     }
 
-    function createDecalMaterial(baseTexture, baseMaterial) {
+    function createDecalMaterial(baseTexture) {
       // Create uniforms object
       const uniforms = {
         baseTexture: { value: baseTexture },
-        baseColor: { value: baseMaterial.color },
         decalCount: { value: 0 }
       };
 
@@ -726,7 +422,6 @@
       // Generate the fragment shader dynamically based on MAX_DECALS
       let fragmentShader = `
         uniform sampler2D baseTexture;
-        uniform vec3 baseColor;
         uniform int decalCount;
         varying vec2 vUV;
         
@@ -745,9 +440,8 @@
 
       fragmentShader += `
         void main() {
-          vec4 baseTexColor = texture2D(baseTexture, vUV);
-          vec4 baseColorWithAlpha = vec4(baseColor, 1.0);
-          vec4 finalColor = mix(baseTexColor, baseColorWithAlpha, 0.5);
+          vec4 baseColor = texture2D(baseTexture, vUV);
+          vec4 finalColor = baseColor;
           
           // Apply decals in order
       `;
@@ -840,15 +534,15 @@
           <span class="remove-sticker" data-id="${sticker.id}">×</span>
         </div>
         <input type="file" class="sticker-upload" accept="image/*" data-id="${sticker.id}">
-        <div>Position: <input type="range" class="position-x" min="-2" max="2" step="0.01" value="0" data-id="${sticker.id}"> X</div>
-        <div><input type="range" class="position-y" min="-2" max="2" step="0.01" value="0" data-id="${sticker.id}"> Y</div>
+        <div>Position: <input type="range" class="position-x" min="-1" max="1" step="0.01" value="0" data-id="${sticker.id}"> X</div>
+        <div><input type="range" class="position-y" min="-1" max="1" step="0.01" value="0" data-id="${sticker.id}"> Y</div>
         <div>Scale: <input type="range" class="scale" min="0.1" max="2" step="0.05" value="0.5" data-id="${sticker.id}"></div>
         <div>Rotation: <input type="range" class="rotation" min="0" max="6.28" step="0.1" value="0" data-id="${sticker.id}"></div>
         <div class="position-presets">
           ${positionPresets.map(preset => 
             `<button class="position-preset-btn" 
-              data-u="${preset.uv.u}" 
-              data-v="${preset.uv.v}"
+              data-x="${preset.position.x}" 
+              data-y="${preset.position.y}"
               data-scale="${preset.scale}"
               data-rotation="${preset.rotation}">${preset.name}</button>`
           ).join('')}
@@ -869,11 +563,11 @@
       // Add event listeners for position preset buttons
       stickerDiv.querySelectorAll('.position-preset-btn').forEach(btn => {
         btn.addEventListener('click', (e) => {
-          const u = parseFloat(e.target.dataset.u);
-          const v = parseFloat(e.target.dataset.v);
+          const x = parseFloat(e.target.dataset.x);
+          const y = parseFloat(e.target.dataset.y);
           const scale = parseFloat(e.target.dataset.scale);
           const rotation = parseFloat(e.target.dataset.rotation);
-          applyPositionPreset(sticker.id, u, v, scale, rotation);
+          applyPositionPreset(sticker.id, x, y, scale, rotation);
         });
       });
       
@@ -883,18 +577,18 @@
       });
     }
 
-    function applyPositionPreset(stickerId, u, v, scale, rotation) {
+    function applyPositionPreset(stickerId, x, y, scale, rotation) {
       const stickerIndex = stickers.findIndex(s => s.id === stickerId);
       if (stickerIndex !== -1) {
-        stickers[stickerIndex].position.set(u, v);
+        stickers[stickerIndex].position.set(x, y);
         stickers[stickerIndex].scale = scale;
         stickers[stickerIndex].rotation = rotation;
         
         // Update the slider controls to reflect the new values
         const stickerDiv = document.getElementById(stickerId + '-controls');
         if (stickerDiv) {
-          stickerDiv.querySelector('.position-x').value = u;
-          stickerDiv.querySelector('.position-y').value = v;
+          stickerDiv.querySelector('.position-x').value = x;
+          stickerDiv.querySelector('.position-y').value = y;
           stickerDiv.querySelector('.scale').value = scale;
           stickerDiv.querySelector('.rotation').value = rotation;
         }
@@ -1014,7 +708,6 @@
       if (!decalMaterial) return;
       
       decalMaterial.uniforms.decalCount.value = stickers.length;
-      decalMaterial.uniforms.baseColor.value = hoodieMaterial.color;
       
       // Reset all uniforms first
       for (let i = 0; i < MAX_DECALS; i++) {
@@ -1037,13 +730,8 @@
 
     function createFallbackModel() {
       const geometry = new THREE.BoxGeometry(1, 1, 1);
-      hoodieMaterial = new THREE.MeshStandardMaterial({ 
-        color: new THREE.Color(document.getElementById('hoodieColor').value),
-        roughness: parseFloat(document.getElementById('roughness').value),
-        metalness: parseFloat(document.getElementById('metalness').value),
-        envMap: scene.environment
-      });
-      hoodieModel = new THREE.Mesh(geometry, hoodieMaterial);
+      const material = new THREE.MeshBasicMaterial({ color: 0x4361ee });
+      hoodieModel = new THREE.Mesh(geometry, material);
       scene.add(hoodieModel);
       
       document.getElementById('loading-overlay').style.display = 'none';
