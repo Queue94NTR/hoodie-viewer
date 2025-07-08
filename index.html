@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>3D Hoodie Viewer with Multiple Stickers</title>
+  <title>3D Hoodie Viewer with Decals</title>
   <style>
     body { margin: 0; overflow: hidden; font-family: Arial, sans-serif; }
     #viewer { width: 100vw; height: 100vh; }
@@ -24,19 +24,6 @@
     }
     @keyframes spin { to { transform: rotate(360deg); } }
     #status { margin-top: 10px; font-size: 1em; }
-    #uv-display {
-      position: absolute; bottom: 10px; left: 10px; z-index: 100;
-      background: rgba(255,255,255,0.8); padding: 10px; border-radius: 5px;
-      font-family: monospace; font-size: 14px;
-    }
-    #uv-region-display {
-      position: absolute; bottom: 10px; right: 10px; z-index: 100;
-      background: rgba(255,255,255,0.8); padding: 10px; border-radius: 5px;
-      width: 200px; height: 200px;
-    }
-    #uv-region-display canvas {
-      width: 100%; height: 100%;
-    }
     .sticker-controls {
       border: 1px solid #ddd; padding: 10px; margin-top: 10px;
       border-radius: 5px; background: rgba(255,255,255,0.7);
@@ -48,31 +35,11 @@
     .remove-sticker {
       color: red; cursor: pointer;
     }
-    .active-sticker {
-      background: rgba(67, 97, 238, 0.2);
-    }
     #add-sticker-btn {
       margin-top: 10px; padding: 5px 10px;
       background: #4361ee; color: white;
       border: none; border-radius: 3px;
       cursor: pointer;
-    }
-    .position-presets {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 5px;
-      margin-top: 5px;
-    }
-    .position-preset-btn {
-      padding: 3px 6px;
-      background: #f0f0f0;
-      border: 1px solid #ccc;
-      border-radius: 3px;
-      cursor: pointer;
-      font-size: 12px;
-    }
-    .position-preset-btn:hover {
-      background: #e0e0e0;
     }
     #animation-controls {
       position: absolute;
@@ -122,6 +89,12 @@
       border-radius: 3px;
       cursor: pointer;
     }
+    .size-controls {
+      margin-top: 10px;
+    }
+    .size-controls input {
+      width: 100%;
+    }
   </style>
 </head>
 <body>
@@ -129,7 +102,7 @@
     <div id="sticker-controls-container">
       <!-- Sticker controls will be added here dynamically -->
     </div>
-    <button id="add-sticker-btn">Add New Sticker</button>
+    <button id="add-sticker-btn">Add New Decal</button>
   </div>
   
   <div id="animation-controls">
@@ -152,17 +125,6 @@
     <button id="apply-color-btn">Apply Color</button>
   </div>
   
-  <div id="uv-display">
-    Current UV: (0.0, 0.0)<br>
-    Scale: 0.5<br>
-    Rotation: 0.0
-  </div>
-  
-  <div id="uv-region-display">
-    <canvas id="uv-region-canvas"></canvas>
-    <div>Front Main Region</div>
-  </div>
-  
   <div id="loading-overlay">
     <div class="spinner"></div>
     <div id="status">Loading 3D Hoodie Viewer...</div>
@@ -183,57 +145,11 @@
     import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
     import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
     import { DRACOLoader } from 'three/addons/loaders/DRACOLoader.js';
+    import { DecalGeometry } from 'three/addons/geometries/DecalGeometry.js';
 
     let scene, camera, renderer, controls, hoodieModel, mixer, clock;
-    let decalMaterial, baseTexture, hoodieMaterial;
-    let uvRegionCanvas, uvRegionCtx;
-    const uvRegions = [{
-      id: 'front',         // Internal identifier (must be unique)
-      name: 'Front Main',  // Display name shown in UI
-      u: 0.5,             // Horizontal center position (0-1)
-      v: 0.5,             // Vertical center position (0-1)
-      width: 0.3,         // Width of the region (0-1)
-      height: 0.4         // Height of the region (0-1)
-    }];
-
-    // Updated position presets with absolute UV coordinates
-    const positionPresets = [
-      { 
-        name: "Back", 
-        uv: { u: 0.83, v: -0.36 }, // Absolute UV coordinates
-        scale: 0.30,
-        rotation: 3.20
-      },
-      { 
-        name: "Front", 
-        uv: { u: -0.42, v: -0.36 },
-        scale: 0.30,
-        rotation: 3.20
-      },
-      { 
-        name: "Left Arm", 
-        uv: { u: 0.44, v: 1.50 },
-        scale: 0.25,
-        rotation: 2.90
-      },
-      { 
-        name: "Right Arm", 
-        uv: { u: -0.50, v: 1.50 },
-        scale: 0.35,
-        rotation: 3.00
-      },
-      { 
-        name: "Hood", 
-        uv: { u: 1.50, v: 0.85 },
-        scale: 0.20,
-        rotation: 3.30
-      }
-    ];
-
-    // Array to store all stickers
-    let stickers = [];
-    let activeStickerIndex = 0;
-    const MAX_DECALS = 10; // Maximum number of decals we support
+    let hoodieMaterial;
+    let decalMeshes = [];
     let isAnimationPlaying = true;
     let currentAnimationAction = null;
 
@@ -251,6 +167,7 @@
       // Setup renderer
       renderer = new THREE.WebGLRenderer({ antialias: true });
       renderer.setSize(window.innerWidth, window.innerHeight);
+      renderer.shadowMap.enabled = true;
       document.getElementById('viewer').appendChild(renderer.domElement);
 
       // Lights
@@ -259,6 +176,7 @@
       
       const directionalLight = new THREE.DirectionalLight(0xffffff, 1);
       directionalLight.position.set(1, 1, 1);
+      directionalLight.castShadow = true;
       scene.add(directionalLight);
 
       // Controls
@@ -268,15 +186,8 @@
       // Clock for animations
       clock = new THREE.Clock();
 
-      // Setup UV region display
-      uvRegionCanvas = document.getElementById('uv-region-canvas');
-      uvRegionCanvas.width = 200;
-      uvRegionCanvas.height = 200;
-      uvRegionCtx = uvRegionCanvas.getContext('2d');
-      drawUVRegion();
-
-      // Add event listener for adding new stickers
-      document.getElementById('add-sticker-btn').addEventListener('click', addNewSticker);
+      // Add event listener for adding new decals
+      document.getElementById('add-sticker-btn').addEventListener('click', addNewDecalControl);
 
       // Add event listener for animation toggle
       document.getElementById('animation-toggle').addEventListener('click', toggleAnimation);
@@ -301,9 +212,20 @@
 
     function applyColor() {
       const colorValue = document.getElementById('hoodieColor').value;
-      if (hoodieMaterial) {
-        hoodieMaterial.color.set(colorValue);
-        hoodieMaterial.needsUpdate = true;
+      if (hoodieModel) {
+        hoodieModel.traverse(child => {
+          if (child.isMesh && child.material) {
+            if (Array.isArray(child.material)) {
+              child.material.forEach(mat => {
+                if (mat.isMeshStandardMaterial) {
+                  mat.color.set(colorValue);
+                }
+              });
+            } else if (child.material.isMeshStandardMaterial) {
+              child.material.color.set(colorValue);
+            }
+          }
+        });
       }
     }
 
@@ -321,86 +243,6 @@
       }
     }
 
-    function drawUVRegion() {
-      const region = uvRegions[0];
-      const canvasSize = 200;
-      const padding = 10;
-      
-      // Clear canvas
-      uvRegionCtx.clearRect(0, 0, canvasSize, canvasSize);
-      
-      // Draw background
-      uvRegionCtx.fillStyle = '#ffffff';
-      uvRegionCtx.fillRect(0, 0, canvasSize, canvasSize);
-      
-      // Draw region outline
-      uvRegionCtx.strokeStyle = '#4361ee';
-      uvRegionCtx.lineWidth = 2;
-      uvRegionCtx.beginPath();
-      uvRegionCtx.rect(
-        padding + (region.u - region.width/2) * (canvasSize - 2*padding),
-        padding + (1 - region.v - region.height/2) * (canvasSize - 2*padding),
-        region.width * (canvasSize - 2*padding),
-        region.height * (canvasSize - 2*padding)
-      );
-      uvRegionCtx.stroke();
-      
-      // Draw center point
-      uvRegionCtx.fillStyle = '#ff0000';
-      uvRegionCtx.beginPath();
-      uvRegionCtx.arc(
-        padding + region.u * (canvasSize - 2*padding),
-        padding + (1 - region.v) * (canvasSize - 2*padding),
-        3, 0, Math.PI * 2
-      );
-      uvRegionCtx.fill();
-      
-      // Draw all sticker positions
-      stickers.forEach((sticker, index) => {
-        const posX = sticker.position.x;
-        const posY = sticker.position.y;
-        const isActive = index === activeStickerIndex;
-        
-        uvRegionCtx.fillStyle = isActive ? '#00ff00' : '#4361ee';
-        uvRegionCtx.beginPath();
-        uvRegionCtx.arc(
-          padding + (region.u + posX) * (canvasSize - 2*padding),
-          padding + (1 - region.v - posY) * (canvasSize - 2*padding),
-          5, 0, Math.PI * 2
-        );
-        uvRegionCtx.fill();
-        
-        // Draw scale indicator
-        const scale = sticker.scale * 20;
-        uvRegionCtx.strokeStyle = isActive ? '#00ff00' : '#4361ee';
-        uvRegionCtx.beginPath();
-        uvRegionCtx.arc(
-          padding + (region.u + posX) * (canvasSize - 2*padding),
-          padding + (1 - region.v - posY) * (canvasSize - 2*padding),
-          scale, 0, Math.PI * 2
-        );
-        uvRegionCtx.stroke();
-      });
-      
-      // Update UV display for active sticker
-      if (stickers.length > 0) {
-        const activeSticker = stickers[activeStickerIndex];
-        updateUVDisplay(
-          activeSticker.position.x, 
-          activeSticker.position.y,
-          activeSticker.scale,
-          activeSticker.rotation
-        );
-      }
-    }
-
-    function updateUVDisplay(u, v, scale, rotation) {
-      document.getElementById('uv-display').innerHTML = 
-        `Current UV: (${u.toFixed(2)}, ${v.toFixed(2)})<br>
-         Scale: ${scale.toFixed(2)}<br>
-         Rotation: ${rotation.toFixed(2)}`;
-    }
-
     async function loadModel() {
       updateStatus('Loading hoodie model...');
       
@@ -414,6 +256,14 @@
         hoodieModel = gltf.scene;
         scene.add(hoodieModel);
 
+        // Enable shadows for all meshes
+        hoodieModel.traverse(child => {
+          if (child.isMesh) {
+            child.castShadow = true;
+            child.receiveShadow = true;
+          }
+        });
+
         // Setup animations if available
         if (gltf.animations && gltf.animations.length > 0) {
           mixer = new THREE.AnimationMixer(hoodieModel);
@@ -425,29 +275,6 @@
           document.getElementById('animation-toggle').style.display = 'none';
         }
 
-        // Create a default white texture
-        baseTexture = createDefaultTexture();
-        
-        // Create base material for the hoodie
-        hoodieMaterial = new THREE.MeshStandardMaterial({
-          color: new THREE.Color(document.getElementById('hoodieColor').value),
-          roughness: 0.7,
-          metalness: 0.1
-        });
-        
-        // Create decal material
-        decalMaterial = createDecalMaterial(baseTexture, hoodieMaterial);
-        
-        // Apply materials to all meshes
-        hoodieModel.traverse((child) => {
-          if (child.isMesh) {
-            // Store the original material
-            child.userData.originalMaterial = child.material;
-            // Apply our custom material
-            child.material = decalMaterial;
-          }
-        });
-
         // Center model
         const box = new THREE.Box3().setFromObject(hoodieModel);
         const center = box.getCenter(new THREE.Vector3());
@@ -458,8 +285,8 @@
         // Hide loading overlay
         document.getElementById('loading-overlay').style.display = 'none';
         
-        // Add a default sticker to start with
-        addNewSticker();
+        // Add a default decal control to start with
+        addNewDecalControl();
       } catch (error) {
         updateStatus('Failed to load model');
         console.error(error);
@@ -468,341 +295,130 @@
       }
     }
 
-    function createDefaultTexture() {
-      const canvas = document.createElement('canvas');
-      canvas.width = canvas.height = 2;
-      const ctx = canvas.getContext('2d');
-      ctx.fillStyle = '#4361ee';
-      ctx.fillRect(0, 0, 2, 2);
-      return new THREE.CanvasTexture(canvas);
-    }
-
-    function createDecalMaterial(baseTexture, baseMaterial) {
-      // Create uniforms object
-      const uniforms = {
-        baseTexture: { value: baseTexture },
-        baseColor: { value: baseMaterial.color },
-        decalCount: { value: 0 }
-      };
-
-      // Add texture slots for up to MAX_DECALS decals
-      for (let i = 0; i < MAX_DECALS; i++) {
-        uniforms[`decalTexture${i}`] = { value: null };
-        uniforms[`decalPosition${i}`] = { value: new THREE.Vector2(0, 0) };
-        uniforms[`decalScale${i}`] = { value: 1.0 };
-        uniforms[`decalRotation${i}`] = { value: 0.0 };
-      }
-
-      // Generate the fragment shader dynamically based on MAX_DECALS
-      let fragmentShader = `
-        uniform sampler2D baseTexture;
-        uniform vec3 baseColor;
-        uniform int decalCount;
-        varying vec2 vUV;
-        
-        // Declare all decal uniforms
-      `;
-
-      // Add uniform declarations
-      for (let i = 0; i < MAX_DECALS; i++) {
-        fragmentShader += `
-          uniform sampler2D decalTexture${i};
-          uniform vec2 decalPosition${i};
-          uniform float decalScale${i};
-          uniform float decalRotation${i};
-        `;
-      }
-
-      fragmentShader += `
-        void main() {
-          vec4 baseTexColor = texture2D(baseTexture, vUV);
-          vec4 baseColorWithAlpha = vec4(baseColor, 1.0);
-          vec4 finalColor = mix(baseTexColor, baseColorWithAlpha, 0.5);
-          
-          // Apply decals in order
-      `;
-
-      // Add decal application logic
-      for (let i = 0; i < MAX_DECALS; i++) {
-        fragmentShader += `
-          if (decalCount > ${i}) {
-            vec2 center = vec2(0.5);
-            vec2 uv = vUV - center;
-            
-            // Apply rotation
-            float cosRot = cos(decalRotation${i});
-            float sinRot = sin(decalRotation${i});
-            uv = vec2(
-              uv.x * cosRot - uv.y * sinRot,
-              uv.x * sinRot + uv.y * cosRot
-            );
-            
-            // Apply scale and position
-            uv = uv / decalScale${i} + decalPosition${i} + center;
-            
-            if (uv.x >= 0.0 && uv.x <= 1.0 && uv.y >= 0.0 && uv.y <= 1.0) {
-              vec4 decalColor = texture2D(decalTexture${i}, uv);
-              finalColor = mix(finalColor, decalColor, decalColor.a);
-            }
-          }
-        `;
-      }
-
-      fragmentShader += `
-          gl_FragColor = finalColor;
-        }
-      `;
-
-      const vertexShader = `
-        varying vec2 vUV;
-        void main() {
-          vUV = uv;
-          gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
-        }
-      `;
-
-      return new THREE.ShaderMaterial({
-        uniforms: uniforms,
-        vertexShader: vertexShader,
-        fragmentShader: fragmentShader,
-        transparent: true
-      });
-    }
-
-    function addNewSticker() {
-      if (stickers.length >= MAX_DECALS) {
-        alert(`Maximum number of stickers (${MAX_DECALS}) reached`);
-        return;
-      }
-
-      const stickerId = 'sticker-' + Date.now();
-      const newSticker = {
-        id: stickerId,
-        texture: null,
-        position: new THREE.Vector2(0, 0),
-        scale: 0.5,
-        rotation: 0,
-        element: null,
-        index: stickers.length
-      };
+    function addNewDecalControl() {
+      const decalId = 'decal-' + Date.now();
+      const decalDiv = document.createElement('div');
+      decalDiv.className = 'sticker-controls';
+      decalDiv.id = decalId + '-controls';
       
-      stickers.push(newSticker);
-      activeStickerIndex = stickers.length - 1;
-      
-      createStickerControls(newSticker);
-      updateDecalUniforms();
-      drawUVRegion();
-    }
-
-    function createStickerControls(sticker) {
-      const container = document.getElementById('sticker-controls-container');
-      
-      const stickerDiv = document.createElement('div');
-      stickerDiv.className = 'sticker-controls';
-      stickerDiv.id = sticker.id + '-controls';
-      if (stickers.length - 1 === activeStickerIndex) {
-        stickerDiv.classList.add('active-sticker');
-      }
-      
-      stickerDiv.innerHTML = `
+      decalDiv.innerHTML = `
         <div class="sticker-header">
-          <span>Sticker ${sticker.index + 1}</span>
-          <span class="remove-sticker" data-id="${sticker.id}">×</span>
+          <span>Decal ${decalMeshes.length + 1}</span>
+          <span class="remove-sticker" data-id="${decalId}">×</span>
         </div>
-        <input type="file" class="sticker-upload" accept="image/*" data-id="${sticker.id}">
-        <div>Position: <input type="range" class="position-x" min="-2" max="2" step="0.01" value="0" data-id="${sticker.id}"> X</div>
-        <div><input type="range" class="position-y" min="-2" max="2" step="0.01" value="0" data-id="${sticker.id}"> Y</div>
-        <div>Scale: <input type="range" class="scale" min="0.1" max="2" step="0.05" value="0.5" data-id="${sticker.id}"></div>
-        <div>Rotation: <input type="range" class="rotation" min="0" max="6.28" step="0.1" value="0" data-id="${sticker.id}"></div>
-        <div class="position-presets">
-          ${positionPresets.map(preset => 
-            `<button class="position-preset-btn" 
-              data-u="${preset.uv.u}" 
-              data-v="${preset.uv.v}"
-              data-scale="${preset.scale}"
-              data-rotation="${preset.rotation}">${preset.name}</button>`
-          ).join('')}
+        <input type="file" class="sticker-upload" accept="image/*" data-id="${decalId}">
+        <div class="size-controls">
+          <div>Size: <input type="range" class="decal-size" min="0.1" max="1" step="0.05" value="0.4" data-id="${decalId}"></div>
+          <div>Rotation: <input type="range" class="decal-rotation" min="0" max="6.28" step="0.1" value="0" data-id="${decalId}"></div>
         </div>
       `;
       
-      container.appendChild(stickerDiv);
-      sticker.element = stickerDiv;
+      document.getElementById('sticker-controls-container').appendChild(decalDiv);
       
       // Add event listeners
-      stickerDiv.querySelector('.sticker-upload').addEventListener('change', (e) => handleStickerUpload(e, sticker.id));
-      stickerDiv.querySelector('.position-x').addEventListener('input', (e) => updateStickerPosition(e, sticker.id, 'x'));
-      stickerDiv.querySelector('.position-y').addEventListener('input', (e) => updateStickerPosition(e, sticker.id, 'y'));
-      stickerDiv.querySelector('.scale').addEventListener('input', (e) => updateStickerScale(e, sticker.id));
-      stickerDiv.querySelector('.rotation').addEventListener('input', (e) => updateStickerRotation(e, sticker.id));
-      stickerDiv.querySelector('.remove-sticker').addEventListener('click', (e) => removeSticker(e, sticker.id));
-      
-      // Add event listeners for position preset buttons
-      stickerDiv.querySelectorAll('.position-preset-btn').forEach(btn => {
-        btn.addEventListener('click', (e) => {
-          const u = parseFloat(e.target.dataset.u);
-          const v = parseFloat(e.target.dataset.v);
-          const scale = parseFloat(e.target.dataset.scale);
-          const rotation = parseFloat(e.target.dataset.rotation);
-          applyPositionPreset(sticker.id, u, v, scale, rotation);
-        });
-      });
-      
-      // Make sticker active when clicked
-      stickerDiv.addEventListener('click', () => {
-        setActiveSticker(sticker.id);
-      });
+      decalDiv.querySelector('.sticker-upload').addEventListener('change', (e) => handleDecalUpload(e, decalId));
+      decalDiv.querySelector('.decal-size').addEventListener('input', (e) => updateDecalSize(e, decalId));
+      decalDiv.querySelector('.decal-rotation').addEventListener('input', (e) => updateDecalRotation(e, decalId));
+      decalDiv.querySelector('.remove-sticker').addEventListener('click', (e) => removeDecal(e, decalId));
     }
 
-    function applyPositionPreset(stickerId, u, v, scale, rotation) {
-      const stickerIndex = stickers.findIndex(s => s.id === stickerId);
-      if (stickerIndex !== -1) {
-        stickers[stickerIndex].position.set(u, v);
-        stickers[stickerIndex].scale = scale;
-        stickers[stickerIndex].rotation = rotation;
-        
-        // Update the slider controls to reflect the new values
-        const stickerDiv = document.getElementById(stickerId + '-controls');
-        if (stickerDiv) {
-          stickerDiv.querySelector('.position-x').value = u;
-          stickerDiv.querySelector('.position-y').value = v;
-          stickerDiv.querySelector('.scale').value = scale;
-          stickerDiv.querySelector('.rotation').value = rotation;
-        }
-        
-        updateDecalUniforms();
-        drawUVRegion();
-      }
-    }
-
-    function setActiveSticker(stickerId) {
-      const index = stickers.findIndex(s => s.id === stickerId);
-      if (index !== -1) {
-        activeStickerIndex = index;
-        
-        // Update UI to show active sticker
-        document.querySelectorAll('.sticker-controls').forEach(div => {
-          div.classList.remove('active-sticker');
-        });
-        document.getElementById(stickerId + '-controls').classList.add('active-sticker');
-        
-        drawUVRegion();
-      }
-    }
-
-    function handleStickerUpload(event, stickerId) {
+    function handleDecalUpload(event, decalId) {
       const file = event.target.files[0];
       if (!file) return;
 
       const reader = new FileReader();
       reader.onload = (e) => {
-        const img = new Image();
-        img.onload = () => {
-          const texture = new THREE.Texture(img);
-          texture.needsUpdate = true;
-          
-          const stickerIndex = stickers.findIndex(s => s.id === stickerId);
-          if (stickerIndex !== -1) {
-            stickers[stickerIndex].texture = texture;
-            updateDecalUniforms();
-          }
-        };
-        img.src = e.target.result;
+        const texture = new THREE.TextureLoader().load(e.target.result, () => {
+          applyDecal(texture, decalId);
+        });
+        texture.anisotropy = renderer.capabilities.getMaxAnisotropy();
       };
       reader.readAsDataURL(file);
     }
 
-    function updateStickerPosition(event, stickerId, axis) {
-      const value = parseFloat(event.target.value);
-      const stickerIndex = stickers.findIndex(s => s.id === stickerId);
-      
-      if (stickerIndex !== -1) {
-        if (axis === 'x') {
-          stickers[stickerIndex].position.x = value;
-        } else {
-          stickers[stickerIndex].position.y = value;
-        }
-        
-        updateDecalUniforms();
-        drawUVRegion();
-      }
-    }
+    function applyDecal(texture, decalId) {
+      if (!hoodieModel) return;
 
-    function updateStickerScale(event, stickerId) {
-      const value = parseFloat(event.target.value);
-      const stickerIndex = stickers.findIndex(s => s.id === stickerId);
-      
-      if (stickerIndex !== -1) {
-        stickers[stickerIndex].scale = value;
-        updateDecalUniforms();
-        drawUVRegion();
-      }
-    }
+      // Find the first suitable mesh to apply the decal to
+      const targetMesh = hoodieModel.children.find(child => child.isMesh);
+      if (!targetMesh) return;
 
-    function updateStickerRotation(event, stickerId) {
-      const value = parseFloat(event.target.value);
-      const stickerIndex = stickers.findIndex(s => s.id === stickerId);
+      // Use the current camera target as decal position
+      const position = controls.target.clone();
       
-      if (stickerIndex !== -1) {
-        stickers[stickerIndex].rotation = value;
-        updateDecalUniforms();
-        drawUVRegion();
-      }
-    }
+      // Add some offset to place it on the front of the hoodie
+      position.add(new THREE.Vector3(0, 0.5, 0));
+      
+      // Get size from the control
+      const sizeControl = document.querySelector(`.decal-size[data-id="${decalId}"]`);
+      const sizeValue = sizeControl ? parseFloat(sizeControl.value) : 0.4;
+      const size = new THREE.Vector3(sizeValue, sizeValue, sizeValue);
+      
+      // Get rotation from the control
+      const rotationControl = document.querySelector(`.decal-rotation[data-id="${decalId}"]`);
+      const rotationValue = rotationControl ? parseFloat(rotationControl.value) : 0;
+      const orientation = new THREE.Euler(0, 0, rotationValue);
 
-    function removeSticker(event, stickerId) {
-      event.stopPropagation();
-      
-      const stickerIndex = stickers.findIndex(s => s.id === stickerId);
-      if (stickerIndex !== -1) {
-        // Remove from DOM
-        const element = document.getElementById(stickerId + '-controls');
-        if (element) element.remove();
-        
-        // Remove from array
-        stickers.splice(stickerIndex, 1);
-        
-        // Update indices of remaining stickers
-        stickers.forEach((sticker, index) => {
-          sticker.index = index;
-          if (sticker.element) {
-            sticker.element.querySelector('.sticker-header span:first-child').textContent = `Sticker ${index + 1}`;
-          }
-        });
-        
-        // Update active sticker index if needed
-        if (activeStickerIndex >= stickerIndex) {
-          activeStickerIndex = Math.max(0, activeStickerIndex - 1);
-        }
-        
-        // Update the material
-        updateDecalUniforms();
-        drawUVRegion();
-      }
-    }
-
-    function updateDecalUniforms() {
-      if (!decalMaterial) return;
-      
-      decalMaterial.uniforms.decalCount.value = stickers.length;
-      decalMaterial.uniforms.baseColor.value = hoodieMaterial.color;
-      
-      // Reset all uniforms first
-      for (let i = 0; i < MAX_DECALS; i++) {
-        decalMaterial.uniforms[`decalTexture${i}`].value = null;
-        decalMaterial.uniforms[`decalPosition${i}`].value.set(0, 0);
-        decalMaterial.uniforms[`decalScale${i}`].value = 1.0;
-        decalMaterial.uniforms[`decalRotation${i}`].value = 0.0;
-      }
-      
-      // Update active stickers
-      stickers.forEach((sticker, index) => {
-        decalMaterial.uniforms[`decalTexture${index}`].value = sticker.texture || createDefaultTexture();
-        decalMaterial.uniforms[`decalPosition${index}`].value.copy(sticker.position);
-        decalMaterial.uniforms[`decalScale${index}`].value = sticker.scale;
-        decalMaterial.uniforms[`decalRotation${index}`].value = sticker.rotation;
+      const decalMaterial = new THREE.MeshPhongMaterial({
+        map: texture,
+        transparent: true,
+        depthTest: true,
+        depthWrite: false,
+        polygonOffset: true,
+        polygonOffsetFactor: -4,
+        shininess: 30
       });
+
+      const decalGeo = new DecalGeometry(targetMesh, position, orientation, size);
+      const decalMesh = new THREE.Mesh(decalGeo, decalMaterial);
+      decalMesh.userData.decalId = decalId;
+      decalMesh.castShadow = true;
+      scene.add(decalMesh);
       
-      decalMaterial.needsUpdate = true;
+      // Store reference to this decal
+      decalMeshes.push(decalMesh);
+    }
+
+    function updateDecalSize(event, decalId) {
+      const size = parseFloat(event.target.value);
+      const decalMesh = decalMeshes.find(mesh => mesh.userData.decalId === decalId);
+      if (decalMesh) {
+        // To change size, we need to recreate the decal with new size
+        const texture = decalMesh.material.map;
+        removeDecalMesh(decalId);
+        applyDecal(texture, decalId);
+      }
+    }
+
+    function updateDecalRotation(event, decalId) {
+      const rotation = parseFloat(event.target.value);
+      const decalMesh = decalMeshes.find(mesh => mesh.userData.decalId === decalId);
+      if (decalMesh) {
+        // To change rotation, we need to recreate the decal with new rotation
+        const texture = decalMesh.material.map;
+        removeDecalMesh(decalId);
+        applyDecal(texture, decalId);
+      }
+    }
+
+    function removeDecal(event, decalId) {
+      event.stopPropagation();
+      removeDecalMesh(decalId);
+      
+      // Remove the controls div
+      const element = document.getElementById(decalId + '-controls');
+      if (element) element.remove();
+    }
+
+    function removeDecalMesh(decalId) {
+      const index = decalMeshes.findIndex(mesh => mesh.userData.decalId === decalId);
+      if (index !== -1) {
+        const decalMesh = decalMeshes[index];
+        scene.remove(decalMesh);
+        if (decalMesh.geometry) decalMesh.geometry.dispose();
+        if (decalMesh.material) decalMesh.material.dispose();
+        decalMeshes.splice(index, 1);
+      }
     }
 
     function createFallbackModel() {
