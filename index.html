@@ -790,6 +790,9 @@
         // Background effects
         let backgroundEffect = 'plain';
 
+        // Define maximum texture dimensions for quality/performance balance
+        const MAX_TEXTURE_DIMENSION = 2048; // Higher values retain more detail but use more VRAM
+
         // Initialize the application
         function init() {
             // Check WebGL support
@@ -1373,7 +1376,77 @@
             });
         }
 
-        // Handle design upload
+        // Client-side image resizing with quality preservation
+        function resizeImage(file, maxDimension) {
+            return new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    const img = new Image();
+                    img.onload = () => {
+                        let width = img.width;
+                        let height = img.height;
+
+                        // Only resize if the image is larger than the maxDimension in either axis
+                        if (width > maxDimension || height > maxDimension) {
+                            if (width > height) {
+                                height *= maxDimension / width;
+                                width = maxDimension;
+                            } else {
+                                width *= maxDimension / height;
+                                height = maxDimension;
+                            }
+                        }
+                        // If the image is smaller than maxDimension, keep its original size.
+
+                        const canvas = document.createElement('canvas');
+                        canvas.width = width;
+                        canvas.height = height;
+                        
+                        // Use high quality image scaling
+                        const ctx = canvas.getContext('2d');
+                        ctx.imageSmoothingEnabled = true;
+                        ctx.imageSmoothingQuality = 'high';
+                        
+                        ctx.drawImage(img, 0, 0, width, height);
+                        
+                        // Apply slight sharpening to counteract blur from scaling
+                        if (width !== img.width || height !== img.height) {
+                            const sharpened = applyUnsharpMask(canvas);
+                            resolve(sharpened.toDataURL('image/png'));
+                        } else {
+                            resolve(canvas.toDataURL('image/png'));
+                        }
+                    };
+                    img.onerror = reject;
+                    img.src = e.target.result;
+                };
+                reader.onerror = reject;
+                reader.readAsDataURL(file);
+            });
+        }
+
+        // Simple unsharp mask filter to improve image quality after scaling
+        function applyUnsharpMask(canvas) {
+            const tempCanvas = document.createElement('canvas');
+            tempCanvas.width = canvas.width;
+            tempCanvas.height = canvas.height;
+            const tempCtx = tempCanvas.getContext('2d');
+            
+            // Apply blur first
+            tempCtx.filter = 'blur(1px)';
+            tempCtx.drawImage(canvas, 0, 0);
+            tempCtx.filter = 'none';
+            
+            // Blend original with blurred version to sharpen
+            const ctx = canvas.getContext('2d');
+            ctx.globalCompositeOperation = 'overlay';
+            ctx.drawImage(tempCanvas, 0, 0);
+            ctx.globalCompositeOperation = 'source-over';
+            
+            return canvas;
+        }
+
+        // Handle design upload with quality preservation
         async function handleDesignUpload(event) {
             const file = event.target.files[0];
             if (!file) return;
@@ -1382,7 +1455,8 @@
             document.getElementById('loading-overlay').style.display = 'flex'; // Show loading for image processing
 
             try {
-                const imageDataUrl = await resizeImage(file, 512, 512); // Resize to 512x512 for performance
+                // Use MAX_TEXTURE_DIMENSION instead of fixed 512x512
+                const imageDataUrl = await resizeImage(file, MAX_TEXTURE_DIMENSION);
                 currentDesign.texture = imageDataUrl; // Store the data URL for saving
                 
                 const preview = document.getElementById('designPreview');
@@ -1398,6 +1472,12 @@
                 await new Promise(resolve => image.onload = resolve);
 
                 decalTexture = new THREE.Texture(image);
+                
+                // Configure texture filtering for best quality
+                decalTexture.minFilter = THREE.LinearMipmapLinearFilter;
+                decalTexture.magFilter = THREE.LinearFilter;
+                decalTexture.anisotropy = renderer.capabilities.getMaxAnisotropy();
+                decalTexture.generateMipmaps = true;
                 decalTexture.needsUpdate = true;
 
                 document.getElementById('decal-controls').classList.add('active');
@@ -1409,43 +1489,6 @@
                 document.getElementById('statusMessage').textContent = 'Error loading image.';
                 document.getElementById('loading-overlay').style.display = 'none';
             }
-        }
-
-        // Client-side image resizing
-        function resizeImage(file, maxWidth, maxHeight) {
-            return new Promise((resolve, reject) => {
-                const reader = new FileReader();
-                reader.onload = (e) => {
-                    const img = new Image();
-                    img.onload = () => {
-                        const canvas = document.createElement('canvas');
-                        let width = img.width;
-                        let height = img.height;
-
-                        if (width > height) {
-                            if (width > maxWidth) {
-                                height *= maxWidth / width;
-                                width = maxWidth;
-                            }
-                        } else {
-                            if (height > maxHeight) {
-                                width *= maxHeight / height;
-                                height = maxHeight;
-                            }
-                        }
-
-                        canvas.width = width;
-                        canvas.height = height;
-                        const ctx = canvas.getContext('2d');
-                        ctx.drawImage(img, 0, 0, width, height);
-                        resolve(canvas.toDataURL('image/png')); // Always convert to PNG for decal transparency
-                    };
-                    img.onerror = reject;
-                    img.src = e.target.result;
-                };
-                reader.onerror = reject;
-                reader.readAsDataURL(file);
-            });
         }
 
         // Handle click event for decal placement
@@ -1561,7 +1604,6 @@
                 scene.add(hoodieModel);
 
                 // Apply a base scaling to the model if it's too small
-                // Adjust this value based on your model's imported size relative to your scene
                 hoodieModel.scale.set(1.5, 1.5, 1.5); // Example: Scale up by 1.5 times
 
                 // Replace all materials with our base material
@@ -1837,6 +1879,12 @@
                                 img.src = currentDesign.texture;
                                 await new Promise(resolve => img.onload = resolve);
                                 decalTexture = new THREE.Texture(img);
+                                
+                                // Configure texture filtering for best quality
+                                decalTexture.minFilter = THREE.LinearMipmapLinearFilter;
+                                decalTexture.magFilter = THREE.LinearFilter;
+                                decalTexture.anisotropy = renderer.capabilities.getMaxAnisotropy();
+                                decalTexture.generateMipmaps = true;
                                 decalTexture.needsUpdate = true;
 
                                 decalBasePosition = new THREE.Vector3().fromArray(designData.design.decalPosition);
