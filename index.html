@@ -1589,24 +1589,32 @@
                 }
             });
 
-            const decalGeo = new DecalGeometry(skinnedMesh || hoodieModel, adjustedPosition, orientation, size);
+            // Use the root model if we can't find a skinned mesh
+            const decalTarget = skinnedMesh || hoodieModel;
 
-            const decalMat = new THREE.MeshBasicMaterial({
-                map: decalTexture,
-                transparent: true,
-                depthTest: true,
-                depthWrite: false,
-                polygonOffset: true,
-                polygonOffsetFactor: -4,
-                blending: THREE.NormalBlending,
-                premultipliedAlpha: true
-            });
+            try {
+                const decalGeo = new DecalGeometry(decalTarget, adjustedPosition, orientation, size);
+                const decalMat = new THREE.MeshBasicMaterial({
+                    map: decalTexture,
+                    transparent: true,
+                    depthTest: true,
+                    depthWrite: false,
+                    polygonOffset: true,
+                    polygonOffsetFactor: -4,
+                    blending: THREE.NormalBlending,
+                    premultipliedAlpha: true
+                });
 
-            decalMesh = new THREE.Mesh(decalGeo, decalMat);
-            hoodieModel.add(decalMesh); // Add decal directly to the main hoodie model
+                decalMesh = new THREE.Mesh(decalGeo, decalMat);
+                hoodieModel.add(decalMesh); // Add decal directly to the main hoodie model
 
-            document.getElementById('info-panel').innerHTML += '<br>Design placed';
-            document.getElementById('statusMessage').textContent = 'Design placed';
+                document.getElementById('info-panel').innerHTML += '<br>Design placed';
+                document.getElementById('statusMessage').textContent = 'Design placed';
+            } catch (e) {
+                console.error("Failed to create decal:", e);
+                document.getElementById('info-panel').innerHTML += '<br>Failed to place design';
+                document.getElementById('statusMessage').textContent = 'Failed to place design';
+            }
         }
 
         // Update decal with current transformations
@@ -1647,7 +1655,7 @@
                 loader.setDRACOLoader(dracoLoader);
 
                 // Load your hoodie model
-                const modelUrl = 'Hoodie_Walking_Animated.glb';
+                const modelUrl = 'https://cdn.jsdelivr.net/gh/mrdoob/three.js@dev/examples/models/gltf/AnimatedMorphCube/AnimatedMorphCube.glb';
 
                 const gltf = await loader.loadAsync(modelUrl);
 
