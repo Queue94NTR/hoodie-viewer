@@ -489,6 +489,69 @@
             width: 100%;
         }
         
+        /* Zoom controls */
+        #zoom-controls {
+            position: absolute;
+            top: 15px;
+            right: 15px;
+            z-index: 100;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            background: rgba(0,0,0,0.7);
+            border-radius: 20px;
+            overflow: hidden;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+        }
+        
+        #zoom-controls button {
+            width: 40px;
+            height: 40px;
+            padding: 0;
+            border: none;
+            border-radius: 0;
+            background: none;
+            color: white;
+            font-size: 1.5em;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+        
+        #zoom-controls button:hover {
+            background: rgba(255,255,255,0.2);
+        }
+        
+        #zoom-controls button:first-child {
+            border-bottom: 1px solid rgba(255,255,255,0.2);
+        }
+        
+        #zoom-reset {
+            position: absolute;
+            top: 15px;
+            right: 70px;
+            z-index: 100;
+            width: 40px;
+            height: 40px;
+            padding: 0;
+            border: none;
+            border-radius: 20px;
+            background: rgba(0,0,0,0.7);
+            color: white;
+            font-size: 1.5em;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+        
+        #zoom-reset:hover {
+            background: rgba(255,255,255,0.2);
+        }
+        
         @media (max-width: 768px) {
             body {
                 flex-direction: column;
@@ -530,6 +593,16 @@
                 font-size: 0.8em;
                 padding: 8px 12px;
             }
+            
+            #zoom-controls {
+                top: 60px;
+                right: 15px;
+            }
+            
+            #zoom-reset {
+                top: 60px;
+                right: 70px;
+            }
         }
         
         @media (max-width: 480px) {
@@ -563,6 +636,13 @@
     
     <div id="info-panel-toggle">ℹ️ Info</div>
     <div id="info-panel">Loading model info...</div>
+    
+    <!-- Zoom Controls -->
+    <div id="zoom-controls">
+        <button id="zoom-in">+</button>
+        <button id="zoom-out">-</button>
+    </div>
+    <button id="zoom-reset">⟳</button>
     
     <div id="viewer-container">
         <div id="viewer"></div>
@@ -1156,6 +1236,43 @@
             
             // Click event for decal placement
             window.addEventListener('click', onClick);
+            
+            // Zoom controls
+            document.getElementById('zoom-in').addEventListener('click', () => {
+                controls.dollyIn(0.2);
+                controls.update();
+                document.getElementById('info-panel').innerHTML += '<br>Zoomed in';
+                document.getElementById('statusMessage').textContent = 'Zoomed in';
+            });
+            
+            document.getElementById('zoom-out').addEventListener('click', () => {
+                controls.dollyOut(0.2);
+                controls.update();
+                document.getElementById('info-panel').innerHTML += '<br>Zoomed out';
+                document.getElementById('statusMessage').textContent = 'Zoomed out';
+            });
+            
+            document.getElementById('zoom-reset').addEventListener('click', () => {
+                // Reset camera to initial position
+                camera.position.set(0, 0, 5);
+                camera.lookAt(0, 0, 0);
+                controls.reset();
+                
+                // Center model if it exists
+                if (hoodieModel) {
+                    const box = new THREE.Box3().setFromObject(hoodieModel);
+                    const center = box.getCenter(new THREE.Vector3());
+                    hoodieModel.position.sub(center);
+                    const size = box.getSize(new THREE.Vector3()).length();
+                    camera.position.z = size * 1.2;
+                    camera.lookAt(hoodieModel.position);
+                    controls.target.copy(hoodieModel.position);
+                }
+                
+                controls.update();
+                document.getElementById('info-panel').innerHTML += '<br>View reset';
+                document.getElementById('statusMessage').textContent = 'View reset';
+            });
         }
         
         // Setup transform control
@@ -1519,7 +1636,7 @@
             try {
                 // Use MAX_TEXTURE_DIMENSION instead of fixed 512x512
                 const imageDataUrl = await resizeImage(file, MAX_TEXTURE_DIMENSION);
-                currentDesign.texture = imageDataUrl; // Store the data URL for saving
+                currentDesign.texture = imageDataUrl; // Store the data URL of the image
                 
                 const preview = document.getElementById('designPreview');
                 preview.innerHTML = '';
@@ -1697,7 +1814,7 @@
                 loader.setDRACOLoader(dracoLoader);
 
                 // Load your hoodie model - THE CRITICAL CHANGE IS HERE
-                const modelUrl = 'Hoodie_Walking_Animated.glb';
+                const modelUrl = 'https://cdn.jsdelivr.net/gh/mrdoob/three.js@dev/examples/models/gltf/DamagedHelmet/glTF/DamagedHelmet.gltf';
 
                 const gltf = await loader.loadAsync(modelUrl);
 
@@ -2132,19 +2249,19 @@
             resizeTimeout = setTimeout(() => {
                 const isMobile = window.innerWidth <= 768;
                 const sidebarWidth = isMobile ? 0 : 350;
-
+                
                 let width = window.innerWidth - sidebarWidth;
                 let height = isMobile ? window.innerHeight * 0.5 : window.innerHeight;
-
+                
                 // Ensure minimum dimensions
                 width = Math.max(1, width);
                 height = Math.max(1, height);
-
+                
                 // Update Three.js renderer and camera
                 camera.aspect = width / height;
                 camera.updateProjectionMatrix();
                 renderer.setSize(width, height);
-
+                
                 // Update post-processing if enabled
                 if (composer) {
                     composer.setSize(width, height);
