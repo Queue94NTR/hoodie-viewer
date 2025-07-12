@@ -1,4017 +1,1879 @@
 <!DOCTYPE html>
-
 <html lang="en">
-
 <head>
-
-    <meta charset="UTF-8">
-
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-
-    <title>3D Hoodie Designer Pro</title>
-
-    <style>
-
-        :root {
-
-            --primary-color: #4361ee;
-
-            --secondary-color: #3f37c9;
-
-            --danger-color: #f72585;
-
-            --warning-color: #ffbe0b;
-
-            --success-color: #4cc9f0;
-
-            --dark-color: #212529;
-
-            --light-color: #f8f9fa;
-
-        }
-
-        
-
-        body { 
-
-            margin: 0;
-
-            display: flex;
-
-            height: 100vh;
-
-            overflow: hidden;
-
-            flex-direction: row-reverse;
-
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-
-            background-color: #f5f5f5;
-
-        }
-
-        
-
-        #sidebar {
-
-            width: 350px;
-
-            background: white;
-
-            padding: 20px;
-
-            overflow-y: auto;
-
-            box-shadow: -2px 0 10px rgba(0,0,0,0.1);
-
-            display: flex;
-
-            flex-direction: column;
-
-        }
-
-        
-
-        #viewer-container {
-
-            flex: 1;
-
-            position: relative;
-
-            background: linear-gradient(135deg, #e0e0e0, #f0f0f0);
-
-        }
-
-        
-
-        #info-panel {
-
-            position: absolute;
-
-            top: 15px;
-
-            left: 15px;
-
-            background: rgba(0,0,0,0.7);
-
-            color: white;
-
-            padding: 10px 15px;
-
-            border-radius: 5px;
-
-            font-size: 0.9em;
-
-            z-index: 100;
-
-            display: none;
-
-            cursor: pointer;
-
-            max-width: 300px;
-
-            max-height: 200px;
-
-            overflow-y: auto;
-
-        }
-
-        
-
-        #info-panel-toggle {
-
-            position: absolute;
-
-            top: 15px;
-
-            left: 15px;
-
-            background: rgba(0,0,0,0.7);
-
-            color: white;
-
-            padding: 10px 15px;
-
-            border-radius: 5px;
-
-            font-size: 0.9em;
-
-            z-index: 100;
-
-            cursor: pointer;
-
-        }
-
-        
-
-        .control-group {
-
-            margin-bottom: 25px;
-
-            padding-bottom: 20px;
-
-            border-bottom: 1px solid #e9ecef;
-
-        }
-
-        
-
-        .control-group h3 {
-
-            margin-top: 0;
-
-            margin-bottom: 15px;
-
-            color: var(--primary-color);
-
-            font-size: 1.2em;
-
-            display: flex;
-
-            align-items: center;
-
-        }
-
-        
-
-        .control-group h3::before {
-
-            content: "";
-
-            display: inline-block;
-
-            width: 5px;
-
-            height: 20px;
-
-            background: var(--primary-color);
-
-            margin-right: 10px;
-
-            border-radius: 3px;
-
-        }
-
-        
-
-        .color-control {
-
-            margin-bottom: 15px;
-
-        }
-
-        
-
-        .color-control label {
-
-            display: block;
-
-            margin-bottom: 8px;
-
-            font-weight: 500;
-
-            color: #495057;
-
-        }
-
-        
-
-        .color-control input[type="color"] {
-
-            width: 100%;
-
-            height: 40px;
-
-            cursor: pointer;
-
-            border: 1px solid #ced4da;
-
-            border-radius: 4px;
-
-        }
-
-        
-
-        #design-upload {
-
-            width: 100%;
-
-            margin-bottom: 15px;
-
-            padding: 8px;
-
-            border: 1px dashed #ced4da;
-
-            border-radius: 4px;
-
-            background: white;
-
-        }
-
-        
-
-        button {
-
-            width: 100%;
-
-            padding: 12px;
-
-            background: var(--primary-color);
-
-            color: white;
-
-            border: none;
-
-            border-radius: 6px;
-
-            cursor: pointer;
-
-            margin-bottom: 10px;
-
-            font-weight: 500;
-
-            transition: all 0.2s ease;
-
-            display: flex;
-
-            align-items: center;
-
-            justify-content: center;
-
-            gap: 8px;
-
-        }
-
-        
-
-        button:hover {
-
-            background: var(--secondary-color);
-
-            transform: translateY(-1px);
-
-        }
-
-        
-
-        button:active {
-
-            transform: translateY(0);
-
-        }
-
-        
-
-        button:disabled {
-
-            background: #adb5bd;
-
-            cursor: not-allowed;
-
-            transform: none;
-
-        }
-
-        
-
-        .placement-control {
-
-            margin-top: 15px;
-
-        }
-
-        
-
-        .placement-control label {
-
-            display: block;
-
-            margin-bottom: 8px;
-
-            color: #495057;
-
-            font-weight: 500;
-
-        }
-
-        
-
-        .placement-control select {
-
-            width: 100%;
-
-            padding: 8px;
-
-            margin-bottom: 10px;
-
-            border: 1px solid #ced4da;
-
-            border-radius: 4px;
-
-            background: white;
-
-        }
-
-        
-
-        .transform-control {
-
-            margin-bottom: 15px;
-
-        }
-
-        
-
-        .transform-control label {
-
-            display: block;
-
-            margin-bottom: 8px;
-
-            font-weight: 500;
-
-            color: #495057;
-
-        }
-
-        
-
-        .transform-control input[type="range"] {
-
-            width: 100%;
-
-            height: 6px;
-
-            -webkit-appearance: none;
-
-            background: #e9ecef;
-
-            border-radius: 3px;
-
-            outline: none;
-
-        }
-
-        
-
-        .transform-control input[type="range"]::-webkit-slider-thumb {
-
-            -webkit-appearance: none;
-
-            width: 18px;
-
-            height: 18px;
-
-            background: var(--primary-color);
-
-            border-radius: 50%;
-
-            cursor: pointer;
-
-        }
-
-        
-
-        .transform-value {
-
-            display: inline-block;
-
-            width: 40px;
-
-            text-align: right;
-
-            margin-left: 10px;
-
-            font-family: monospace;
-
-        }
-
-        
-
-        .transform-row {
-
-            display: flex;
-
-            align-items: center;
-
-            margin-bottom: 8px;
-
-            gap: 10px;
-
-        }
-
-        
-
-        .transform-row span:first-child {
-
-            width: 20px;
-
-            font-weight: bold;
-
-            color: var(--primary-color);
-
-        }
-
-        
-
-        .transform-row input[type="number"] {
-
-            width: 60px;
-
-            padding: 6px;
-
-            border: 1px solid #ced4da;
-
-            border-radius: 4px;
-
-            text-align: center;
-
-        }
-
-        
-
-        #resetTransforms {
-
-            background: var(--danger-color);
-
-        }
-
-        
-
-        #resetTransforms:hover {
-
-            background: #d6336c;
-
-        }
-
-        
-
-        .animation-controls {
-
-            display: flex;
-
-            gap: 10px;
-
-        }
-
-        
-
-        .animation-controls button {
-
-            flex: 1;
-
-        }
-
-        
-
-        #pause-animation {
-
-            background: var(--warning-color);
-
-            color: var(--dark-color);
-
-        }
-
-        
-
-        #pause-animation:hover {
-
-            background: #ffaa00;
-
-        }
-
-        
-
-        .effect-control {
-
-            margin-bottom: 15px;
-
-        }
-
-        
-
-        .effect-control label {
-
-            display: block;
-
-            margin-bottom: 8px;
-
-            color: #495057;
-
-            font-weight: 500;
-
-        }
-
-        
-
-        .effect-control select {
-
-            width: 100%;
-
-            padding: 8px;
-
-            border: 1px solid #ced4da;
-
-            border-radius: 4px;
-
-            background: white;
-
-        }
-
-        
-
-        #loading-overlay {
-
-            position: absolute;
-
-            top: 0;
-
-            left: 0;
-
-            width: 100%;
-
-            height: 100%;
-
-            background: rgba(0,0,0,0.8);
-
-            display: flex;
-
-            flex-direction: column;
-
-            justify-content: center;
-
-            align-items: center;
-
-            color: white;
-
-            font-size: 1.5em;
-
-            z-index: 1000;
-
-            gap: 20px;
-
-        }
-
-        
-
-        .spinner {
-
-            width: 50px;
-
-            height: 50px;
-
-            border: 5px solid rgba(255,255,255,0.3);
-
-            border-radius: 50%;
-
-            border-top-color: var(--primary-color);
-
-            animation: spin 1s ease-in-out infinite;
-
-        }
-
-        
-
-        @keyframes spin {
-
-            to { transform: rotate(360deg); }
-
-        }
-
-        
-
-        .save-controls {
-
-            margin-top: 20px;
-
-        }
-
-        
-
-        #screenshotBtn {
-
-            background: var(--success-color);
-
-        }
-
-        
-
-        #screenshotBtn:hover {
-
-            background: #3aa8d0;
-
-        }
-
-        
-
-        .logo {
-
-            font-size: 1.5em;
-
-            font-weight: bold;
-
-            color: var(--primary-color);
-
-            margin-bottom: 20px;
-
-            display: flex;
-
-            align-items: center;
-
-            gap: 10px;
-
-        }
-
-        
-
-        .logo::before {
-
-            content: "🧥";
-
-            font-size: 1.2em;
-
-        }
-
-        
-
-        .tab-buttons {
-
-            display: flex;
-
-            margin-bottom: 20px;
-
-            border-bottom: 1px solid #e9ecef;
-
-        }
-
-        
-
-        .tab-button {
-
-            padding: 10px 15px;
-
-            background: none;
-
-            border: none;
-
-            color: #6c757d;
-
-            font-weight: 500;
-
-            cursor: pointer;
-
-            border-bottom: 3px solid transparent;
-
-            transition: all 0.2s;
-
-            margin-bottom: -1px;
-
-        }
-
-        
-
-        .tab-button.active {
-
-            color: var(--primary-color);
-
-            border-bottom-color: var(--primary-color);
-
-        }
-
-        
-
-        .tab-content {
-
-            display: none;
-
-        }
-
-        
-
-        .tab-content.active {
-
-            display: block;
-
-        }
-
-        
-
-        .color-presets {
-
-            display: grid;
-
-            grid-template-columns: repeat(4, 1fr);
-
-            gap: 8px;
-
-            margin-top: 10px;
-
-        }
-
-        
-
-        .color-preset {
-
-            width: 30px;
-
-            height: 30px;
-
-            border-radius: 50%;
-
-            cursor: pointer;
-
-            border: 2px solid transparent;
-
-            transition: all 0.2s;
-
-        }
-
-        
-
-        .color-preset:hover {
-
-            transform: scale(1.1);
-
-        }
-
-        
-
-        .color-preset.selected {
-
-            border-color: var(--dark-color);
-
-            transform: scale(1.1);
-
-        }
-
-        
-
-        .design-preview {
-
-            width: 100%;
-
-            height: 100px;
-
-            background-color: #e9ecef;
-
-            border-radius: 4px;
-
-            margin-bottom: 10px;
-
-            display: flex;
-
-            align-items: center;
-
-            justify-content: center;
-
-            overflow: hidden;
-
-            position: relative;
-
-        }
-
-        
-
-        .design-preview img {
-
-            max-width: 100%;
-
-            max-height: 100%;
-
-            object-fit: contain;
-
-        }
-
-        
-
-        .design-preview.empty::after {
-
-            content: "No design selected";
-
-            color: #6c757d;
-
-            font-size: 0.9em;
-
-        }
-
-        
-
-        .status-bar {
-
-            margin-top: auto;
-
-            padding-top: 15px;
-
-            border-top: 1px solid #e9ecef;
-
-            font-size: 0.8em;
-
-            color: #6c757d;
-
-            display: flex;
-
-            justify-content: space-between;
-
-        }
-
-        
-
-        .tooltip {
-
-            position: relative;
-
-            display: inline-block;
-
-        }
-
-        
-
-        .tooltip .tooltiptext {
-
-            visibility: hidden;
-
-            width: 200px;
-
-            background-color: #333;
-
-            color: #fff;
-
-            text-align: center;
-
-            border-radius: 6px;
-
-            padding: 5px;
-
-            position: absolute;
-
-            z-index: 1;
-
-            bottom: 125%;
-
-            left: 50%;
-
-            transform: translateX(-50%);
-
-            opacity: 0;
-
-            transition: opacity 0.3s;
-
-            font-size: 0.8em;
-
-            font-weight: normal;
-
-        }
-
-        
-
-        .tooltip:hover .tooltiptext {
-
-            visibility: visible;
-
-            opacity: 1;
-
-        }
-
-        
-
-        .decal-controls {
-
-            margin-top: 15px;
-
-            display: none;
-
-        }
-
-
-
-        .decal-controls.active {
-
-            display: block;
-
-        }
-
-        
-
-        @media (max-width: 768px) {
-
-            body {
-
-                flex-direction: column;
-
-                height: auto;
-
-                min-height: 100vh;
-
-            }
-
-            
-
-            #sidebar {
-
-                width: 100%;
-
-                height: auto;
-
-                max-height: 50vh;
-
-                order: 2;
-
-                padding: 15px;
-
-            }
-
-            
-
-            #viewer-container {
-
-                height: 50vh;
-
-                min-height: 300px;
-
-                flex: none;
-
-            }
-
-            
-
-            .tab-buttons {
-
-                overflow-x: auto;
-
-                white-space: nowrap;
-
-                padding-bottom: 5px;
-
-            }
-
-            
-
-            .tab-button {
-
-                padding: 8px 12px;
-
-                font-size: 0.9em;
-
-            }
-
-            
-
-            .control-group {
-
-                margin-bottom: 15px;
-
-                padding-bottom: 15px;
-
-            }
-
-            
-
-            #info-panel-toggle, #info-panel {
-
-                font-size: 0.8em;
-
-                padding: 8px 12px;
-
-            }
-
-        }
-
-        
-
-        @media (max-width: 480px) {
-
-            #sidebar {
-
-                max-height: 60vh;
-
-            }
-
-            
-
-            #viewer-container {
-
-                height: 40vh;
-
-            }
-
-            
-
-            .color-presets {
-
-                grid-template-columns: repeat(4, 1fr);
-
-            }
-
-            
-
-            .transform-row input[type="number"] {
-
-                width: 50px;
-
-            }
-
-        }
-
-    </style>
-
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>3D Hoodie Designer Pro</title>
+    <style>
+        :root {
+            --primary-color: #4361ee;
+            --secondary-color: #3f37c9;
+            --danger-color: #f72585;
+            --warning-color: #ffbe0b;
+            --success-color: #4cc9f0;
+            --dark-color: #212529;
+            --light-color: #f8f9fa;
+        }
+        
+        body { 
+            margin: 0;
+            display: flex;
+            height: 100vh;
+            overflow: hidden;
+            flex-direction: row-reverse;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f5f5f5;
+        }
+        
+        #sidebar {
+            width: 350px;
+            background: white;
+            padding: 20px;
+            overflow-y: auto;
+            box-shadow: -2px 0 10px rgba(0,0,0,0.1);
+            display: flex;
+            flex-direction: column;
+        }
+        
+        #viewer-container {
+            flex: 1;
+            position: relative;
+            background: linear-gradient(135deg, #e0e0e0, #f0f0f0);
+        }
+        
+        #info-panel {
+            position: absolute;
+            top: 15px;
+            left: 15px;
+            background: rgba(0,0,0,0.7);
+            color: white;
+            padding: 10px 15px;
+            border-radius: 5px;
+            font-size: 0.9em;
+            z-index: 100;
+            display: none;
+            cursor: pointer;
+            max-width: 300px;
+            max-height: 200px;
+            overflow-y: auto;
+        }
+        
+        #info-panel-toggle {
+            position: absolute;
+            top: 15px;
+            left: 15px;
+            background: rgba(0,0,0,0.7);
+            color: white;
+            padding: 10px 15px;
+            border-radius: 5px;
+            font-size: 0.9em;
+            z-index: 100;
+            cursor: pointer;
+        }
+        
+        .control-group {
+            margin-bottom: 25px;
+            padding-bottom: 20px;
+            border-bottom: 1px solid #e9ecef;
+        }
+        
+        .control-group h3 {
+            margin-top: 0;
+            margin-bottom: 15px;
+            color: var(--primary-color);
+            font-size: 1.2em;
+            display: flex;
+            align-items: center;
+        }
+        
+        .control-group h3::before {
+            content: "";
+            display: inline-block;
+            width: 5px;
+            height: 20px;
+            background: var(--primary-color);
+            margin-right: 10px;
+            border-radius: 3px;
+        }
+        
+        .color-control {
+            margin-bottom: 15px;
+        }
+        
+        .color-control label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 500;
+            color: #495057;
+        }
+        
+        .color-control input[type="color"] {
+            width: 100%;
+            height: 40px;
+            cursor: pointer;
+            border: 1px solid #ced4da;
+            border-radius: 4px;
+        }
+        
+        #design-upload {
+            width: 100%;
+            margin-bottom: 15px;
+            padding: 8px;
+            border: 1px dashed #ced4da;
+            border-radius: 4px;
+            background: white;
+        }
+        
+        button {
+            width: 100%;
+            padding: 12px;
+            background: var(--primary-color);
+            color: white;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            margin-bottom: 10px;
+            font-weight: 500;
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+        
+        button:hover {
+            background: var(--secondary-color);
+            transform: translateY(-1px);
+        }
+        
+        button:active {
+            transform: translateY(0);
+        }
+        
+        button:disabled {
+            background: #adb5bd;
+            cursor: not-allowed;
+            transform: none;
+        }
+        
+        .placement-control {
+            margin-top: 15px;
+        }
+        
+        .placement-control label {
+            display: block;
+            margin-bottom: 8px;
+            color: #495057;
+            font-weight: 500;
+        }
+        
+        .placement-control select {
+            width: 100%;
+            padding: 8px;
+            margin-bottom: 10px;
+            border: 1px solid #ced4da;
+            border-radius: 4px;
+            background: white;
+        }
+        
+        .transform-control {
+            margin-bottom: 15px;
+        }
+        
+        .transform-control label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 500;
+            color: #495057;
+        }
+        
+        .transform-control input[type="range"] {
+            width: 100%;
+            height: 6px;
+            -webkit-appearance: none;
+            background: #e9ecef;
+            border-radius: 3px;
+            outline: none;
+        }
+        
+        .transform-control input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 18px;
+            height: 18px;
+            background: var(--primary-color);
+            border-radius: 50%;
+            cursor: pointer;
+        }
+        
+        .transform-value {
+            display: inline-block;
+            width: 40px;
+            text-align: right;
+            margin-left: 10px;
+            font-family: monospace;
+        }
+        
+        .transform-row {
+            display: flex;
+            align-items: center;
+            margin-bottom: 8px;
+            gap: 10px;
+        }
+        
+        .transform-row span:first-child {
+            width: 20px;
+            font-weight: bold;
+            color: var(--primary-color);
+        }
+        
+        .transform-row input[type="number"] {
+            width: 60px;
+            padding: 6px;
+            border: 1px solid #ced4da;
+            border-radius: 4px;
+            text-align: center;
+        }
+        
+        #resetTransforms {
+            background: var(--danger-color);
+        }
+        
+        #resetTransforms:hover {
+            background: #d6336c;
+        }
+        
+        .animation-controls {
+            display: flex;
+            gap: 10px;
+        }
+        
+        .animation-controls button {
+            flex: 1;
+        }
+        
+        #pause-animation {
+            background: var(--warning-color);
+            color: var(--dark-color);
+        }
+        
+        #pause-animation:hover {
+            background: #ffaa00;
+        }
+        
+        .effect-control {
+            margin-bottom: 15px;
+        }
+        
+        .effect-control label {
+            display: block;
+            margin-bottom: 8px;
+            color: #495057;
+            font-weight: 500;
+        }
+        
+        .effect-control select {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #ced4da;
+            border-radius: 4px;
+            background: white;
+        }
+        
+        #loading-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.8);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            color: white;
+            font-size: 1.5em;
+            z-index: 1000;
+            gap: 20px;
+        }
+        
+        .spinner {
+            width: 50px;
+            height: 50px;
+            border: 5px solid rgba(255,255,255,0.3);
+            border-radius: 50%;
+            border-top-color: var(--primary-color);
+            animation: spin 1s ease-in-out infinite;
+        }
+        
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+        
+        .save-controls {
+            margin-top: 20px;
+        }
+        
+        #screenshotBtn {
+            background: var(--success-color);
+        }
+        
+        #screenshotBtn:hover {
+            background: #3aa8d0;
+        }
+        
+        .logo {
+            font-size: 1.5em;
+            font-weight: bold;
+            color: var(--primary-color);
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .logo::before {
+            content: "🧥";
+            font-size: 1.2em;
+        }
+        
+        .tab-buttons {
+            display: flex;
+            margin-bottom: 20px;
+            border-bottom: 1px solid #e9ecef;
+        }
+        
+        .tab-button {
+            padding: 10px 15px;
+            background: none;
+            border: none;
+            color: #6c757d;
+            font-weight: 500;
+            cursor: pointer;
+            border-bottom: 3px solid transparent;
+            transition: all 0.2s;
+            margin-bottom: -1px;
+        }
+        
+        .tab-button.active {
+            color: var(--primary-color);
+            border-bottom-color: var(--primary-color);
+        }
+        
+        .tab-content {
+            display: none;
+        }
+        
+        .tab-content.active {
+            display: block;
+        }
+        
+        .color-presets {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 8px;
+            margin-top: 10px;
+        }
+        
+        .color-preset {
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            cursor: pointer;
+            border: 2px solid transparent;
+            transition: all 0.2s;
+        }
+        
+        .color-preset:hover {
+            transform: scale(1.1);
+        }
+        
+        .color-preset.selected {
+            border-color: var(--dark-color);
+            transform: scale(1.1);
+        }
+        
+        .design-preview {
+            width: 100%;
+            height: 100px;
+            background-color: #e9ecef;
+            border-radius: 4px;
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+            position: relative;
+        }
+        
+        .design-preview img {
+            max-width: 100%;
+            max-height: 100%;
+            object-fit: contain;
+        }
+        
+        .design-preview.empty::after {
+            content: "No design selected";
+            color: #6c757d;
+            font-size: 0.9em;
+        }
+        
+        .status-bar {
+            margin-top: auto;
+            padding-top: 15px;
+            border-top: 1px solid #e9ecef;
+            font-size: 0.8em;
+            color: #6c757d;
+            display: flex;
+            justify-content: space-between;
+        }
+        
+        .tooltip {
+            position: relative;
+            display: inline-block;
+        }
+        
+        .tooltip .tooltiptext {
+            visibility: hidden;
+            width: 200px;
+            background-color: #333;
+            color: #fff;
+            text-align: center;
+            border-radius: 6px;
+            padding: 5px;
+            position: absolute;
+            z-index: 1;
+            bottom: 125%;
+            left: 50%;
+            transform: translateX(-50%);
+            opacity: 0;
+            transition: opacity 0.3s;
+            font-size: 0.8em;
+            font-weight: normal;
+        }
+        
+        .tooltip:hover .tooltiptext {
+            visibility: visible;
+            opacity: 1;
+        }
+        
+        .decal-controls {
+            margin-top: 15px;
+            display: none;
+        }
+
+        .decal-controls.active {
+            display: block;
+        }
+        
+        @media (max-width: 768px) {
+            body {
+                flex-direction: column;
+                height: auto;
+                min-height: 100vh;
+            }
+            
+            #sidebar {
+                width: 100%;
+                height: auto;
+                max-height: 50vh;
+                order: 2;
+                padding: 15px;
+            }
+            
+            #viewer-container {
+                height: 50vh;
+                min-height: 300px;
+                flex: none;
+            }
+            
+            .tab-buttons {
+                overflow-x: auto;
+                white-space: nowrap;
+                padding-bottom: 5px;
+            }
+            
+            .tab-button {
+                padding: 8px 12px;
+                font-size: 0.9em;
+            }
+            
+            .control-group {
+                margin-bottom: 15px;
+                padding-bottom: 15px;
+            }
+            
+            #info-panel-toggle, #info-panel {
+                font-size: 0.8em;
+                padding: 8px 12px;
+            }
+        }
+        
+        @media (max-width: 480px) {
+            #sidebar {
+                max-height: 60vh;
+            }
+            
+            #viewer-container {
+                height: 40vh;
+            }
+            
+            .color-presets {
+                grid-template-columns: repeat(4, 1fr);
+            }
+            
+            .transform-row input[type="number"] {
+                width: 50px;
+            }
+        }
+    </style>
 </head>
-
 <body>
-
-    <div id="loading-overlay">
-
-        <div class="spinner"></div>
-
-        <div>Loading 3D Hoodie Designer...</div>
-
-    </div>
-
-    
-
-    <div id="info-panel-toggle">ℹ️ Info</div>
-
-    <div id="info-panel">Loading model info...</div>
-
-    
-
-    <div id="viewer-container">
-
-        <div id="viewer"></div>
-
-    </div>
-
-    
-
-    <div id="sidebar">
-
-        <div class="logo">Hoodie Designer Pro</div>
-
-        
-
-        <div class="tab-buttons">
-
-            <button class="tab-button active" data-tab="design">Design</button>
-
-            <button class="tab-button" data-tab="materials">Materials</button>
-
-            <button class="tab-button" data-tab="effects">Effects</button>
-
-            <button class="tab-button" data-tab="export">Export</button>
-
-        </div>
-
-        
-
-        <div class="tab-content active" id="design-tab">
-
-            <div class="control-group">
-
-                <h3>Design Upload</h3>
-
-                <div class="design-preview empty" id="designPreview"></div>
-
-                <input type="file" id="design-upload" accept="image/*">
-
-                <div class="placement-control">
-
-                    <label>Click on the hoodie to place your design</label>
-
-                </div>
-
-                <div class="decal-controls" id="decal-controls">
-
-                    <div class="transform-control">
-
-                        <label>Scale</label>
-
-                        <div class="transform-row">
-
-                            <span>Size:</span>
-
-                            <input type="range" id="decal-scale" min="0.1" max="3" step="0.1" value="1">
-
-                            <input type="number" id="decal-scale-input" min="0.1" max="3" step="0.1" value="1">
-
-                        </div>
-
-                    </div>
-
-                    
-
-                    <div class="transform-control">
-
-                        <label>Rotation</label>
-
-                        <div class="transform-row">
-
-                            <span>Angle:</span>
-
-                            <input type="range" id="decal-rotation" min="-180" max="180" step="1" value="0">
-
-                            <input type="number" id="decal-rotation-input" min="-180" max="180" step="1" value="0">
-
-                        </div>
-
-                    </div>
-
-                    
-
-                    <button id="resetTransforms">
-
-                        <span>🔄</span> Reset Transformations
-
-                    </button>
-
-                </div>
-
-                <button id="remove-decal">
-
-                    <span>🗑️</span> Remove Design
-
-                </button>
-
-            </div>
-
-        </div>
-
-        
-
-        <div class="tab-content" id="materials-tab">
-
-            <div class="control-group">
-
-                <h3>Color Customization</h3>
-
-                <div class="color-control">
-
-                    <label for="hoodieColor">Hoodie Color</label>
-
-                    <input type="color" id="hoodieColor" value="#FFFFFF">
-
-                </div>
-
-                
-
-                <div class="color-presets">
-
-                    <div class="color-preset" style="background-color: #FFFFFF;" data-color="#FFFFFF"></div>
-
-                    <div class="color-preset" style="background-color: #000000;" data-color="#000000"></div>
-
-                    <div class="color-preset" style="background-color: #4361ee;" data-color="#4361ee"></div>
-
-                    <div class="color-preset" style="background-color: #3f37c9;" data-color="#3f37c9"></div>
-
-                    <div class="color-preset" style="background-color: #8ac926;" data-color="#8ac926"></div>
-
-                    <div class="color-preset" style="background-color: #ffca3a;" data-color="#ffca3a"></div>
-
-                    <div class="color-preset" style="background-color: #ff595e;" data-color="#ff595e"></div>
-
-                    <div class="color-preset" style="background-color: #f72585;" data-color="#f72585"></div>
-
-                </div>
-
-                <button id="apply-colors">Apply Color</button>
-
-            </div>
-
-            
-
-            <div class="control-group">
-
-                <h3>Material Properties</h3>
-
-                <div class="color-control">
-
-                    <label for="materialType">Material Type</label>
-
-                    <select id="materialType">
-
-                        <option value="cotton">Cotton</option>
-
-                        <option value="polyester">Polyester</option>
-
-                        <option value="velvet">Velvet</option>
-
-                        <option value="denim">Denim</option>
-
-                        <option value="leather">Leather</option>
-
-                    </select>
-
-                </div>
-
-                <div class="color-control">
-
-                    <label for="roughness">Roughness</label>
-
-                    <input type="range" id="roughness" min="0" max="1" step="0.05" value="0.7">
-
-                    <span class="transform-value" id="roughnessValue">0.7</span>
-
-                </div>
-
-            </div>
-
-        </div>
-
-        
-
-        <div class="tab-content" id="effects-tab">
-
-            <div class="control-group">
-
-                <h3>Animation Controls</h3>
-
-                <div class="animation-controls">
-
-                    <button id="play-animation">
-
-                        <span>▶</span> Play
-
-                    </button>
-
-                    <button id="pause-animation">
-
-                        <span>⏸</span> Pause
-
-                    </button>
-
-                </div>
-
-                <div class="effect-control">
-
-                    <label for="animationEffect">Animation Effect</label>
-
-                    <select id="animationEffect">
-
-                        <option value="none">None</option>
-
-                        <option value="wind">Wind</option>
-
-                        <option value="bounce">Bounce</option>
-
-                        <option value="spin">Spin</option>
-
-                    </select>
-
-                </div>
-
-            </div>
-
-            
-
-            <div class="control-group">
-
-                <h3>Special Effects</h3>
-
-                <div class="effect-control">
-
-                    <label for="lightingEffect">Lighting</label>
-
-                    <select id="lightingEffect">
-
-                        <option value="studio">Studio</option>
-
-                        <option value="outdoor">Outdoor</option>
-
-                        <option value="neon">Neon</option>
-
-                        <option value="sunset">Sunset</option>
-
-                    </select>
-
-                </div>
-
-                <div class="effect-control">
-
-                    <label for="backgroundEffect">Background</label>
-
-                    <select id="backgroundEffect">
-
-                        <option value="plain">Plain</option>
-
-                        <option value="gradient">Gradient</option>
-
-                        <option value="showroom">Showroom</option>
-
-                        <option value="transparent">Transparent</option>
-
-                    </select>
-
-                </div>
-
-            </div>
-
-        </div>
-
-        
-
-        <div class="tab-content" id="export-tab">
-
-            <div class="control-group">
-
-                <h3>Save & Export</h3>
-
-                <button id="screenshotBtn">
-
-                    <span>📸</span> Take Screenshot
-
-                </button>
-
-                <div class="tooltip">
-
-                    <button id="saveDesignBtn">
-
-                        <span>💾</span> Save Design
-
-                    </button>
-
-                    <span class="tooltiptext">Save your design settings to continue later</span>
-
-                </div>
-
-                <div class="tooltip">
-
-                    <button id="loadDesignBtn">
-
-                        <span>📂</span> Load Design
-
-                    </button>
-
-                    <span class="tooltiptext">Load a previously saved design</span>
-
-                </div>
-
-            </div>
-
-            
-
-            <div class="control-group">
-
-                <h3>Export Options</h3>
-
-                <div class="effect-control">
-
-                    <label for="exportQuality">Quality</label>
-
-                    <select id="exportQuality">
-
-                        <option value="high">High (PNG)</option>
-
-                        <option value="medium">Medium (JPEG 90%)</option>
-
-                        <option value="low">Low (JPEG 70%)</option>
-
-                    </select>
-
-                </div>
-
-                <div class="effect-control">
-
-                    <label for="exportSize">Size</label>
-
-                    <select id="exportSize">
-
-                        <option value="1x">Original Size</option>
-
-                        <option value="2x">2x Resolution</option>
-
-                        <option value="4x">4x Resolution</option>
-
-                    </select>
-
-                </div>
-
-            </div>
-
-        </div>
-
-        
-
-        <div class="status-bar">
-
-            <span id="statusMessage">Initializing...</span>
-
-            <span id="versionInfo">v1.0.0</span>
-
-        </div>
-
-    </div>
-
-
-
-    <script type="importmap">
-
-        {
-
-            "imports": {
-
-                "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
-
-                "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
-
-            }
-
-        }
-
-    </script>
-
-    <script type="module">
-
-        import * as THREE from 'three';
-
-        import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
-
-        import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
-
-        import { RGBELoader } from 'three/addons/loaders/RGBELoader.js';
-
-        import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
-
-        import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
-
-        import { ShaderPass } from 'three/addons/postprocessing/ShaderPass.js';
-
-        import { FXAAShader } from 'three/addons/shaders/FXAAShader.js';
-
-        import { DRACOLoader } from 'three/addons/loaders/DRACOLoader.js';
-
-        import { DecalGeometry } from 'three/addons/geometries/DecalGeometry.js';
-
-        
-
-        // Main variables
-
-        let scene, camera, renderer, controls, mixer, clock, hoodieModel;
-
-        let hoodieMaterial = null;
-
-        let currentAction = null;
-
-        let decalMesh = null;
-
-        let decalTexture = null;
-
-        let isAnimationPaused = false;
-
-        let composer, fxaaPass;
-
-        let textures = {};
-
-        
-
-        // For raycasting and decal placement
-
-        const raycaster = new THREE.Raycaster();
-
-        const mouse = new THREE.Vector2();
-
-        
-
-        // Store the base position and normal of the decal when first placed
-
-        let decalBasePosition = null;
-
-        let decalBaseNormal = null;
-
-        let decalTargetMesh = null; // Store the mesh the decal was applied to
-
-        
-
-        // Current design properties
-
-        let currentDesign = {
-
-            texture: null, // This will store the data URL or base64
-
-            transform: {
-
-                scale: 1,
-
-                rotation: 0
-
-            }
-
-        };
-
-        
-
-        // Current material properties
-
-        let currentMaterial = {
-
-            color: new THREE.Color(0xFFFFFF),
-
-            roughness: 0.7,
-
-            metalness: 0.0,
-
-            materialType: 'cotton'
-
-        };
-
-        
-
-        // Animation effects
-
-        let animationEffect = 'none';
-
-        let windEffect = {
-
-            strength: 0,
-
-            frequency: 0.5,
-
-            time: 0
-
-        };
-
-        
-
-        // Lighting effects
-
-        let lightingEffect = 'studio';
-
-        
-
-        // Background effects
-
-        let backgroundEffect = 'plain';
-
-
-
-        // Initialize the application
-
-        function init() {
-
-            // Check WebGL support
-
-            if (!isWebGLAvailable()) {
-
-                showWebGLError();
-
-                return;
-
-            }
-
-
-
-            setupScene();
-
-            setupControls();
-
-            setupUI();
-
-            loadResources();
-
-            animate();
-
-        }
-
-
-
-        // Check WebGL support
-
-        function isWebGLAvailable() {
-
-            try {
-
-                const canvas = document.createElement('canvas');
-
-                canvas.width = canvas.height = 2;
-
-                const ctx = canvas.getContext('webgl') || canvas.getContext('experimental-webgl');
-
-                return !!(window.WebGLRenderingContext && ctx);
-
-            } catch (e) {
-
-                return false;
-
-            }
-
-        }
-
-
-
-        function showWebGLError() {
-
-            const warning = document.createElement('div');
-
-            warning.innerHTML = 'WebGL not supported in your browser';
-
-            warning.style.color = 'white';
-
-            warning.style.backgroundColor = 'red';
-
-            warning.style.padding = '20px';
-
-            warning.style.fontFamily = 'sans-serif';
-
-            document.getElementById('viewer').appendChild(warning);
-
-            document.getElementById('statusMessage').textContent = 'WebGL not supported';
-
-            throw new Error('WebGL not supported');
-
-        }
-
-
-
-        // Setup Three.js scene
-
-        function setupScene() {
-
-            scene = new THREE.Scene();
-
-            scene.background = new THREE.Color(0xf0f0f0);
-
-            
-
-            // Get initial dimensions
-
-            const { width, height } = getSafeDimensions();
-
-            
-
-            camera = new THREE.PerspectiveCamera(75, width / height, 0.1, 1000);
-
-            camera.position.z = 5; // Initial position, will be adjusted after model load
-
-            
-
-            renderer = new THREE.WebGLRenderer({ 
-
-                antialias: true,
-
-                powerPreference: "high-performance"
-
-            });
-
-            renderer.setSize(width, height);
-
-            renderer.outputColorSpace = THREE.SRGBColorSpace;
-
-            renderer.toneMapping = THREE.ACESFilmicToneMapping;
-
-            renderer.toneMappingExposure = 1.0;
-
-            renderer.shadowMap.enabled = true;
-
-            renderer.shadowMap.type = THREE.PCFSoftShadowMap;
-
-            document.getElementById('viewer').appendChild(renderer.domElement);
-
-            
-
-            // Lighting
-
-            const ambientLight = new THREE.AmbientLight(0xffffff, 0.5);
-
-            scene.add(ambientLight);
-
-            
-
-            const directionalLight = new THREE.DirectionalLight(0xffffff, 2);
-
-            directionalLight.position.set(1, 1, 1);
-
-            directionalLight.castShadow = true;
-
-            directionalLight.shadow.mapSize.width = 2048;
-
-            directionalLight.shadow.mapSize.height = 2048;
-
-            directionalLight.shadow.camera.near = 0.5;
-
-            directionalLight.shadow.camera.far = 500;
-
-            directionalLight.shadow.camera.left = -5;
-
-            directionalLight.shadow.camera.right = 5;
-
-            directionalLight.shadow.camera.top = 5;
-
-            directionalLight.shadow.camera.bottom = -5;
-
-            scene.add(directionalLight);
-
-            
-
-            const directionalLight2 = new THREE.DirectionalLight(0xffffff, 0.5);
-
-            directionalLight2.position.set(-1, -1, -1);
-
-            scene.add(directionalLight2);
-
-            
-
-            clock = new THREE.Clock();
-
-            
-
-            // Initialize post-processing
-
-            initPostProcessing();
-
-        }
-
-        
-
-        // Initialize post-processing
-
-        function initPostProcessing() {
-
-            composer = new EffectComposer(renderer);
-
-            const renderPass = new RenderPass(scene, camera);
-
-            composer.addPass(renderPass);
-
-            
-
-            fxaaPass = new ShaderPass(FXAAShader);
-
-            const pixelRatio = renderer.getPixelRatio();
-
-            fxaaPass.material.uniforms['resolution'].value.x = 1 / (Math.max(1, window.innerWidth - 350) * pixelRatio);
-
-            fxaaPass.material.uniforms['resolution'].value.y = 1 / (Math.max(1, window.innerHeight) * pixelRatio);
-
-            composer.addPass(fxaaPass);
-
-        }
-
-
-
-        // Helper function to get safe dimensions
-
-        function getSafeDimensions() {
-
-            const isMobile = window.innerWidth <= 768;
-
-            const sidebarWidth = isMobile ? 0 : 350;
-
-            
-
-            let width = window.innerWidth - sidebarWidth;
-
-            let height = isMobile ? window.innerHeight * 0.5 : window.innerHeight;
-
-            
-
-            // Ensure minimum dimensions of 1px
-
-            width = Math.max(1, width);
-
-            height = Math.max(1, height);
-
-            
-
-            return { width, height };
-
-        }
-
-
-
-        // Setup orbit controls
-
-        function setupControls() {
-
-            controls = new OrbitControls(camera, renderer.domElement);
-
-            controls.enableDamping = true;
-
-            controls.dampingFactor = 0.05;
-
-            controls.screenSpacePanning = false;
-
-            controls.maxPolarAngle = Math.PI;
-
-            controls.minDistance = 1;
-
-            controls.maxDistance = 10;
-
-        }
-
-
-
-        // Setup UI event listeners
-
-        function setupUI() {
-
-            // Info panel toggle
-
-            document.getElementById('info-panel-toggle').addEventListener('click', (e) => {
-
-                e.stopPropagation();
-
-                const infoPanel = document.getElementById('info-panel');
-
-                infoPanel.style.display = infoPanel.style.display === 'block' ? 'none' : 'block';
-
-            });
-
-            
-
-            // Close info panel when clicking outside
-
-            document.addEventListener('click', (e) => {
-
-                const infoPanel = document.getElementById('info-panel');
-
-                const toggleButton = document.getElementById('info-panel-toggle');
-
-                
-
-                if (e.target !== infoPanel && e.target !== toggleButton && !infoPanel.contains(e.target)) {
-
-                    infoPanel.style.display = 'none';
-
-                }
-
-            });
-
-            
-
-            // Animation controls
-
-            document.getElementById('play-animation').addEventListener('click', () => {
-
-                if (currentAction) {
-
-                    isAnimationPaused = false;
-
-                    currentAction.paused = false;
-
-                    currentAction.play();
-
-                    document.getElementById('info-panel').innerHTML += '<br>Animation playing';
-
-                    document.getElementById('statusMessage').textContent = 'Animation playing';
-
-                }
-
-            });
-
-            
-
-            document.getElementById('pause-animation').addEventListener('click', () => {
-
-                if (currentAction) {
-
-                    isAnimationPaused = !isAnimationPaused;
-
-                    currentAction.paused = isAnimationPaused;
-
-                    document.getElementById('info-panel').innerHTML += isAnimationPaused 
-
-                        ? '<br>Animation paused' 
-
-                        : '<br>Animation playing';
-
-                    document.getElementById('statusMessage').textContent = isAnimationPaused 
-
-                        ? 'Animation paused' 
-
-                        : 'Animation playing';
-
-                }
-
-            });
-
-            
-
-            // Color controls
-
-            document.getElementById('apply-colors').addEventListener('click', applyColor);
-
-            
-
-            // Color presets
-
-            document.querySelectorAll('.color-preset').forEach(preset => {
-
-                preset.addEventListener('click', () => {
-
-                    document.querySelectorAll('.color-preset').forEach(p => p.classList.remove('selected'));
-
-                    preset.classList.add('selected');
-
-                    document.getElementById('hoodieColor').value = preset.dataset.color;
-
-                    applyColor();
-
-                });
-
-            });
-
-            
-
-            // Design upload
-
-            document.getElementById('design-upload').addEventListener('change', handleDesignUpload);
-
-            document.getElementById('remove-decal').addEventListener('click', removeDecal);
-
-            
-
-            // Material properties
-
-            document.getElementById('materialType').addEventListener('change', (e) => {
-
-                const preset = materialPresets[e.target.value];
-
-                currentMaterial.materialType = e.target.value;
-
-                currentMaterial.roughness = preset.roughness;
-
-                currentMaterial.metalness = preset.metalness;
-
-                
-
-                document.getElementById('roughness').value = preset.roughness;
-
-                document.getElementById('roughnessValue').textContent = preset.roughness.toFixed(2);
-
-                
-
-                updateHoodieMaterial();
-
-                
-
-                document.getElementById('info-panel').innerHTML += `<br>Material: ${e.target.value}`;
-
-                document.getElementById('statusMessage').textContent = `Material: ${e.target.value}`;
-
-            });
-
-            
-
-            document.getElementById('roughness').addEventListener('input', (e) => {
-
-                currentMaterial.roughness = parseFloat(e.target.value);
-
-                document.getElementById('roughnessValue').textContent = currentMaterial.roughness.toFixed(2);
-
-                updateHoodieMaterial();
-
-            });
-
-            
-
-            // Animation effect
-
-            document.getElementById('animationEffect').addEventListener('change', (e) => {
-
-                animationEffect = e.target.value;
-
-                windEffect.strength = animationEffect === 'wind' ? 0.1 : 0;
-
-                document.getElementById('info-panel').innerHTML += `<br>Effect: ${animationEffect}`;
-
-                document.getElementById('statusMessage').textContent = `Effect: ${animationEffect}`;
-
-            });
-
-            
-
-            // Lighting effect
-
-            document.getElementById('lightingEffect').addEventListener('change', async (e) => {
-
-                lightingEffect = e.target.value;
-
-                await loadEnvironment(lightingEffect);
-
-                updateLighting();
-
-                document.getElementById('info-panel').innerHTML += `<br>Lighting: ${lightingEffect}`;
-
-                document.getElementById('statusMessage').textContent = `Lighting: ${lightingEffect}`;
-
-            });
-
-            
-
-            // Background effect
-
-            document.getElementById('backgroundEffect').addEventListener('change', (e) => {
-
-                backgroundEffect = e.target.value;
-
-                updateBackground();
-
-                document.getElementById('info-panel').innerHTML += `<br>Background: ${backgroundEffect}`;
-
-                document.getElementById('statusMessage').textContent = `Background: ${backgroundEffect}`;
-
-            });
-
-            
-
-            // Tab navigation
-
-            document.querySelectorAll('.tab-button').forEach(button => {
-
-                button.addEventListener('click', () => {
-
-                    // Remove active class from all buttons and content
-
-                    document.querySelectorAll('.tab-button').forEach(btn => btn.classList.remove('active'));
-
-                    document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
-
-                    
-
-                    // Add active class to clicked button and corresponding content
-
-                    button.classList.add('active');
-
-                    const tabId = button.dataset.tab + '-tab';
-
-                    document.getElementById(tabId).classList.add('active');
-
-                });
-
-            });
-
-            
-
-            // Transform controls
-
-            setupTransformControl('decal-scale', 'decal-scale-input', 'scale', (v) => v.toFixed(1));
-
-            setupTransformControl('decal-rotation', 'decal-rotation-input', 'rotation', (v) => v.toFixed(0));
-
-            
-
-            // Reset transformations
-
-            document.getElementById('resetTransforms').addEventListener('click', () => {
-
-                currentDesign.transform = {
-
-                    scale: 1,
-
-                    rotation: 0
-
-                };
-
-                
-
-                document.getElementById('decal-scale').value = 1;
-
-                document.getElementById('decal-rotation').value = 0;
-
-                document.getElementById('decal-scale-input').value = 1;
-
-                document.getElementById('decal-rotation-input').value = 0;
-
-                
-
-                if (decalMesh) {
-
-                    updateDecal();
-
-                }
-
-                
-
-                document.getElementById('info-panel').innerHTML += '<br>Transformations reset';
-
-                document.getElementById('statusMessage').textContent = 'Transformations reset';
-
-            });
-
-            
-
-            // Screenshot button
-
-            document.getElementById('screenshotBtn').addEventListener('click', takeScreenshot);
-
-            
-
-            // Save design button
-
-            document.getElementById('saveDesignBtn').addEventListener('click', saveDesign);
-
-            
-
-            // Load design button (needs a hidden file input to trigger)
-
-            const loadDesignInput = document.createElement('input');
-
-            loadDesignInput.type = 'file';
-
-            loadDesignInput.accept = '.json';
-
-            loadDesignInput.style.display = 'none';
-
-            document.body.appendChild(loadDesignInput);
-
-
-
-            document.getElementById('loadDesignBtn').addEventListener('click', () => {
-
-                loadDesignInput.click();
-
-            });
-
-
-
-            loadDesignInput.addEventListener('change', (e) => {
-
-                const file = e.target.files[0];
-
-                if (file) {
-
-                    loadDesign(file).catch(error => {
-
-                        console.error('Error loading design:', error);
-
-                    });
-
-                }
-
-                // Reset the input to allow loading the same file again
-
-                e.target.value = '';
-
-            });
-
-            
-
-            // Click event for decal placement
-
-            window.addEventListener('click', onClick);
-
-        }
-
-        
-
-        // Setup transform control
-
-        function setupTransformControl(sliderId, inputId, property, formatFn = (v) => v) {
-
-            const slider = document.getElementById(sliderId);
-
-            const input = document.getElementById(inputId);
-
-            
-
-            slider.addEventListener('input', (e) => {
-
-                const value = parseFloat(e.target.value);
-
-                currentDesign.transform[property] = value;
-
-                input.value = formatFn(value);
-
-                
-
-                if (decalMesh) {
-
-                    updateDecal();
-
-                }
-
-            });
-
-            
-
-            input.addEventListener('input', (e) => {
-
-                let value = parseFloat(e.target.value);
-
-                
-
-                // Clamp the value to the allowed range
-
-                if (sliderId === 'decal-scale') {
-
-                    value = Math.max(0.1, Math.min(3, value));
-
-                } else if (sliderId === 'decal-rotation') {
-
-                    value = Math.max(-180, Math.min(180, value));
-
-                }
-
-                
-
-                currentDesign.transform[property] = value;
-
-                slider.value = value;
-
-                
-
-                if (decalMesh) {
-
-                    updateDecal();
-
-                }
-
-            });
-
-        }
-
-
-
-        // Material presets
-
-        const materialPresets = {
-
-            cotton: { roughness: 0.7, metalness: 0.0 },
-
-            polyester: { roughness: 0.3, metalness: 0.0 },
-
-            velvet: { roughness: 0.9, metalness: 0.0 },
-
-            denim: { roughness: 0.8, metalness: 0.0 },
-
-            leather: { roughness: 0.4, metalness: 0.2 }
-
-        };
-
-        
-
-        // Load all resources
-
-        async function loadResources() {
-
-            try {
-
-                document.getElementById('info-panel').innerHTML = 'Loading resources...';
-
-                document.getElementById('statusMessage').textContent = 'Loading resources...';
-
-                
-
-                // Load textures
-
-                try {
-
-                    textures = await loadTextures();
-
-                } catch (textureError) {
-
-                    console.error('Error loading textures:', textureError);
-
-                    textures = {};
-
-                }
-
-                
-
-                // Load environment
-
-                try {
-
-                    await loadEnvironment();
-
-                } catch (envError) {
-
-                    console.error('Error loading environment:', envError);
-
-                    scene.environment = null;
-
-                }
-
-                
-
-                // Load model
-
-                await loadModel();
-
-                
-
-                // Hide loading overlay
-
-                document.getElementById('loading-overlay').style.display = 'none';
-
-                document.getElementById('statusMessage').textContent = 'Ready';
-
-            } catch (error) {
-
-                console.error('Error loading resources:', error);
-
-                document.getElementById('info-panel').innerHTML = 
-
-                    `Failed to load model: ${error.message}`;
-
-                document.getElementById('statusMessage').textContent = 
-
-                    `Failed to load model: ${error.message}`;
-
-                document.getElementById('loading-overlay').textContent = 
-
-                    `Error: ${error.message}`;
-
-            }
-
-        }
-
-        
-
-        // Load textures
-
-        async function loadTextures() {
-
-            document.getElementById('info-panel').innerHTML = 'Loading textures...';
-
-            document.getElementById('statusMessage').textContent = 'Loading textures...';
-
-            
-
-            const textureUrls = {
-
-                cottonNormalMap: 'https://cdn.jsdelivr.net/gh/mrdoob/three.js@dev/examples/textures/terrain/grasslight-big.jpg',
-
-                denimNormalMap: 'https://cdn.jsdelivr.net/gh/mrdoob/three.js@dev/examples/textures/normalmaps/leather/roughness.jpg',
-
-                velvetNormalMap: 'https://cdn.jsdelivr.net/gh/mrdoob/three.js@dev/examples/textures/normalmaps/leather/normal.jpg',
-
-                leatherNormalMap: 'https://cdn.jsdelivr.net/gh/mrdoob/three.js@dev/examples/textures/normalmaps/leather/normal.jpg',
-
-                puffDisplacementMap: 'https://cdn.jsdelivr.net/gh/mrdoob/three.js@dev/examples/textures/terrain/grasslight-big.jpg',
-
-                studioEnvMap: 'https://cdn.jsdelivr.net/gh/mrdoob/three.js@dev/examples/textures/equirectangular/venice_sunset_1k.hdr',
-
-                outdoorEnvMap: 'https://cdn.jsdelivr.net/gh/mrdoob/three.js@dev/examples/textures/equirectangular/pisa_1k.hdr',
-
-                neonEnvMap: 'https://cdn.jsdelivr.net/gh/mrdoob/three.js@dev/examples/textures/equirectangular/royal_esplanade_1k.hdr',
-
-                sunsetEnvMap: 'https://cdn.jsdelivr.net/gh/mrdoob/three.js@dev/examples/textures/equirectangular/bridge2_1k.hdr'
-
-            };
-
-            
-
-            const texturePromises = Object.entries(textureUrls).map(([key, url]) => 
-
-                loadTexture(url)
-
-                    .then(texture => ({ key, texture }))
-
-                    .catch(error => {
-
-                        console.warn(`Failed to load ${key}: ${error}`);
-
-                        return { key, texture: createDefaultTexture() };
-
-                    })
-
-            );
-
-            
-
-            const loadedTextures = await Promise.all(texturePromises);
-
-            
-
-            const textures = {};
-
-            loadedTextures.forEach(({ key, texture }) => {
-
-                textures[key] = texture;
-
-                if (key.includes('Displacement')) {
-
-                    texture.wrapS = texture.wrapT = THREE.RepeatWrapping;
-
-                }
-
-            });
-
-            
-
-            return textures;
-
-        }
-
-        
-
-        // Create a default empty texture
-
-        function createDefaultTexture() {
-
-            const canvas = document.createElement('canvas');
-
-            canvas.width = canvas.height = 2;
-
-            const ctx = canvas.getContext('2d');
-
-            ctx.fillStyle = '#808080';
-
-            ctx.fillRect(0, 0, 2, 2);
-
-            const texture = new THREE.CanvasTexture(canvas);
-
-            texture.needsUpdate = true;
-
-            return texture;
-
-        }
-
-        
-
-        // Load texture with error handling
-
-        function loadTexture(url) {
-
-            try {
-
-                const loader = new THREE.TextureLoader();
-
-                return new Promise((resolve, reject) => {
-
-                    loader.load(
-
-                        url,
-
-                        resolve,
-
-                        undefined,
-
-                        (error) => {
-
-                            console.warn(`Failed to load texture: ${url}`, error);
-
-                            resolve(createDefaultTexture());
-
-                        }
-
-                    );
-
-                });
-
-            } catch (error) {
-
-                console.error('Texture loading error:', error);
-
-                return createDefaultTexture();
-
-            }
-
-        }
-
-        
-
-        // Load environment map
-
-        async function loadEnvironment(type = 'studio') {
-
-            document.getElementById('info-panel').innerHTML = `Loading ${type} environment...`;
-
-            document.getElementById('statusMessage').textContent = `Loading ${type} environment...`;
-
-
-
-            try {
-
-                const pmremGenerator = new THREE.PMREMGenerator(renderer);
-
-                pmremGenerator.compileEquirectangularShader();
-
-
-
-                let envMapUrl;
-
-                switch (type) {
-
-                    case 'studio':
-
-                        envMapUrl = textures.studioEnvMap;
-
-                        break;
-
-                    case 'outdoor':
-
-                        envMapUrl = textures.outdoorEnvMap;
-
-                        break;
-
-                    case 'neon':
-
-                        envMapUrl = textures.neonEnvMap;
-
-                        break;
-
-                    case 'sunset':
-
-                        envMapUrl = textures.sunsetEnvMap;
-
-                        break;
-
-                    default:
-
-                        envMapUrl = textures.studioEnvMap; // Fallback
-
-                }
-
-
-
-                const texture = await new RGBELoader()
-
-                    .setDataType(THREE.FloatType) // HDR files are usually float type
-
-                    .loadAsync(envMapUrl);
-
-                const envMap = pmremGenerator.fromEquirectangular(texture).texture;
-
-                texture.dispose();
-
-
-
-                scene.environment = envMap;
-
-                pmremGenerator.dispose();
-
-
-
-                return envMap;
-
-            } catch (error) {
-
-                console.error('Failed to load environment map:', error);
-
-
-
-                // Fallback to cube environment
-
-                try {
-
-                    const envMap = await new THREE.CubeTextureLoader()
-
-                        .setPath('https://cdn.jsdelivr.net/gh/mrdoob/three.js@dev/examples/textures/cube/pisa/')
-
-                        .loadAsync(['px.png', 'nx.png', 'py.png', 'ny.png', 'pz.png', 'nz.png']);
-
-                    scene.environment = envMap;
-
-                    return envMap;
-
-                } catch (cubeError) {
-
-                    console.error('Failed to load cube environment:', cubeError);
-
-                    return null;
-
-                }
-
-            }
-
-        }
-
-
-
-        // Update model info panel
-
-        function updateModelInfo(gltf) {
-
-            let info = `Model loaded: ${gltf.scene.name || 'Unnamed'}<br>`;
-
-            
-
-            // Count meshes
-
-            let meshCount = 0;
-
-            gltf.scene.traverse((child) => {
-
-                if (child.isMesh) meshCount++;
-
-            });
-
-            info += `Meshes: ${meshCount}<br>`;
-
-            
-
-            // Animation info
-
-            if (gltf.animations && gltf.animations.length > 0) {
-
-                info += `Animations: ${gltf.animations.length}<br>`;
-
-                info += `Playing animation: ${gltf.animations[0].name || 'Unnamed'}`;
-
-            } else {
-
-                info += 'No animations found';
-
-            }
-
-            
-
-            document.getElementById('info-panel').innerHTML = info;
-
-        }
-
-
-
-        // Create a new white base material
-
-        function createBaseMaterial() {
-
-            return new THREE.MeshStandardMaterial({
-
-                color: new THREE.Color(currentMaterial.color), // Use currentMaterial color
-
-                roughness: currentMaterial.roughness,
-
-                metalness: currentMaterial.metalness,
-
-                side: THREE.DoubleSide,
-
-                envMap: scene.environment,
-
-                envMapIntensity: 0.5
-
-            });
-
-        }
-
-
-
-        // Apply color to the hoodie
-
-        function applyColor() {
-
-            const colorValue = document.getElementById('hoodieColor').value;
-
-            currentMaterial.color.set(colorValue); // Update currentMaterial state
-
-            if (hoodieMaterial) {
-
-                hoodieMaterial.color.set(colorValue);
-
-                hoodieMaterial.needsUpdate = true;
-
-                document.getElementById('info-panel').innerHTML += `<br>Color applied: ${colorValue}`;
-
-                document.getElementById('statusMessage').textContent = `Color applied: ${colorValue}`;
-
-            }
-
-        }
-
-        
-
-        // Update the hoodie material with current properties
-
-        function updateHoodieMaterial() {
-
-            if (!hoodieModel) return;
-
-
-
-            // Dispose of old material if it exists
-
-            if (hoodieMaterial) {
-
-                hoodieMaterial.dispose();
-
-            }
-
-
-
-            // Create new material with current properties
-
-            const newMaterial = createBaseMaterial();
-
-
-
-            // Replace all materials with our base material
-
-            hoodieModel.traverse((child) => {
-
-                if (child.isMesh) {
-
-                    // Store reference to the material we'll be modifying
-
-                    hoodieMaterial = newMaterial;
-
-                    child.material = newMaterial;
-
-                    child.material.map = textures[`${currentMaterial.materialType}NormalMap`]; // Apply material texture
-
-                    child.material.needsUpdate = true;
-
-                }
-
-            });
-
-        }
-
-
-
-        // Handle design upload
-
-        async function handleDesignUpload(event) {
-
-            const file = event.target.files[0];
-
-            if (!file) return;
-
-
-
-            document.getElementById('statusMessage').textContent = 'Processing image...';
-
-            document.getElementById('loading-overlay').style.display = 'flex'; // Show loading for image processing
-
-
-
-            try {
-
-                const imageDataUrl = await resizeImage(file, 512, 512); // Resize to 512x512 for performance
-
-                currentDesign.texture = imageDataUrl; // Store the data URL for saving
-
-                
-
-                const preview = document.getElementById('designPreview');
-
-                preview.innerHTML = '';
-
-                preview.classList.remove('empty');
-
-                
-
-                const img = document.createElement('img');
-
-                img.src = imageDataUrl;
-
-                preview.appendChild(img);
-
-
-
-                const image = new Image();
-
-                image.src = imageDataUrl;
-
-                await new Promise(resolve => image.onload = resolve);
-
-
-
-                decalTexture = new THREE.Texture(image);
-
-                decalTexture.needsUpdate = true;
-
-
-
-                document.getElementById('decal-controls').classList.add('active');
-
-                document.getElementById('info-panel').innerHTML += '<br>Design loaded';
-
-                document.getElementById('statusMessage').textContent = 'Design loaded. Click on hoodie to place!';
-
-                document.getElementById('loading-overlay').style.display = 'none'; // Hide loading
-
-            } catch (error) {
-
-                console.error("Error processing image:", error);
-
-                document.getElementById('statusMessage').textContent = 'Error loading image.';
-
-                document.getElementById('loading-overlay').style.display = 'none';
-
-            }
-
-        }
-
-
-
-        // Client-side image resizing
-
-        function resizeImage(file, maxWidth, maxHeight) {
-
-            return new Promise((resolve, reject) => {
-
-                const reader = new FileReader();
-
-                reader.onload = (e) => {
-
-                    const img = new Image();
-
-                    img.onload = () => {
-
-                        const canvas = document.createElement('canvas');
-
-                        let width = img.width;
-
-                        let height = img.height;
-
-
-
-                        if (width > height) {
-
-                            if (width > maxWidth) {
-
-                                height *= maxWidth / width;
-
-                                width = maxWidth;
-
-                            }
-
-                        } else {
-
-                            if (height > maxHeight) {
-
-                                width *= maxHeight / height;
-
-                                height = maxHeight;
-
-                            }
-
-                        }
-
-
-
-                        canvas.width = width;
-
-                        canvas.height = height;
-
-                        const ctx = canvas.getContext('2d');
-
-                        ctx.drawImage(img, 0, 0, width, height);
-
-                        resolve(canvas.toDataURL('image/png')); // Always convert to PNG for decal transparency
-
-                    };
-
-                    img.onerror = reject;
-
-                    img.src = e.target.result;
-
-                };
-
-                reader.onerror = reject;
-
-                reader.readAsDataURL(file);
-
-            });
-
-        }
-
-
-
-        // Handle click event for decal placement
-
-        function onClick(event) {
-
-            if (!decalTexture || !hoodieModel) return;
-
-
-
-            // Normalize mouse coordinates (-1 to 1)
-
-            const rect = renderer.domElement.getBoundingClientRect();
-
-            mouse.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
-
-            mouse.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
-
-
-
-            raycaster.setFromCamera(mouse, camera);
-
-
-
-            // Find the first intersected mesh on the hoodie
-
-            const intersects = raycaster.intersectObject(hoodieModel, true);
-
-            if (intersects.length > 0) {
-
-                const hit = intersects[0];
-
-                // Store base position, normal, and target mesh for later updates
-
-                decalBasePosition = hit.point.clone();
-
-                decalBaseNormal = hit.face.normal.clone();
-
-                decalTargetMesh = hit.object;
-
-                placeDecalAt(decalBasePosition, decalBaseNormal, decalTargetMesh);
-
-                document.getElementById('statusMessage').textContent = 'Design placed.';
-
-            }
-
-        }
-
-
-
-        // Place decal at the clicked position
-
-        function placeDecalAt(position, normal, targetMesh) {
-
-            if (!decalTexture) return;
-
-
-
-            // Remove existing decal if any
-
-            if (decalMesh) {
-
-                scene.remove(decalMesh);
-
-                decalMesh.geometry.dispose();
-
-                decalMesh.material.dispose();
-
-            }
-
-
-
-            // Calculate orientation including user's rotation input
-
-            const initialOrientation = new THREE.Euler().setFromVector3(normal);
-
-            const rotationQuat = new THREE.Quaternion().setFromAxisAngle(
-
-                new THREE.Vector3(0, 0, 1), // Rotate around the Z axis of the decal's plane
-
-                THREE.MathUtils.degToRad(currentDesign.transform.rotation)
-
-            );
-
-            const combinedOrientation = new THREE.Quaternion().setFromEuler(initialOrientation).multiply(rotationQuat);
-
-            const finalOrientation = new THREE.Euler().setFromQuaternion(combinedOrientation);
-
-
-
-            const size = new THREE.Vector3(
-
-                currentDesign.transform.scale,
-
-                currentDesign.transform.scale,
-
-                currentDesign.transform.scale // Z component for DecalGeometry's projection depth
-
-            );
-
-
-
-            const decalGeo = new DecalGeometry(targetMesh, position, finalOrientation, size);
-
-
-
-            const decalMat = new THREE.MeshBasicMaterial({
-
-                map: decalTexture,
-
-                transparent: true,
-
-                depthTest: true,
-
-                depthWrite: false,
-
-                polygonOffset: true,
-
-                polygonOffsetFactor: -4
-
-            });
-
-
-
-            decalMesh = new THREE.Mesh(decalGeo, decalMat);
-
-            scene.add(decalMesh);
-
-
-
-            document.getElementById('info-panel').innerHTML += '<br>Design placed';
-
-            document.getElementById('statusMessage').textContent = 'Design placed';
-
-        }
-
-
-
-        // Update decal with current transformations
-
-        function updateDecal() {
-
-            if (!decalMesh || !decalBasePosition || !decalBaseNormal || !decalTargetMesh) return;
-
-
-
-            // Recreate the decal geometry with updated scale and rotation
-
-            placeDecalAt(decalBasePosition, decalBaseNormal, decalTargetMesh);
-
-        }
-
-
-
-        // Remove decal
-
-        function removeDecal() {
-
-            if (decalMesh) {
-
-                scene.remove(decalMesh);
-
-                decalMesh.geometry.dispose();
-
-                decalMesh.material.dispose();
-
-                decalMesh = null;
-
-                decalTexture = null; // Clear decal texture as well
-
-                decalBasePosition = null;
-
-                decalBaseNormal = null;
-
-                decalTargetMesh = null;
-
-                document.getElementById('designPreview').innerHTML = '';
-
-                document.getElementById('designPreview').classList.add('empty');
-
-                document.getElementById('decal-controls').classList.remove('active'); // Hide controls
-
-                document.getElementById('info-panel').innerHTML += '<br>Design removed';
-
-                document.getElementById('statusMessage').textContent = 'Design removed. Upload new design!';
-
-            }
-
-        }
-
-
-
-        // Load the model
-
-        async function loadModel() {
-
-            try {
-
-                const loader = new GLTFLoader();
-
-                const dracoLoader = new DRACOLoader();
-
-                dracoLoader.setDecoderPath('https://www.gstatic.com/draco/v1/decoders/');
-
-                loader.setDRACOLoader(dracoLoader);
-
-
-
-                // Load your hoodie model
-
-                const modelUrl = 'Hoodie_Walking_Animated.glb'; // Make sure this path is correct
-
-
-
-                const gltf = await loader.loadAsync(modelUrl);
-
-
-
-                console.log('Model loaded successfully:', gltf);
-
-                hoodieModel = gltf.scene;
-
-                scene.add(hoodieModel);
-
-
-
-                // Apply a base scaling to the model if it's too small
-
-                // Adjust this value based on your model's imported size relative to your scene
-
-                hoodieModel.scale.set(1.5, 1.5, 1.5); // Example: Scale up by 1.5 times
-
-
-
-                // Replace all materials with our base material
-
-                const baseMaterial = createBaseMaterial();
-
-                hoodieModel.traverse((child) => {
-
-                    if (child.isMesh) {
-
-                        // Store reference to the material we'll be modifying
-
-                        hoodieMaterial = baseMaterial;
-
-                        child.material = baseMaterial;
-
-                        // You might need to check if normal maps etc. should be applied based on material type
-
-                        if (textures[`${currentMaterial.materialType}NormalMap`]) {
-
-                            child.material.normalMap = textures[`${currentMaterial.materialType}NormalMap`];
-
-                            child.material.normalScale.set(1, 1); // Adjust if needed
-
-                        }
-
-                        child.castShadow = true;
-
-                        child.receiveShadow = true;
-
-                        console.log("Replaced material for:", child.name);
-
-                    }
-
-                });
-
-
-
-                // Check for animations
-
-                if (gltf.animations && gltf.animations.length > 0) {
-
-                    mixer = new THREE.AnimationMixer(hoodieModel);
-
-                    currentAction = mixer.clipAction(gltf.animations[0]);
-
-                    currentAction.play();
-
-                    console.log(`Playing animation: ${gltf.animations[0].name}`);
-
-
-
-                    // Enable animation controls
-
-                    document.getElementById('play-animation').disabled = false;
-
-                    document.getElementById('pause-animation').disabled = false;
-
-
-
-                    document.getElementById('info-panel').innerHTML += '<br>Animation ready';
-
-                    document.getElementById('statusMessage').textContent = 'Animation ready';
-
-                }
-
-
-
-                // Update model info
-
-                updateModelInfo(gltf);
-
-
-
-                // Center model and adjust camera
-
-                const box = new THREE.Box3().setFromObject(hoodieModel);
-
-                const center = box.getCenter(new THREE.Vector3());
-
-                hoodieModel.position.sub(center); // Center the model itself
-
-
-
-                // Adjust camera distance based on model size
-
-                const size = box.getSize(new THREE.Vector3()).length();
-
-                camera.position.z = size * 1.2; // Move closer for a better view of the hoodie
-
-                camera.lookAt(hoodieModel.position); // Ensure camera looks at the centered model
-
-                controls.target.copy(hoodieModel.position); // Set orbit controls target to the model's center
-
-                controls.update();
-
-
-
-                // Enable apply button
-
-                document.getElementById('apply-colors').disabled = false;
-
-
-
-            } catch (error) {
-
-                console.error('Error loading model:', error);
-
-
-
-                // Update info panel
-
-                document.getElementById('info-panel').innerHTML =
-
-                    `Failed to load model: ${error.message}`;
-
-                document.getElementById('statusMessage').textContent =
-
-                    `Failed to load model: ${error.message}`;
-
-
-
-                // Create a fallback cube
-
-                const geometry = new THREE.BoxGeometry(1, 1.5, 0.8);
-
-                const material = createBaseMaterial();
-
-                hoodieModel = new THREE.Mesh(geometry, material);
-
-                scene.add(hoodieModel);
-
-
-
-                camera.position.z = 3;
-
-                controls.update();
-
-            }
-
-        }
-
-
-
-        // Update lighting based on selected effect
-
-        function updateLighting() {
-
-            const ambientLight = scene.children.find(child => child instanceof THREE.AmbientLight);
-
-            const directionalLight = scene.children.find(child => child instanceof THREE.DirectionalLight && child.position.x > 0);
-
-            const directionalLight2 = scene.children.find(child => child instanceof THREE.DirectionalLight && child.position.x < 0);
-
-
-
-            if (!ambientLight || !directionalLight || !directionalLight2) return;
-
-
-
-            switch (lightingEffect) {
-
-                case 'studio':
-
-                    ambientLight.intensity = 0.5;
-
-                    directionalLight.intensity = 2;
-
-                    directionalLight2.intensity = 0.5;
-
-                    directionalLight.color.setHex(0xffffff);
-
-                    directionalLight2.color.setHex(0xffffff);
-
-                    break;
-
-                case 'outdoor':
-
-                    ambientLight.intensity = 1;
-
-                    directionalLight.intensity = 3;
-
-                    directionalLight2.intensity = 1;
-
-                    directionalLight.color.setHex(0xffecd2);
-
-                    directionalLight2.color.setHex(0xfcb69f);
-
-                    break;
-
-                case 'neon':
-
-                    ambientLight.intensity = 0.2;
-
-                    directionalLight.intensity = 3;
-
-                    directionalLight2.intensity = 0.5;
-
-                    directionalLight.color.setHex(0x00f5d4);
-
-                    directionalLight2.color.setHex(0xf15bb5);
-
-                    break;
-
-                case 'sunset':
-
-                    ambientLight.intensity = 0.8;
-
-                    directionalLight.intensity = 2.5;
-
-                    directionalLight2.intensity = 0.8;
-
-                    directionalLight.color.setHex(0xff9e7d);
-
-                    directionalLight2.color.setHex(0xffd7ba);
-
-                    break;
-
-            }
-
-        }
-
-
-
-        // Update background based on selected effect
-
-        function updateBackground() {
-
-            switch (backgroundEffect) {
-
-                case 'plain':
-
-                    scene.background = new THREE.Color(0xf0f0f0);
-
-                    break;
-
-                case 'gradient':
-
-                    const canvas = document.createElement('canvas');
-
-                    canvas.width = 1;
-
-                    canvas.height = 256;
-
-                    const ctx = canvas.getContext('2d');
-
-                    const gradient = ctx.createLinearGradient(0, 0, 0, 256);
-
-                    gradient.addColorStop(0, '#e0e0e0');
-
-                    gradient.addColorStop(1, '#c0c0c0');
-
-                    ctx.fillStyle = gradient;
-
-                    ctx.fillRect(0, 0, 1, 256);
-
-                    scene.background = new THREE.CanvasTexture(canvas);
-
-                    break;
-
-                case 'showroom':
-
-                    scene.background = new THREE.Color(0x222222);
-
-                    break;
-
-                case 'transparent':
-
-                    scene.background = null;
-
-                    renderer.setClearAlpha(0); // Make the canvas transparent
-
-                    break;
-
-            }
-
-        }
-
-
-
-        // Take screenshot
-
-        function takeScreenshot() {
-
-            const quality = document.getElementById('exportQuality').value;
-
-            const size = document.getElementById('exportSize').value;
-
-
-
-            // Set renderer to higher resolution if needed
-
-            const originalSize = renderer.getSize(new THREE.Vector2());
-
-            let scale = 1;
-
-
-
-            if (size === '2x') scale = 2;
-
-            if (size === '4x') scale = 4;
-
-
-
-            renderer.setSize(originalSize.x * scale, originalSize.y * scale, false);
-
-            renderer.render(scene, camera);
-
-
-
-            let mimeType, qualityValue;
-
-            if (quality === 'high') {
-
-                mimeType = 'image/png';
-
-                qualityValue = 1.0;
-
-            } else if (quality === 'medium') {
-
-                mimeType = 'image/jpeg';
-
-                qualityValue = 0.9;
-
-            } else {
-
-                mimeType = 'image/jpeg';
-
-                qualityValue = 0.7;
-
-            }
-
-
-
-            const image = renderer.domElement.toDataURL(mimeType, qualityValue);
-
-
-
-            // Reset renderer to original size
-
-            renderer.setSize(originalSize.x, originalSize.y, false);
-
-
-
-            const link = document.createElement('a');
-
-            link.href = image;
-
-            link.download = `hoodie-design-${new Date().toISOString().slice(0, 10)}.${mimeType.split('/')[1]}`;
-
-            link.click();
-
-
-
-            document.getElementById('info-panel').innerHTML += '<br>Screenshot saved';
-
-            document.getElementById('statusMessage').textContent = 'Screenshot saved';
-
-        }
-
-
-
-        // Save design settings
-
-        function saveDesign() {
-
-            const designData = {
-
-                material: {
-
-                    color: currentMaterial.color.getHexString(), // Save color as hex string
-
-                    roughness: currentMaterial.roughness,
-
-                    metalness: currentMaterial.metalness,
-
-                    materialType: currentMaterial.materialType
-
-                },
-
-                design: {
-
-                    texture: currentDesign.texture, // Store the data URL of the image
-
-                    transform: currentDesign.transform,
-
-                    decalPosition: decalBasePosition ? decalBasePosition.toArray() : null,
-
-                    decalNormal: decalBaseNormal ? decalBaseNormal.toArray() : null,
-
-                    decalTargetMeshName: decalTargetMesh ? decalTargetMesh.name : null
-
-                },
-
-                lighting: lightingEffect,
-
-                background: backgroundEffect,
-
-                animation: animationEffect,
-
-                version: '1.0'
-
-            };
-
-
-
-            const blob = new Blob([JSON.stringify(designData)], { type: 'application/json' });
-
-            const url = URL.createObjectURL(blob);
-
-
-
-            const link = document.createElement('a');
-
-            link.href = url;
-
-            link.download = `hoodie-design-${new Date().toISOString().slice(0, 10)}.json`;
-
-            link.click();
-
-
-
-            document.getElementById('info-panel').innerHTML += '<br>Design settings saved';
-
-            document.getElementById('statusMessage').textContent = 'Design saved';
-
-        }
-
-
-
-        // Load design settings
-
-        async function loadDesign(file) {
-
-            try {
-
-                const reader = new FileReader();
-
-
-
-                return new Promise((resolve, reject) => {
-
-                    reader.onload = async (e) => {
-
-                        try {
-
-                            const designData = JSON.parse(e.target.result);
-
-
-
-                            // Validate version
-
-                            if (!designData.version || designData.version !== '1.0') {
-
-                                throw new Error('Invalid design file version');
-
-                            }
-
-
-
-                            // Apply settings
-
-                            currentMaterial.color.set(`#${designData.material.color}`);
-
-                            currentMaterial.roughness = designData.material.roughness;
-
-                            currentMaterial.metalness = designData.material.metalness;
-
-                            currentMaterial.materialType = designData.material.materialType;
-
-
-
-                            currentDesign.transform = designData.design.transform;
-
-                            currentDesign.texture = designData.design.texture;
-
-
-
-                            lightingEffect = designData.lighting;
-
-                            backgroundEffect = designData.background;
-
-                            animationEffect = designData.animation;
-
-
-
-                            // Update UI
-
-                            document.getElementById('hoodieColor').value = `#${currentMaterial.color.getHexString()}`;
-
-                            document.getElementById('materialType').value = currentMaterial.materialType;
-
-                            document.getElementById('roughness').value = currentMaterial.roughness;
-
-                            document.getElementById('roughnessValue').textContent = currentMaterial.roughness.toFixed(2);
-
-                            document.getElementById('animationEffect').value = animationEffect;
-
-                            document.getElementById('lightingEffect').value = lightingEffect;
-
-                            document.getElementById('backgroundEffect').value = backgroundEffect;
-
-
-
-                            // Update color presets selection
-
-                            document.querySelectorAll('.color-preset').forEach(preset => {
-
-                                preset.classList.remove('selected');
-
-                                if (preset.dataset.color === `#${currentMaterial.color.getHexString()}`) {
-
-                                    preset.classList.add('selected');
-
-                                }
-
-                            });
-
-
-
-                            // Update material
-
-                            updateHoodieMaterial();
-
-
-
-                            // Update environment and lighting
-
-                            await loadEnvironment(lightingEffect);
-
-                            updateLighting();
-
-                            updateBackground();
-
-
-
-                            // Load decal texture and re-place if it exists
-
-                            if (currentDesign.texture) {
-
-                                const img = new Image();
-
-                                img.src = currentDesign.texture;
-
-                                await new Promise(resolve => img.onload = resolve);
-
-                                decalTexture = new THREE.Texture(img);
-
-                                decalTexture.needsUpdate = true;
-
-
-
-                                decalBasePosition = new THREE.Vector3().fromArray(designData.design.decalPosition);
-
-                                decalBaseNormal = new THREE.Vector3().fromArray(designData.design.decalNormal);
-
-
-
-                                // Find the target mesh by name
-
-                                decalTargetMesh = hoodieModel.getObjectByName(designData.design.decalTargetMeshName);
-
-                                if (decalTargetMesh) {
-
-                                    placeDecalAt(decalBasePosition, decalBaseNormal, decalTargetMesh);
-
-                                    document.getElementById('decal-controls').classList.add('active'); // Show controls
-
-                                    document.getElementById('designPreview').innerHTML = '';
-
-                                    const previewImg = document.createElement('img');
-
-                                    previewImg.src = currentDesign.texture;
-
-                                    document.getElementById('designPreview').appendChild(previewImg);
-
-                                    document.getElementById('designPreview').classList.remove('empty');
-
-                                    document.getElementById('decal-scale').value = currentDesign.transform.scale;
-
-                                    document.getElementById('decal-rotation').value = currentDesign.transform.rotation;
-
-                                    document.getElementById('decal-scale-input').value = currentDesign.transform.scale.toFixed(1);
-
-                                    document.getElementById('decal-rotation-input').value = currentDesign.transform.rotation.toFixed(0);
-
-                                } else {
-
-                                    console.warn('Target mesh for decal not found:', designData.design.decalTargetMeshName);
-
-                                    removeDecal(); // Clear decal state if target mesh is missing
-
-                                }
-
-                            } else {
-
-                                removeDecal(); // No decal to load, ensure it's removed
-
-                            }
-
-
-
-                            document.getElementById('info-panel').innerHTML = 'Design loaded successfully';
-
-                            document.getElementById('statusMessage').textContent = 'Design loaded';
-
-                            resolve();
-
-                        } catch (error) {
-
-                            console.error('Error parsing design file:', error);
-
-                            document.getElementById('info-panel').innerHTML = 'Error loading design file';
-
-                            document.getElementById('statusMessage').textContent = 'Error loading design';
-
-                            reject(error);
-
-                        }
-
-                    };
-
-
-
-                    reader.onerror = () => {
-
-                        reject(new Error('Error reading file'));
-
-                    };
-
-
-
-                    reader.readAsText(file);
-
-                });
-
-            } catch (error) {
-
-                console.error('Error loading design:', error);
-
-                document.getElementById('info-panel').innerHTML = 'Error loading design';
-
-                document.getElementById('statusMessage').textContent = 'Error loading design';
-
-                throw error;
-
-            }
-
-        }
-
-
-
-        // Apply wind effect to the hoodie
-
-        function applyWindEffect(delta) {
-
-            if (!hoodieModel || animationEffect !== 'wind') return;
-
-
-
-            windEffect.time += delta;
-
-
-
-            // This is a simplified wind effect and might distort the model significantly.
-
-            // For realistic cloth simulation, you'd typically use a physics engine or
-
-            // modify vertex shaders with more complex algorithms.
-
-            hoodieModel.traverse(child => {
-
-                if (child.isMesh && child.geometry.isBufferGeometry) {
-
-                    const positionAttribute = child.geometry.attributes.position;
-
-                    const originalPositions = child.geometry.userData.originalPositions;
-
-
-
-                    if (!originalPositions) {
-
-                        // Store original positions the first time
-
-                        child.geometry.userData.originalPositions = Array.from(positionAttribute.array);
-
-                    }
-
-
-
-                    const positions = positionAttribute.array;
-
-
-
-                    for (let i = 0; i < positions.length; i += 3) {
-
-                        const x = originalPositions[i];
-
-                        const y = originalPositions[i + 1];
-
-                        const z = originalPositions[i + 2];
-
-
-
-                        const windMagnitude = windEffect.strength * Math.sin(windEffect.time * windEffect.frequency + y * 5 + x * 2) * (1 + Math.sin(windEffect.time * 0.5 + z * 3)) * 0.5;
-
-
-
-                        // Apply displacement along a general wind direction (e.g., X and Z)
-
-                        positions[i] = x + windMagnitude * 0.5; // X displacement
-
-                        positions[i + 2] = z + windMagnitude * 0.2; // Z displacement
-
-                    }
-
-
-
-                    positionAttribute.needsUpdate = true;
-
-                    child.geometry.computeVertexNormals();
-
-                }
-
-            });
-
-        }
-
-
-
-        // Apply bounce effect
-
-        function applyBounceEffect(delta) {
-
-            if (!hoodieModel || animationEffect !== 'bounce') return;
-
-
-
-            const time = Date.now() * 0.001;
-
-            hoodieModel.position.y = Math.sin(time * 2) * 0.05; // Bounce up and down
-
-        }
-
-
-
-        // Apply spin effect
-
-        function applySpinEffect(delta) {
-
-            if (!hoodieModel || animationEffect !== 'spin') return;
-
-
-
-            hoodieModel.rotation.y += delta * 0.5; // Rotate around Y axis
-
-        }
-
-
-
-        // Animation loop
-
-        function animate() {
-
-            requestAnimationFrame(animate);
-
-
-
-            const delta = clock.getDelta();
-
-            if (mixer && !isAnimationPaused) {
-
-                mixer.update(delta);
-
-            }
-
-
-
-            // Only apply if 'none' is not selected for animationEffect
-
-            if (animationEffect !== 'none') {
-
-                applyWindEffect(delta);
-
-                applyBounceEffect(delta);
-
-                applySpinEffect(delta);
-
-            }
-
-
-
-            controls.update();
-
-
-
-            if (composer) {
-
-                composer.render();
-
-            } else {
-
-                renderer.render(scene, camera);
-
-            }
-
-        }
-
-
-
-        // Improved resize handler with debouncing
-
-        let resizeTimeout;
-
-        function handleResize() {
-
-            // Debounce resize events
-
-            clearTimeout(resizeTimeout);
-
-            resizeTimeout = setTimeout(() => {
-
-                const isMobile = window.innerWidth <= 768;
-
-                const sidebarWidth = isMobile ? 0 : 350;
-
-
-
-                let width = window.innerWidth - sidebarWidth;
-
-                let height = isMobile ? window.innerHeight * 0.5 : window.innerHeight;
-
-
-
-                // Ensure minimum dimensions
-
-                width = Math.max(1, width);
-
-                height = Math.max(1, height);
-
-
-
-                // Update Three.js renderer and camera
-
-                camera.aspect = width / height;
-
-                camera.updateProjectionMatrix();
-
-                renderer.setSize(width, height);
-
-
-
-                // Update post-processing if enabled
-
-                if (composer) {
-
-                    composer.setSize(width, height);
-
-                    const pixelRatio = renderer.getPixelRatio();
-
-                    fxaaPass.material.uniforms['resolution'].value.x = 1 / (width * pixelRatio);
-
-                    fxaaPass.material.uniforms['resolution'].value.y = 1 / (height * pixelRatio);
-
-                }
-
-            }, 100);
-
-        }
-
-
-
-        // Event listeners
-
-        window.addEventListener('resize', handleResize);
-
-
-
-        // Start the application
-
-        init();
-
-    </script>
-
+    <div id="loading-overlay">
+        <div class="spinner"></div>
+        <div>Loading 3D Hoodie Designer...</div>
+    </div>
+    
+    <div id="info-panel-toggle">ℹ️ Info</div>
+    <div id="info-panel">Loading model info...</div>
+    
+    <div id="viewer-container">
+        <div id="viewer"></div>
+    </div>
+    
+    <div id="sidebar">
+        <div class="logo">Hoodie Designer Pro</div>
+        
+        <div class="tab-buttons">
+            <button class="tab-button active" data-tab="design">Design</button>
+            <button class="tab-button" data-tab="materials">Materials</button>
+            <button class="tab-button" data-tab="effects">Effects</button>
+            <button class="tab-button" data-tab="export">Export</button>
+        </div>
+        
+        <div class="tab-content active" id="design-tab">
+            <div class="control-group">
+                <h3>Design Upload</h3>
+                <div class="design-preview empty" id="designPreview"></div>
+                <input type="file" id="design-upload" accept="image/*">
+                <div class="placement-control">
+                    <label>Click on the hoodie to place your design</label>
+                </div>
+                <div class="decal-controls" id="decal-controls">
+                    <div class="transform-control">
+                        <label>Scale</label>
+                        <div class="transform-row">
+                            <span>Size:</span>
+                            <input type="range" id="decal-scale" min="0.1" max="3" step="0.1" value="1">
+                            <input type="number" id="decal-scale-input" min="0.1" max="3" step="0.1" value="1">
+                        </div>
+                    </div>
+                    
+                    <div class="transform-control">
+                        <label>Rotation</label>
+                        <div class="transform-row">
+                            <span>Angle:</span>
+                            <input type="range" id="decal-rotation" min="-180" max="180" step="1" value="0">
+                            <input type="number" id="decal-rotation-input" min="-180" max="180" step="1" value="0">
+                        </div>
+                    </div>
+                    
+                    <button id="resetTransforms">
+                        <span>🔄</span> Reset Transformations
+                    </button>
+                </div>
+                <button id="remove-decal">
+                    <span>🗑️</span> Remove Design
+                </button>
+            </div>
+        </div>
+        
+        <div class="tab-content" id="materials-tab">
+            <div class="control-group">
+                <h3>Color Customization</h3>
+                <div class="color-control">
+                    <label for="hoodieColor">Hoodie Color</label>
+                    <input type="color" id="hoodieColor" value="#FFFFFF">
+                </div>
+                
+                <div class="color-presets">
+                    <div class="color-preset" style="background-color: #FFFFFF;" data-color="#FFFFFF"></div>
+                    <div class="color-preset" style="background-color: #000000;" data-color="#000000"></div>
+                    <div class="color-preset" style="background-color: #4361ee;" data-color="#4361ee"></div>
+                    <div class="color-preset" style="background-color: #3f37c9;" data-color="#3f37c9"></div>
+                    <div class="color-preset" style="background-color: #8ac926;" data-color="#8ac926"></div>
+                    <div class="color-preset" style="background-color: #ffca3a;" data-color="#ffca3a"></div>
+                    <div class="color-preset" style="background-color: #ff595e;" data-color="#ff595e"></div>
+                    <div class="color-preset" style="background-color: #f72585;" data-color="#f72585"></div>
+                </div>
+                <button id="apply-colors">Apply Color</button>
+            </div>
+            
+            <div class="control-group">
+                <h3>Material Properties</h3>
+                <div class="color-control">
+                    <label for="materialType">Material Type</label>
+                    <select id="materialType">
+                        <option value="cotton">Cotton</option>
+                        <option value="polyester">Polyester</option>
+                        <option value="velvet">Velvet</option>
+                        <option value="denim">Denim</option>
+                        <option value="leather">Leather</option>
+                    </select>
+                </div>
+                <div class="color-control">
+                    <label for="roughness">Roughness</label>
+                    <input type="range" id="roughness" min="0" max="1" step="0.05" value="0.7">
+                    <span class="transform-value" id="roughnessValue">0.7</span>
+                </div>
+            </div>
+        </div>
+        
+        <div class="tab-content" id="effects-tab">
+            <div class="control-group">
+                <h3>Animation Controls</h3>
+                <div class="animation-controls">
+                    <button id="play-animation">
+                        <span>▶</span> Play
+                    </button>
+                    <button id="pause-animation">
+                        <span>⏸</span> Pause
+                    </button>
+                </div>
+                <div class="effect-control">
+                    <label for="animationEffect">Animation Effect</label>
+                    <select id="animationEffect">
+                        <option value="none">None</option>
+                        <option value="wind">Wind</option>
+                        <option value="bounce">Bounce</option>
+                        <option value="spin">Spin</option>
+                    </select>
+                </div>
+            </div>
+            
+            <div class="control-group">
+                <h3>Special Effects</h3>
+                <div class="effect-control">
+                    <label for="lightingEffect">Lighting</label>
+                    <select id="lightingEffect">
+                        <option value="studio">Studio</option>
+                        <option value="outdoor">Outdoor</option>
+                        <option value="neon">Neon</option>
+                        <option value="sunset">Sunset</option>
+                    </select>
+                </div>
+                <div class="effect-control">
+                    <label for="backgroundEffect">Background</label>
+                    <select id="backgroundEffect">
+                        <option value="plain">Plain</option>
+                        <option value="gradient">Gradient</option>
+                        <option value="showroom">Showroom</option>
+                        <option value="transparent">Transparent</option>
+                    </select>
+                </div>
+            </div>
+        </div>
+        
+        <div class="tab-content" id="export-tab">
+            <div class="control-group">
+                <h3>Save & Export</h3>
+                <button id="screenshotBtn">
+                    <span>📸</span> Take Screenshot
+                </button>
+                <div class="tooltip">
+                    <button id="saveDesignBtn">
+                        <span>💾</span> Save Design
+                    </button>
+                    <span class="tooltiptext">Save your design settings to continue later</span>
+                </div>
+                <div class="tooltip">
+                    <button id="loadDesignBtn">
+                        <span>📂</span> Load Design
+                    </button>
+                    <span class="tooltiptext">Load a previously saved design</span>
+                </div>
+            </div>
+            
+            <div class="control-group">
+                <h3>Export Options</h3>
+                <div class="effect-control">
+                    <label for="exportQuality">Quality</label>
+                    <select id="exportQuality">
+                        <option value="high">High (PNG)</option>
+                        <option value="medium">Medium (JPEG 90%)</option>
+                        <option value="low">Low (JPEG 70%)</option>
+                    </select>
+                </div>
+                <div class="effect-control">
+                    <label for="exportSize">Size</label>
+                    <select id="exportSize">
+                        <option value="1x">Original Size</option>
+                        <option value="2x">2x Resolution</option>
+                        <option value="4x">4x Resolution</option>
+                    </select>
+                </div>
+            </div>
+        </div>
+        
+        <div class="status-bar">
+            <span id="statusMessage">Initializing...</span>
+            <span id="versionInfo">v1.0.0</span>
+        </div>
+    </div>
+
+    <script type="importmap">
+        {
+            "imports": {
+                "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+                "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+            }
+        }
+    </script>
+    <script type="module">
+        import * as THREE from 'three';
+        import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+        import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+        import { RGBELoader } from 'three/addons/loaders/RGBELoader.js';
+        import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
+        import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
+        import { ShaderPass } from 'three/addons/postprocessing/ShaderPass.js';
+        import { FXAAShader } from 'three/addons/shaders/FXAAShader.js';
+        import { DRACOLoader } from 'three/addons/loaders/DRACOLoader.js';
+        import { DecalGeometry } from 'three/addons/geometries/DecalGeometry.js';
+        
+        // Main variables
+        let scene, camera, renderer, controls, mixer, clock, hoodieModel;
+        let hoodieMaterial = null;
+        let currentAction = null;
+        let decalMesh = null;
+        let decalTexture = null;
+        let isAnimationPaused = false;
+        let composer, fxaaPass;
+        let textures = {};
+        
+        // For raycasting and decal placement
+        const raycaster = new THREE.Raycaster();
+        const mouse = new THREE.Vector2();
+        
+        // Current design properties
+        let currentDesign = {
+            texture: null,
+            placement: 'front',
+            transform: {
+                scale: 1,
+                rotation: 0
+            }
+        };
+        
+        // Current material properties
+        let currentMaterial = {
+            color: new THREE.Color(0xFFFFFF),
+            roughness: 0.7,
+            metalness: 0.0,
+            materialType: 'cotton'
+        };
+        
+        // Animation effects
+        let animationEffect = 'none';
+        let windEffect = {
+            strength: 0,
+            frequency: 0.5,
+            time: 0
+        };
+        
+        // Lighting effects
+        let lightingEffect = 'studio';
+        
+        // Background effects
+        let backgroundEffect = 'plain';
+
+        // Initialize the application
+        function init() {
+            // Check WebGL support
+            if (!isWebGLAvailable()) {
+                showWebGLError();
+                return;
+            }
+
+            setupScene();
+            setupControls();
+            setupUI();
+            loadResources();
+            animate();
+        }
+
+        // Check WebGL support
+        function isWebGLAvailable() {
+            try {
+                const canvas = document.createElement('canvas');
+                canvas.width = canvas.height = 2;
+                const ctx = canvas.getContext('webgl') || canvas.getContext('experimental-webgl');
+                return !!(window.WebGLRenderingContext && ctx);
+            } catch (e) {
+                return false;
+            }
+        }
+
+        function showWebGLError() {
+            const warning = document.createElement('div');
+            warning.innerHTML = 'WebGL not supported in your browser';
+            warning.style.color = 'white';
+            warning.style.backgroundColor = 'red';
+            warning.style.padding = '20px';
+            warning.style.fontFamily = 'sans-serif';
+            document.getElementById('viewer').appendChild(warning);
+            document.getElementById('statusMessage').textContent = 'WebGL not supported';
+            throw new Error('WebGL not supported');
+        }
+
+        // Setup Three.js scene
+        function setupScene() {
+            scene = new THREE.Scene();
+            scene.background = new THREE.Color(0xf0f0f0);
+            
+            // Get initial dimensions
+            const { width, height } = getSafeDimensions();
+            
+            camera = new THREE.PerspectiveCamera(75, width / height, 0.1, 1000);
+            camera.position.z = 5;
+            
+            renderer = new THREE.WebGLRenderer({ 
+                antialias: true,
+                powerPreference: "high-performance"
+            });
+            renderer.setSize(width, height);
+            renderer.outputColorSpace = THREE.SRGBColorSpace;
+            renderer.toneMapping = THREE.ACESFilmicToneMapping;
+            renderer.toneMappingExposure = 1.0;
+            renderer.shadowMap.enabled = true;
+            renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+            document.getElementById('viewer').appendChild(renderer.domElement);
+            
+            // Lighting
+            const ambientLight = new THREE.AmbientLight(0xffffff, 0.5);
+            scene.add(ambientLight);
+            
+            const directionalLight = new THREE.DirectionalLight(0xffffff, 2);
+            directionalLight.position.set(1, 1, 1);
+            directionalLight.castShadow = true;
+            directionalLight.shadow.mapSize.width = 2048;
+            directionalLight.shadow.mapSize.height = 2048;
+            directionalLight.shadow.camera.near = 0.5;
+            directionalLight.shadow.camera.far = 500;
+            directionalLight.shadow.camera.left = -5;
+            directionalLight.shadow.camera.right = 5;
+            directionalLight.shadow.camera.top = 5;
+            directionalLight.shadow.camera.bottom = -5;
+            scene.add(directionalLight);
+            
+            const directionalLight2 = new THREE.DirectionalLight(0xffffff, 0.5);
+            directionalLight2.position.set(-1, -1, -1);
+            scene.add(directionalLight2);
+            
+            clock = new THREE.Clock();
+            
+            // Initialize post-processing
+            initPostProcessing();
+        }
+        
+        // Initialize post-processing
+        function initPostProcessing() {
+            composer = new EffectComposer(renderer);
+            const renderPass = new RenderPass(scene, camera);
+            composer.addPass(renderPass);
+            
+            fxaaPass = new ShaderPass(FXAAShader);
+            const pixelRatio = renderer.getPixelRatio();
+            fxaaPass.material.uniforms['resolution'].value.x = 1 / (Math.max(1, window.innerWidth - 350) * pixelRatio);
+            fxaaPass.material.uniforms['resolution'].value.y = 1 / (Math.max(1, window.innerHeight) * pixelRatio);
+            composer.addPass(fxaaPass);
+        }
+
+        // Helper function to get safe dimensions
+        function getSafeDimensions() {
+            const isMobile = window.innerWidth <= 768;
+            const sidebarWidth = isMobile ? 0 : 350;
+            
+            let width = window.innerWidth - sidebarWidth;
+            let height = isMobile ? window.innerHeight * 0.5 : window.innerHeight;
+            
+            // Ensure minimum dimensions of 1px
+            width = Math.max(1, width);
+            height = Math.max(1, height);
+            
+            return { width, height };
+        }
+
+        // Setup orbit controls
+        function setupControls() {
+            controls = new OrbitControls(camera, renderer.domElement);
+            controls.enableDamping = true;
+            controls.dampingFactor = 0.05;
+            controls.screenSpacePanning = false;
+            controls.maxPolarAngle = Math.PI;
+            controls.minDistance = 1;
+            controls.maxDistance = 10;
+        }
+
+        // Setup UI event listeners
+        function setupUI() {
+            // Info panel toggle
+            document.getElementById('info-panel-toggle').addEventListener('click', (e) => {
+                e.stopPropagation();
+                const infoPanel = document.getElementById('info-panel');
+                infoPanel.style.display = infoPanel.style.display === 'block' ? 'none' : 'block';
+            });
+            
+            // Close info panel when clicking outside
+            document.addEventListener('click', (e) => {
+                const infoPanel = document.getElementById('info-panel');
+                const toggleButton = document.getElementById('info-panel-toggle');
+                
+                if (e.target !== infoPanel && e.target !== toggleButton && !infoPanel.contains(e.target)) {
+                    infoPanel.style.display = 'none';
+                }
+            });
+            
+            // Animation controls
+            document.getElementById('play-animation').addEventListener('click', () => {
+                if (currentAction) {
+                    isAnimationPaused = false;
+                    currentAction.paused = false;
+                    currentAction.play();
+                    document.getElementById('info-panel').innerHTML += '<br>Animation playing';
+                    document.getElementById('statusMessage').textContent = 'Animation playing';
+                }
+            });
+            
+            document.getElementById('pause-animation').addEventListener('click', () => {
+                if (currentAction) {
+                    isAnimationPaused = !isAnimationPaused;
+                    currentAction.paused = isAnimationPaused;
+                    document.getElementById('info-panel').innerHTML += isAnimationPaused 
+                        ? '<br>Animation paused' 
+                        : '<br>Animation playing';
+                    document.getElementById('statusMessage').textContent = isAnimationPaused 
+                        ? 'Animation paused' 
+                        : 'Animation playing';
+                }
+            });
+            
+            // Color controls
+            document.getElementById('apply-colors').addEventListener('click', applyColor);
+            
+            // Color presets
+            document.querySelectorAll('.color-preset').forEach(preset => {
+                preset.addEventListener('click', () => {
+                    document.querySelectorAll('.color-preset').forEach(p => p.classList.remove('selected'));
+                    preset.classList.add('selected');
+                    document.getElementById('hoodieColor').value = preset.dataset.color;
+                    applyColor();
+                });
+            });
+            
+            // Design upload
+            document.getElementById('design-upload').addEventListener('change', handleDesignUpload);
+            document.getElementById('remove-decal').addEventListener('click', removeDecal);
+            
+            // Material properties
+            document.getElementById('materialType').addEventListener('change', (e) => {
+                const preset = materialPresets[e.target.value];
+                currentMaterial.materialType = e.target.value;
+                currentMaterial.roughness = preset.roughness;
+                currentMaterial.metalness = preset.metalness;
+                
+                document.getElementById('roughness').value = preset.roughness;
+                document.getElementById('roughnessValue').textContent = preset.roughness.toFixed(2);
+                
+                updateHoodieMaterial();
+                
+                document.getElementById('info-panel').innerHTML += `<br>Material: ${e.target.value}`;
+                document.getElementById('statusMessage').textContent = `Material: ${e.target.value}`;
+            });
+            
+            document.getElementById('roughness').addEventListener('input', (e) => {
+                currentMaterial.roughness = parseFloat(e.target.value);
+                document.getElementById('roughnessValue').textContent = currentMaterial.roughness.toFixed(2);
+                updateHoodieMaterial();
+            });
+            
+            // Animation effect
+            document.getElementById('animationEffect').addEventListener('change', (e) => {
+                animationEffect = e.target.value;
+                windEffect.strength = animationEffect === 'wind' ? 0.1 : 0;
+                document.getElementById('info-panel').innerHTML += `<br>Effect: ${animationEffect}`;
+                document.getElementById('statusMessage').textContent = `Effect: ${animationEffect}`;
+            });
+            
+            // Lighting effect
+            document.getElementById('lightingEffect').addEventListener('change', async (e) => {
+                lightingEffect = e.target.value;
+                await loadEnvironment(lightingEffect);
+                updateLighting();
+                document.getElementById('info-panel').innerHTML += `<br>Lighting: ${lightingEffect}`;
+                document.getElementById('statusMessage').textContent = `Lighting: ${lightingEffect}`;
+            });
+            
+            // Background effect
+            document.getElementById('backgroundEffect').addEventListener('change', (e) => {
+                backgroundEffect = e.target.value;
+                updateBackground();
+                document.getElementById('info-panel').innerHTML += `<br>Background: ${backgroundEffect}`;
+                document.getElementById('statusMessage').textContent = `Background: ${backgroundEffect}`;
+            });
+            
+            // Tab navigation
+            document.querySelectorAll('.tab-button').forEach(button => {
+                button.addEventListener('click', () => {
+                    // Remove active class from all buttons and content
+                    document.querySelectorAll('.tab-button').forEach(btn => btn.classList.remove('active'));
+                    document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
+                    
+                    // Add active class to clicked button and corresponding content
+                    button.classList.add('active');
+                    const tabId = button.dataset.tab + '-tab';
+                    document.getElementById(tabId).classList.add('active');
+                });
+            });
+            
+            // Transform controls
+            setupTransformControl('decal-scale', 'decal-scale-input', 'scale');
+            setupTransformControl('decal-rotation', 'decal-rotation-input', 'rotation');
+            
+            // Reset transformations
+            document.getElementById('resetTransforms').addEventListener('click', () => {
+                currentDesign.transform = {
+                    scale: 1,
+                    rotation: 0
+                };
+                
+                document.getElementById('decal-scale').value = 1;
+                document.getElementById('decal-rotation').value = 0;
+                document.getElementById('decal-scale-input').value = 1;
+                document.getElementById('decal-rotation-input').value = 0;
+                
+                if (decalMesh) {
+                    updateDecal();
+                }
+                
+                document.getElementById('info-panel').innerHTML += '<br>Transformations reset';
+                document.getElementById('statusMessage').textContent = 'Transformations reset';
+            });
+            
+            // Screenshot button
+            document.getElementById('screenshotBtn').addEventListener('click', takeScreenshot);
+            
+            // Save design button
+            document.getElementById('saveDesignBtn').addEventListener('click', saveDesign);
+            
+            // Load design button
+            document.getElementById('loadDesignBtn').addEventListener('change', (e) => {
+                const file = e.target.files[0];
+                if (file) {
+                    loadDesign(file).catch(error => {
+                        console.error('Error loading design:', error);
+                    });
+                }
+                // Reset the input to allow loading the same file again
+                e.target.value = '';
+            });
+            
+            // Click event for decal placement
+            window.addEventListener('click', onClick);
+        }
+        
+        // Setup transform control
+        function setupTransformControl(sliderId, inputId, property, formatFn = (v) => v) {
+            const slider = document.getElementById(sliderId);
+            const input = document.getElementById(inputId);
+            
+            slider.addEventListener('input', (e) => {
+                const value = parseFloat(e.target.value);
+                currentDesign.transform[property] = value;
+                input.value = formatFn(value);
+                
+                if (decalMesh) {
+                    updateDecal();
+                }
+            });
+            
+            input.addEventListener('input', (e) => {
+                let value = parseFloat(e.target.value);
+                
+                // Clamp the value to the allowed range
+                if (sliderId === 'decal-scale') {
+                    value = Math.max(0.1, Math.min(3, value));
+                } else if (sliderId === 'decal-rotation') {
+                    value = Math.max(-180, Math.min(180, value));
+                }
+                
+                currentDesign.transform[property] = value;
+                slider.value = value;
+                
+                if (decalMesh) {
+                    updateDecal();
+                }
+            });
+        }
+
+        // Material presets
+        const materialPresets = {
+            cotton: { roughness: 0.7, metalness: 0.0 },
+            polyester: { roughness: 0.3, metalness: 0.0 },
+            velvet: { roughness: 0.9, metalness: 0.0 },
+            denim: { roughness: 0.8, metalness: 0.0 },
+            leather: { roughness: 0.4, metalness: 0.2 }
+        };
+        
+        // Load all resources
+        async function loadResources() {
+            try {
+                document.getElementById('info-panel').innerHTML = 'Loading resources...';
+                document.getElementById('statusMessage').textContent = 'Loading resources...';
+                
+                // Load textures
+                try {
+                    textures = await loadTextures();
+                } catch (textureError) {
+                    console.error('Error loading textures:', textureError);
+                    textures = {};
+                }
+                
+                // Load environment
+                try {
+                    await loadEnvironment();
+                } catch (envError) {
+                    console.error('Error loading environment:', envError);
+                    scene.environment = null;
+                }
+                
+                // Load model
+                await loadModel();
+                
+                // Hide loading overlay
+                document.getElementById('loading-overlay').style.display = 'none';
+                document.getElementById('statusMessage').textContent = 'Ready';
+            } catch (error) {
+                console.error('Error loading resources:', error);
+                document.getElementById('info-panel').innerHTML = 
+                    `Failed to load model: ${error.message}`;
+                document.getElementById('statusMessage').textContent = 
+                    `Failed to load model: ${error.message}`;
+                document.getElementById('loading-overlay').textContent = 
+                    `Error: ${error.message}`;
+            }
+        }
+        
+        // Load textures
+        async function loadTextures() {
+            document.getElementById('info-panel').innerHTML = 'Loading textures...';
+            document.getElementById('statusMessage').textContent = 'Loading textures...';
+            
+            const textureUrls = {
+                cottonNormalMap: 'https://cdn.jsdelivr.net/gh/mrdoob/three.js@dev/examples/textures/terrain/grasslight-big.jpg',
+                denimNormalMap: 'https://cdn.jsdelivr.net/gh/mrdoob/three.js@dev/examples/textures/normalmaps/leather/roughness.jpg',
+                velvetNormalMap: 'https://cdn.jsdelivr.net/gh/mrdoob/three.js@dev/examples/textures/normalmaps/leather/normal.jpg',
+                leatherNormalMap: 'https://cdn.jsdelivr.net/gh/mrdoob/three.js@dev/examples/textures/normalmaps/leather/normal.jpg',
+                puffDisplacementMap: 'https://cdn.jsdelivr.net/gh/mrdoob/three.js@dev/examples/textures/terrain/grasslight-big.jpg',
+                studioEnvMap: 'https://cdn.jsdelivr.net/gh/mrdoob/three.js@dev/examples/textures/equirectangular/venice_sunset_1k.hdr',
+                outdoorEnvMap: 'https://cdn.jsdelivr.net/gh/mrdoob/three.js@dev/examples/textures/equirectangular/pisa_1k.hdr',
+                neonEnvMap: 'https://cdn.jsdelivr.net/gh/mrdoob/three.js@dev/examples/textures/equirectangular/royal_esplanade_1k.hdr',
+                sunsetEnvMap: 'https://cdn.jsdelivr.net/gh/mrdoob/three.js@dev/examples/textures/equirectangular/bridge2_1k.hdr'
+            };
+            
+            const texturePromises = Object.entries(textureUrls).map(([key, url]) => 
+                loadTexture(url)
+                    .then(texture => ({ key, texture }))
+                    .catch(error => {
+                        console.warn(`Failed to load ${key}: ${error}`);
+                        return { key, texture: createDefaultTexture() };
+                    })
+            );
+            
+            const loadedTextures = await Promise.all(texturePromises);
+            
+            const textures = {};
+            loadedTextures.forEach(({ key, texture }) => {
+                textures[key] = texture;
+                if (key.includes('Displacement')) {
+                    texture.wrapS = texture.wrapT = THREE.RepeatWrapping;
+                }
+            });
+            
+            return textures;
+        }
+        
+        // Create a default empty texture
+        function createDefaultTexture() {
+            const canvas = document.createElement('canvas');
+            canvas.width = canvas.height = 2;
+            const ctx = canvas.getContext('2d');
+            ctx.fillStyle = '#808080';
+            ctx.fillRect(0, 0, 2, 2);
+            const texture = new THREE.CanvasTexture(canvas);
+            texture.needsUpdate = true;
+            return texture;
+        }
+        
+        // Load texture with error handling
+        function loadTexture(url) {
+            try {
+                const loader = new THREE.TextureLoader();
+                return new Promise((resolve, reject) => {
+                    loader.load(
+                        url,
+                        resolve,
+                        undefined,
+                        (error) => {
+                            console.warn(`Failed to load texture: ${url}`, error);
+                            resolve(createDefaultTexture());
+                        }
+                    );
+                });
+            } catch (error) {
+                console.error('Texture loading error:', error);
+                return createDefaultTexture();
+            }
+        }
+        
+        // Load environment map
+        async function loadEnvironment(type = 'studio') {
+            document.getElementById('info-panel').innerHTML = `Loading ${type} environment...`;
+            document.getElementById('statusMessage').textContent = `Loading ${type} environment...`;
+            
+            try {
+                const pmremGenerator = new THREE.PMREMGenerator(renderer);
+                pmremGenerator.compileEquirectangularShader();
+                
+                let envMap;
+                
+                if (type === 'studio') {
+                    const texture = await new RGBELoader()
+                        .setDataType(THREE.UnsignedByteType)
+                        .loadAsync(textures.studioEnvMap);
+                    envMap = pmremGenerator.fromEquirectangular(texture).texture;
+                    texture.dispose();
+                } 
+                else if (type === 'outdoor') {
+                    const texture = await new RGBELoader()
+                        .setDataType(THREE.UnsignedByteType)
+                        .loadAsync(textures.outdoorEnvMap);
+                    envMap = pmremGenerator.fromEquirectangular(texture).texture;
+                    texture.dispose();
+                }
+                else if (type === 'neon') {
+                    const texture = await new RGBELoader()
+                        .setDataType(THREE.UnsignedByteType)
+                        .loadAsync(textures.neonEnvMap);
+                    envMap = pmremGenerator.fromEquirectangular(texture).texture;
+                    texture.dispose();
+                }
+                else if (type === 'sunset') {
+                    const texture = await new RGBELoader()
+                        .setDataType(THREE.UnsignedByteType)
+                        .loadAsync(textures.sunsetEnvMap);
+                    envMap = pmremGenerator.fromEquirectangular(texture).texture;
+                    texture.dispose();
+                }
+                
+                scene.environment = envMap;
+                pmremGenerator.dispose();
+                
+                return envMap;
+            } catch (error) {
+                console.error('Failed to load environment map:', error);
+                
+                // Fallback to cube environment
+                try {
+                    const envMap = await new THREE.CubeTextureLoader()
+                        .setPath('https://cdn.jsdelivr.net/gh/mrdoob/three.js@dev/examples/textures/cube/pisa/')
+                        .loadAsync(['px.png', 'nx.png', 'py.png', 'ny.png', 'pz.png', 'nz.png']);
+                    scene.environment = envMap;
+                    return envMap;
+                } catch (cubeError) {
+                    console.error('Failed to load cube environment:', cubeError);
+                    return null;
+                }
+            }
+        }
+
+        // Update model info panel
+        function updateModelInfo(gltf) {
+            let info = `Model loaded: ${gltf.scene.name || 'Unnamed'}<br>`;
+            
+            // Count meshes
+            let meshCount = 0;
+            gltf.scene.traverse((child) => {
+                if (child.isMesh) meshCount++;
+            });
+            info += `Meshes: ${meshCount}<br>`;
+            
+            // Animation info
+            if (gltf.animations && gltf.animations.length > 0) {
+                info += `Animations: ${gltf.animations.length}<br>`;
+                info += `Playing animation: ${gltf.animations[0].name || 'Unnamed'}`;
+            } else {
+                info += 'No animations found';
+            }
+            
+            document.getElementById('info-panel').innerHTML = info;
+        }
+
+        // Create a new white base material
+        function createBaseMaterial() {
+            return new THREE.MeshStandardMaterial({
+                color: 0xFFFFFF, // White base
+                roughness: currentMaterial.roughness,
+                metalness: currentMaterial.metalness,
+                side: THREE.DoubleSide,
+                envMap: scene.environment,
+                envMapIntensity: 0.5
+            });
+        }
+
+        // Apply color to the hoodie
+        function applyColor() {
+            const colorValue = document.getElementById('hoodieColor').value;
+            if (hoodieMaterial) {
+                hoodieMaterial.color.set(colorValue);
+                hoodieMaterial.needsUpdate = true;
+                document.getElementById('info-panel').innerHTML += `<br>Color applied: ${colorValue}`;
+                document.getElementById('statusMessage').textContent = `Color applied: ${colorValue}`;
+            }
+        }
+        
+        // Update the hoodie material with current properties
+        function updateHoodieMaterial() {
+            if (!hoodieModel) return;
+            
+            // Create new material with current properties
+            const newMaterial = createBaseMaterial();
+            
+            // Replace all materials with our base material
+            hoodieModel.traverse((child) => {
+                if (child.isMesh) {
+                    // Store reference to the material we'll be modifying
+                    hoodieMaterial = newMaterial;
+                    child.material = newMaterial;
+                }
+            });
+        }
+
+        // Handle design upload
+        function handleDesignUpload(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            const preview = document.getElementById('designPreview');
+            preview.innerHTML = '';
+            preview.classList.remove('empty');
+            
+            const img = document.createElement('img');
+            img.src = URL.createObjectURL(file);
+            preview.appendChild(img);
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const image = new Image();
+                image.onload = function() {
+                    // Create texture from the image
+                    decalTexture = new THREE.Texture(image);
+                    decalTexture.needsUpdate = true;
+                    
+                    // Show decal controls
+                    document.getElementById('decal-controls').classList.add('active');
+                    document.getElementById('info-panel').innerHTML += '<br>Design loaded';
+                    document.getElementById('statusMessage').textContent = 'Design loaded';
+                };
+                image.src = e.target.result;
+            };
+            reader.readAsDataURL(file);
+        }
+
+        // Handle click event for decal placement
+        function onClick(event) {
+            if (!decalTexture || !hoodieModel) return;
+
+            // Normalize mouse coordinates (-1 to 1)
+            const rect = renderer.domElement.getBoundingClientRect();
+            mouse.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
+            mouse.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
+
+            raycaster.setFromCamera(mouse, camera);
+
+            // Find the first intersected mesh on the hoodie
+            const intersects = raycaster.intersectObject(hoodieModel, true);
+            if (intersects.length > 0) {
+                const hit = intersects[0];
+                placeDecalAt(hit.point, hit.face.normal, hit.object);
+            }
+        }
+
+        // Place decal at the clicked position
+        function placeDecalAt(position, normal, targetMesh) {
+            if (!decalTexture) return;
+            
+            // Remove existing decal if any
+            if (decalMesh) {
+                scene.remove(decalMesh);
+            }
+
+            const orientation = new THREE.Euler().setFromVector3(normal.clone());
+            const size = new THREE.Vector3(
+                currentDesign.transform.scale,
+                currentDesign.transform.scale,
+                currentDesign.transform.scale
+            );
+
+            const decalGeo = new DecalGeometry(targetMesh, position, orientation, size);
+
+            const decalMat = new THREE.MeshBasicMaterial({
+                map: decalTexture,
+                transparent: true,
+                depthTest: true,
+                depthWrite: false,
+                polygonOffset: true,
+                polygonOffsetFactor: -4
+            });
+
+            decalMesh = new THREE.Mesh(decalGeo, decalMat);
+            scene.add(decalMesh);
+            
+            // Apply rotation
+            updateDecal();
+            
+            document.getElementById('info-panel').innerHTML += '<br>Design placed';
+            document.getElementById('statusMessage').textContent = 'Design placed';
+        }
+
+        // Update decal with current transformations
+        function updateDecal() {
+            if (!decalMesh) return;
+            
+            // Apply rotation
+            decalMesh.rotation.z = THREE.MathUtils.degToRad(currentDesign.transform.rotation);
+            
+            // Update scale (need to recreate geometry)
+            const targetMesh = findTargetMesh();
+            if (targetMesh) {
+                const position = decalMesh.position.clone();
+                const normal = new THREE.Vector3().copy(position).normalize();
+                const orientation = new THREE.Euler().setFromVector3(normal);
+                const size = new THREE.Vector3(
+                    currentDesign.transform.scale,
+                    currentDesign.transform.scale,
+                    currentDesign.transform.scale
+                );
+                
+                const newGeo = new DecalGeometry(targetMesh, position, orientation, size);
+                decalMesh.geometry.dispose();
+                decalMesh.geometry = newGeo;
+            }
+        }
+
+        // Find the target mesh for decal placement
+        function findTargetMesh() {
+            if (!hoodieModel) return null;
+            
+            let target = null;
+            hoodieModel.traverse(child => {
+                if (child.isMesh && !target) {
+                    target = child;
+                }
+            });
+            
+            return target;
+        }
+
+        // Remove decal
+        function removeDecal() {
+            if (decalMesh) {
+                scene.remove(decalMesh);
+                decalMesh = null;
+                document.getElementById('info-panel').innerHTML += '<br>Design removed';
+                document.getElementById('statusMessage').textContent = 'Design removed';
+            }
+        }
+
+        // Load the model
+        async function loadModel() {
+            try {
+                const loader = new GLTFLoader();
+                const dracoLoader = new DRACOLoader();
+                dracoLoader.setDecoderPath('https://www.gstatic.com/draco/v1/decoders/');
+                loader.setDRACOLoader(dracoLoader);
+                
+                // Load your hoodie model
+                const modelUrl = 'Hoodie_Walking_Animated.glb'; // Make sure this path is correct
+                
+                const gltf = await loader.loadAsync(modelUrl);
+                
+                console.log('Model loaded successfully:', gltf);
+                hoodieModel = gltf.scene;
+                scene.add(hoodieModel);
+                
+                // Replace all materials with our base material
+                const baseMaterial = createBaseMaterial();
+                hoodieModel.traverse((child) => {
+                    if (child.isMesh) {
+                        // Store reference to the material we'll be modifying
+                        hoodieMaterial = baseMaterial;
+                        child.material = baseMaterial;
+                        console.log("Replaced material for:", child.name);
+                    }
+                });
+                
+                // Check for animations
+                if (gltf.animations && gltf.animations.length > 0) {
+                    mixer = new THREE.AnimationMixer(hoodieModel);
+                    currentAction = mixer.clipAction(gltf.animations[0]);
+                    currentAction.play();
+                    console.log(`Playing animation: ${gltf.animations[0].name}`);
+                    
+                    // Enable animation controls
+                    document.getElementById('play-animation').disabled = false;
+                    document.getElementById('pause-animation').disabled = false;
+                    
+                    document.getElementById('info-panel').innerHTML += '<br>Animation ready';
+                    document.getElementById('statusMessage').textContent = 'Animation ready';
+                }
+                
+                // Update model info
+                updateModelInfo(gltf);
+                
+                // Center model
+                const box = new THREE.Box3().setFromObject(hoodieModel);
+                const center = box.getCenter(new THREE.Vector3());
+                hoodieModel.position.sub(center);
+                
+                // Adjust camera distance based on model size
+                const size = box.getSize(new THREE.Vector3()).length();
+                camera.position.z = size * 1.5;
+                controls.update();
+                
+                // Enable apply button
+                document.getElementById('apply-colors').disabled = false;
+                
+            } catch (error) {
+                console.error('Error loading model:', error);
+                
+                // Update info panel
+                document.getElementById('info-panel').innerHTML = 
+                    `Failed to load model: ${error.message}`;
+                document.getElementById('statusMessage').textContent = 
+                    `Failed to load model: ${error.message}`;
+                
+                // Create a fallback cube
+                const geometry = new THREE.BoxGeometry(1, 1.5, 0.8);
+                const material = createBaseMaterial();
+                hoodieModel = new THREE.Mesh(geometry, material);
+                scene.add(hoodieModel);
+                
+                camera.position.z = 3;
+                controls.update();
+            }
+        }
+        
+        // Update lighting based on selected effect
+        function updateLighting() {
+            const ambientLight = scene.children.find(child => child instanceof THREE.AmbientLight);
+            const directionalLight = scene.children.find(child => child instanceof THREE.DirectionalLight && child.position.x > 0);
+            const directionalLight2 = scene.children.find(child => child instanceof THREE.DirectionalLight && child.position.x < 0);
+            
+            if (!ambientLight || !directionalLight || !directionalLight2) return;
+            
+            switch(lightingEffect) {
+                case 'studio':
+                    ambientLight.intensity = 0.5;
+                    directionalLight.intensity = 2;
+                    directionalLight2.intensity = 0.5;
+                    directionalLight.color.setHex(0xffffff);
+                    directionalLight2.color.setHex(0xffffff);
+                    break;
+                case 'outdoor':
+                    ambientLight.intensity = 1;
+                    directionalLight.intensity = 3;
+                    directionalLight2.intensity = 1;
+                    directionalLight.color.setHex(0xffecd2);
+                    directionalLight2.color.setHex(0xfcb69f);
+                    break;
+                case 'neon':
+                    ambientLight.intensity = 0.2;
+                    directionalLight.intensity = 3;
+                    directionalLight2.intensity = 0.5;
+                    directionalLight.color.setHex(0x00f5d4);
+                    directionalLight2.color.setHex(0xf15bb5);
+                    break;
+                case 'sunset':
+                    ambientLight.intensity = 0.8;
+                    directionalLight.intensity = 2.5;
+                    directionalLight2.intensity = 0.8;
+                    directionalLight.color.setHex(0xff9e7d);
+                    directionalLight2.color.setHex(0xffd7ba);
+                    break;
+            }
+        }
+        
+        // Update background based on selected effect
+        function updateBackground() {
+            switch(backgroundEffect) {
+                case 'plain':
+                    scene.background = new THREE.Color(0xf0f0f0);
+                    break;
+                case 'gradient':
+                    const canvas = document.createElement('canvas');
+                    canvas.width = 1;
+                    canvas.height = 256;
+                    const ctx = canvas.getContext('2d');
+                    const gradient = ctx.createLinearGradient(0, 0, 0, 256);
+                    gradient.addColorStop(0, '#e0e0e0');
+                    gradient.addColorStop(1, '#c0c0c0');
+                    ctx.fillStyle = gradient;
+                    ctx.fillRect(0, 0, 1, 256);
+                    scene.background = new THREE.CanvasTexture(canvas);
+                    break;
+                case 'showroom':
+                    scene.background = new THREE.Color(0x222222);
+                    break;
+                case 'transparent':
+                    scene.background = null;
+                    break;
+            }
+        }
+        
+        // Take screenshot
+        function takeScreenshot() {
+            const quality = document.getElementById('exportQuality').value;
+            const size = document.getElementById('exportSize').value;
+            
+            // Set renderer to higher resolution if needed
+            const originalSize = renderer.getSize(new THREE.Vector2());
+            let scale = 1;
+            
+            if (size === '2x') scale = 2;
+            if (size === '4x') scale = 4;
+            
+            renderer.setSize(originalSize.x * scale, originalSize.y * scale, false);
+            renderer.render(scene, camera);
+            
+            let mimeType, qualityValue;
+            if (quality === 'high') {
+                mimeType = 'image/png';
+                qualityValue = 1.0;
+            } else if (quality === 'medium') {
+                mimeType = 'image/jpeg';
+                qualityValue = 0.9;
+            } else {
+                mimeType = 'image/jpeg';
+                qualityValue = 0.7;
+            }
+            
+            const image = renderer.domElement.toDataURL(mimeType, qualityValue);
+            
+            // Reset renderer to original size
+            renderer.setSize(originalSize.x, originalSize.y, false);
+            
+            const link = document.createElement('a');
+            link.href = image;
+            link.download = `hoodie-design-${new Date().toISOString().slice(0, 10)}.${mimeType.split('/')[1]}`;
+            link.click();
+            
+            document.getElementById('info-panel').innerHTML += '<br>Screenshot saved';
+            document.getElementById('statusMessage').textContent = 'Screenshot saved';
+        }
+        
+        // Save design settings
+        function saveDesign() {
+            const designData = {
+                material: currentMaterial,
+                design: currentDesign,
+                lighting: lightingEffect,
+                background: backgroundEffect,
+                animation: animationEffect,
+                version: '1.0'
+            };
+            
+            const blob = new Blob([JSON.stringify(designData)], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = `hoodie-design-${new Date().toISOString().slice(0, 10)}.json`;
+            link.click();
+            
+            document.getElementById('info-panel').innerHTML += '<br>Design settings saved';
+            document.getElementById('statusMessage').textContent = 'Design saved';
+        }
+        
+        // Load design settings
+        function loadDesign(file) {
+            try {
+                const reader = new FileReader();
+                
+                return new Promise((resolve, reject) => {
+                    reader.onload = async (e) => {
+                        try {
+                            const designData = JSON.parse(e.target.result);
+                            
+                            // Validate version
+                            if (!designData.version || designData.version !== '1.0') {
+                                throw new Error('Invalid design file version');
+                            }
+                            
+                            // Apply settings
+                            currentMaterial = designData.material;
+                            currentDesign = designData.design;
+                            lightingEffect = designData.lighting;
+                            backgroundEffect = designData.background;
+                            animationEffect = designData.animation;
+                            
+                            // Update UI
+                            document.getElementById('hoodieColor').value = `#${currentMaterial.color.getHexString()}`;
+                            document.getElementById('materialType').value = currentMaterial.materialType;
+                            document.getElementById('roughness').value = currentMaterial.roughness;
+                            document.getElementById('roughnessValue').textContent = currentMaterial.roughness.toFixed(2);
+                            document.getElementById('animationEffect').value = animationEffect;
+                            document.getElementById('lightingEffect').value = lightingEffect;
+                            document.getElementById('backgroundEffect').value = backgroundEffect;
+                            
+                            // Update color presets selection
+                            document.querySelectorAll('.color-preset').forEach(preset => {
+                                preset.classList.remove('selected');
+                                if (preset.dataset.color === `#${currentMaterial.color.getHexString()}`) {
+                                    preset.classList.add('selected');
+                                }
+                            });
+                            
+                            // Update material
+                            updateHoodieMaterial();
+                            
+                            // Update environment and lighting
+                            await loadEnvironment(lightingEffect);
+                            updateLighting();
+                            updateBackground();
+                            
+                            document.getElementById('info-panel').innerHTML = 'Design loaded successfully';
+                            document.getElementById('statusMessage').textContent = 'Design loaded';
+                            resolve();
+                        } catch (error) {
+                            console.error('Error parsing design file:', error);
+                            document.getElementById('info-panel').innerHTML = 'Error loading design file';
+                            document.getElementById('statusMessage').textContent = 'Error loading design';
+                            reject(error);
+                        }
+                    };
+                    
+                    reader.onerror = () => {
+                        reject(new Error('Error reading file'));
+                    };
+                    
+                    reader.readAsText(file);
+                });
+            } catch (error) {
+                console.error('Error loading design:', error);
+                document.getElementById('info-panel').innerHTML = 'Error loading design';
+                document.getElementById('statusMessage').textContent = 'Error loading design';
+                throw error;
+            }
+        }
+        
+        // Apply wind effect to the hoodie
+        function applyWindEffect(delta) {
+            if (!hoodieModel || animationEffect !== 'wind') return;
+            
+            windEffect.time += delta;
+            
+            hoodieModel.traverse(child => {
+                if (child.isMesh) {
+                    const positionAttribute = child.geometry.attributes.position;
+                    const positions = positionAttribute.array;
+                    
+                    for (let i = 0; i < positions.length; i += 3) {
+                        const y = positions[i + 1];
+                        const windStrength = windEffect.strength * Math.sin(windEffect.time * 2 + y * 5) * (1 + Math.sin(windEffect.time * 0.5 + positions[i] * 3)) * 0.5;
+                        
+                        positions[i] += windStrength;
+                        positions[i + 2] += windStrength * 0.3;
+                    }
+                    
+                    positionAttribute.needsUpdate = true;
+                    child.geometry.computeVertexNormals();
+                }
+            });
+        }
+        
+        // Apply bounce effect
+        function applyBounceEffect(delta) {
+            if (!hoodieModel || animationEffect !== 'bounce') return;
+            
+            const time = Date.now() * 0.001;
+            hoodieModel.position.y = Math.sin(time * 2) * 0.05;
+        }
+        
+        // Apply spin effect
+        function applySpinEffect(delta) {
+            if (!hoodieModel || animationEffect !== 'spin') return;
+            
+            hoodieModel.rotation.y += delta * 0.5;
+        }
+
+        // Animation loop
+        function animate() {
+            requestAnimationFrame(animate);
+            
+            const delta = clock.getDelta();
+            if (mixer && !isAnimationPaused) {
+                mixer.update(delta);
+            }
+            
+            applyWindEffect(delta);
+            applyBounceEffect(delta);
+            applySpinEffect(delta);
+            
+            controls.update();
+            
+            if (composer) {
+                composer.render();
+            } else {
+                renderer.render(scene, camera);
+            }
+        }
+
+        // Improved resize handler with debouncing
+        let resizeTimeout;
+        function handleResize() {
+            // Debounce resize events
+            clearTimeout(resizeTimeout);
+            resizeTimeout = setTimeout(() => {
+                const isMobile = window.innerWidth <= 768;
+                const sidebarWidth = isMobile ? 0 : 350;
+                
+                let width = window.innerWidth - sidebarWidth;
+                let height = isMobile ? window.innerHeight * 0.5 : window.innerHeight;
+                
+                // Ensure minimum dimensions
+                width = Math.max(1, width);
+                height = Math.max(1, height);
+                
+                // Update Three.js renderer and camera
+                camera.aspect = width / height;
+                camera.updateProjectionMatrix();
+                renderer.setSize(width, height);
+                
+                // Update post-processing if enabled
+                if (composer) {
+                    composer.setSize(width, height);
+                    const pixelRatio = renderer.getPixelRatio();
+                    fxaaPass.material.uniforms['resolution'].value.x = 1 / (width * pixelRatio);
+                    fxaaPass.material.uniforms['resolution'].value.y = 1 / (height * pixelRatio);
+                }
+            }, 100);
+        }
+
+        // Event listeners
+        window.addEventListener('resize', handleResize);
+
+        // Start the application
+        init();
+    </script>
 </body>
-
 </html>
