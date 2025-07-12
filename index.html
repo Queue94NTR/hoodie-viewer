@@ -577,24 +577,6 @@
                         </div>
                     </div>
                     
-                    <div class="transform-control">
-                        <label>Position X (Left/Right)</label>
-                        <div class="transform-row">
-                            <span>X:</span>
-                            <input type="range" id="decal-position-x" min="-1" max="1" step="0.01" value="0">
-                            <input type="number" id="decal-position-x-input" min="-1" max="1" step="0.01" value="0">
-                        </div>
-                    </div>
-                    
-                    <div class="transform-control">
-                        <label>Position Y (Up/Down)</label>
-                        <div class="transform-row">
-                            <span>Y:</span>
-                            <input type="range" id="decal-position-y" min="-1" max="1" step="0.01" value="0">
-                            <input type="number" id="decal-position-y-input" min="-1" max="1" step="0.01" value="0">
-                        </div>
-                    </div>
-                    
                     <button id="resetTransforms">
                         <span>🔄</span> Reset Transformations
                     </button>
@@ -772,20 +754,13 @@
         const raycaster = new THREE.Raycaster();
         const mouse = new THREE.Vector2();
         
-        // Store the base position and normal of the decal when first placed
-        let decalBasePosition = null;
-        let decalBaseNormal = null;
-        let decalTargetMesh = null; // Store the mesh the decal was applied to
-        let decalParent = new THREE.Group(); // Parent group for decal to follow animations
-        
         // Current design properties
         let currentDesign = {
-            texture: null, // This will store the data URL or base64
+            texture: null,
+            placement: 'front',
             transform: {
                 scale: 1,
-                rotation: 0,
-                positionX: 0, // New: X position offset
-                positionY: 0  // New: Y position offset
+                rotation: 0
             }
         };
         
@@ -810,9 +785,6 @@
         
         // Background effects
         let backgroundEffect = 'plain';
-
-        // Define maximum texture dimensions for quality/performance balance
-        const MAX_TEXTURE_DIMENSION = 2048; // Higher values retain more detail but use more VRAM
 
         // Initialize the application
         function init() {
@@ -862,7 +834,7 @@
             const { width, height } = getSafeDimensions();
             
             camera = new THREE.PerspectiveCamera(75, width / height, 0.1, 1000);
-            camera.position.z = 5; // Initial position, will be adjusted after model load
+            camera.position.z = 5;
             
             renderer = new THREE.WebGLRenderer({ 
                 antialias: true,
@@ -901,9 +873,6 @@
             
             // Initialize post-processing
             initPostProcessing();
-            
-            // Add decal parent group to scene
-            scene.add(decalParent);
         }
         
         // Initialize post-processing
@@ -1067,28 +1036,20 @@
             });
             
             // Transform controls
-            setupTransformControl('decal-scale', 'decal-scale-input', 'scale', (v) => v.toFixed(1));
-            setupTransformControl('decal-rotation', 'decal-rotation-input', 'rotation', (v) => v.toFixed(0));
-            setupTransformControl('decal-position-x', 'decal-position-x-input', 'positionX', (v) => v.toFixed(2));
-            setupTransformControl('decal-position-y', 'decal-position-y-input', 'positionY', (v) => v.toFixed(2));
+            setupTransformControl('decal-scale', 'decal-scale-input', 'scale');
+            setupTransformControl('decal-rotation', 'decal-rotation-input', 'rotation');
             
             // Reset transformations
             document.getElementById('resetTransforms').addEventListener('click', () => {
                 currentDesign.transform = {
                     scale: 1,
-                    rotation: 0,
-                    positionX: 0,
-                    positionY: 0
+                    rotation: 0
                 };
                 
                 document.getElementById('decal-scale').value = 1;
                 document.getElementById('decal-rotation').value = 0;
-                document.getElementById('decal-position-x').value = 0;
-                document.getElementById('decal-position-y').value = 0;
                 document.getElementById('decal-scale-input').value = 1;
                 document.getElementById('decal-rotation-input').value = 0;
-                document.getElementById('decal-position-x-input').value = 0;
-                document.getElementById('decal-position-y-input').value = 0;
                 
                 if (decalMesh) {
                     updateDecal();
@@ -1104,18 +1065,8 @@
             // Save design button
             document.getElementById('saveDesignBtn').addEventListener('click', saveDesign);
             
-            // Load design button (needs a hidden file input to trigger)
-            const loadDesignInput = document.createElement('input');
-            loadDesignInput.type = 'file';
-            loadDesignInput.accept = '.json';
-            loadDesignInput.style.display = 'none';
-            document.body.appendChild(loadDesignInput);
-
-            document.getElementById('loadDesignBtn').addEventListener('click', () => {
-                loadDesignInput.click();
-            });
-
-            loadDesignInput.addEventListener('change', (e) => {
+            // Load design button
+            document.getElementById('loadDesignBtn').addEventListener('change', (e) => {
                 const file = e.target.files[0];
                 if (file) {
                     loadDesign(file).catch(error => {
@@ -1153,8 +1104,6 @@
                     value = Math.max(0.1, Math.min(3, value));
                 } else if (sliderId === 'decal-rotation') {
                     value = Math.max(-180, Math.min(180, value));
-                } else if (sliderId === 'decal-position-x' || sliderId === 'decal-position-y') {
-                    value = Math.max(-1, Math.min(1, value));
                 }
                 
                 currentDesign.transform[property] = value;
@@ -1290,42 +1239,49 @@
         async function loadEnvironment(type = 'studio') {
             document.getElementById('info-panel').innerHTML = `Loading ${type} environment...`;
             document.getElementById('statusMessage').textContent = `Loading ${type} environment...`;
-
+            
             try {
                 const pmremGenerator = new THREE.PMREMGenerator(renderer);
                 pmremGenerator.compileEquirectangularShader();
-
-                let envMapUrl;
-                switch (type) {
-                    case 'studio':
-                        envMapUrl = textures.studioEnvMap;
-                        break;
-                    case 'outdoor':
-                        envMapUrl = textures.outdoorEnvMap;
-                        break;
-                    case 'neon':
-                        envMapUrl = textures.neonEnvMap;
-                        break;
-                    case 'sunset':
-                        envMapUrl = textures.sunsetEnvMap;
-                        break;
-                    default:
-                        envMapUrl = textures.studioEnvMap; // Fallback
+                
+                let envMap;
+                
+                if (type === 'studio') {
+                    const texture = await new RGBELoader()
+                        .setDataType(THREE.UnsignedByteType)
+                        .loadAsync(textures.studioEnvMap);
+                    envMap = pmremGenerator.fromEquirectangular(texture).texture;
+                    texture.dispose();
+                } 
+                else if (type === 'outdoor') {
+                    const texture = await new RGBELoader()
+                        .setDataType(THREE.UnsignedByteType)
+                        .loadAsync(textures.outdoorEnvMap);
+                    envMap = pmremGenerator.fromEquirectangular(texture).texture;
+                    texture.dispose();
                 }
-
-                const texture = await new RGBELoader()
-                    .setDataType(THREE.FloatType) // HDR files are usually float type
-                    .loadAsync(envMapUrl);
-                const envMap = pmremGenerator.fromEquirectangular(texture).texture;
-                texture.dispose();
-
+                else if (type === 'neon') {
+                    const texture = await new RGBELoader()
+                        .setDataType(THREE.UnsignedByteType)
+                        .loadAsync(textures.neonEnvMap);
+                    envMap = pmremGenerator.fromEquirectangular(texture).texture;
+                    texture.dispose();
+                }
+                else if (type === 'sunset') {
+                    const texture = await new RGBELoader()
+                        .setDataType(THREE.UnsignedByteType)
+                        .loadAsync(textures.sunsetEnvMap);
+                    envMap = pmremGenerator.fromEquirectangular(texture).texture;
+                    texture.dispose();
+                }
+                
                 scene.environment = envMap;
                 pmremGenerator.dispose();
-
+                
                 return envMap;
             } catch (error) {
                 console.error('Failed to load environment map:', error);
-
+                
                 // Fallback to cube environment
                 try {
                     const envMap = await new THREE.CubeTextureLoader()
@@ -1365,7 +1321,7 @@
         // Create a new white base material
         function createBaseMaterial() {
             return new THREE.MeshStandardMaterial({
-                color: new THREE.Color(currentMaterial.color), // Use currentMaterial color
+                color: 0xFFFFFF, // White base
                 roughness: currentMaterial.roughness,
                 metalness: currentMaterial.metalness,
                 side: THREE.DoubleSide,
@@ -1377,7 +1333,6 @@
         // Apply color to the hoodie
         function applyColor() {
             const colorValue = document.getElementById('hoodieColor').value;
-            currentMaterial.color.set(colorValue); // Update currentMaterial state
             if (hoodieMaterial) {
                 hoodieMaterial.color.set(colorValue);
                 hoodieMaterial.needsUpdate = true;
@@ -1389,140 +1344,49 @@
         // Update the hoodie material with current properties
         function updateHoodieMaterial() {
             if (!hoodieModel) return;
-
-            // Dispose of old material if it exists
-            if (hoodieMaterial) {
-                hoodieMaterial.dispose();
-            }
-
+            
             // Create new material with current properties
             const newMaterial = createBaseMaterial();
-
+            
             // Replace all materials with our base material
             hoodieModel.traverse((child) => {
                 if (child.isMesh) {
                     // Store reference to the material we'll be modifying
                     hoodieMaterial = newMaterial;
                     child.material = newMaterial;
-                    child.material.map = textures[`${currentMaterial.materialType}NormalMap`]; // Apply material texture
-                    child.material.needsUpdate = true;
                 }
             });
         }
 
-        // Client-side image resizing with quality preservation
-        function resizeImage(file, maxDimension) {
-            return new Promise((resolve, reject) => {
-                const reader = new FileReader();
-                reader.onload = (e) => {
-                    const img = new Image();
-                    img.onload = () => {
-                        let width = img.width;
-                        let height = img.height;
-
-                        // Only resize if the image is larger than the maxDimension in either axis
-                        if (width > maxDimension || height > maxDimension) {
-                            if (width > height) {
-                                height *= maxDimension / width;
-                                width = maxDimension;
-                            } else {
-                                width *= maxDimension / height;
-                                height = maxDimension;
-                            }
-                        }
-                        // If the image is smaller than maxDimension, keep its original size.
-
-                        const canvas = document.createElement('canvas');
-                        canvas.width = width;
-                        canvas.height = height;
-                        
-                        // Use high quality image scaling
-                        const ctx = canvas.getContext('2d');
-                        ctx.imageSmoothingEnabled = true;
-                        ctx.imageSmoothingQuality = 'high';
-                        
-                        ctx.drawImage(img, 0, 0, width, height);
-                        
-                        // Apply slight sharpening to counteract blur from scaling
-                        if (width !== img.width || height !== img.height) {
-                            const sharpened = applyUnsharpMask(canvas);
-                            resolve(sharpened.toDataURL('image/png'));
-                        } else {
-                            resolve(canvas.toDataURL('image/png'));
-                        }
-                    };
-                    img.onerror = reject;
-                    img.src = e.target.result;
-                };
-                reader.onerror = reject;
-                reader.readAsDataURL(file);
-            });
-        }
-
-        // Simple unsharp mask filter to improve image quality after scaling
-        function applyUnsharpMask(canvas) {
-            const tempCanvas = document.createElement('canvas');
-            tempCanvas.width = canvas.width;
-            tempCanvas.height = canvas.height;
-            const tempCtx = tempCanvas.getContext('2d');
-            
-            // Apply blur first
-            tempCtx.filter = 'blur(1px)';
-            tempCtx.drawImage(canvas, 0, 0);
-            tempCtx.filter = 'none';
-            
-            // Blend original with blurred version to sharpen
-            const ctx = canvas.getContext('2d');
-            ctx.globalCompositeOperation = 'overlay';
-            ctx.drawImage(tempCanvas, 0, 0);
-            ctx.globalCompositeOperation = 'source-over';
-            
-            return canvas;
-        }
-
-        // Handle design upload with quality preservation
-        async function handleDesignUpload(event) {
+        // Handle design upload
+        function handleDesignUpload(event) {
             const file = event.target.files[0];
             if (!file) return;
 
-            document.getElementById('statusMessage').textContent = 'Processing image...';
-            document.getElementById('loading-overlay').style.display = 'flex'; // Show loading for image processing
+            const preview = document.getElementById('designPreview');
+            preview.innerHTML = '';
+            preview.classList.remove('empty');
+            
+            const img = document.createElement('img');
+            img.src = URL.createObjectURL(file);
+            preview.appendChild(img);
 
-            try {
-                // Use MAX_TEXTURE_DIMENSION instead of fixed 512x512
-                const imageDataUrl = await resizeImage(file, MAX_TEXTURE_DIMENSION);
-                currentDesign.texture = imageDataUrl; // Store the data URL for saving
-                
-                const preview = document.getElementById('designPreview');
-                preview.innerHTML = '';
-                preview.classList.remove('empty');
-                
-                const img = document.createElement('img');
-                img.src = imageDataUrl;
-                preview.appendChild(img);
-
+            const reader = new FileReader();
+            reader.onload = function(e) {
                 const image = new Image();
-                image.src = imageDataUrl;
-                await new Promise(resolve => image.onload = resolve);
-
-                decalTexture = new THREE.Texture(image);
-                
-                // Configure texture filtering for best quality
-                decalTexture.minFilter = THREE.LinearMipmapLinearFilter;
-                decalTexture.magFilter = THREE.LinearFilter;
-                decalTexture.anisotropy = renderer.capabilities.getMaxAnisotropy();
-                decalTexture.generateMipmaps = true;
-                decalTexture.needsUpdate = true;
-
-                document.getElementById('decal-controls').classList.add('active');
-                document.getElementById('info-panel').innerHTML += '<br>Design loaded';
-                document.getElementById('statusMessage').textContent = 'Design loaded. Click on hoodie to place!';
-                document.getElementById('loading-overlay').style.display = 'none'; // Hide loading
-            } catch (error) {
-                console.error("Error processing image:", error);
-                document.getElementById('statusMessage').textContent = 'Error loading image.';
-                document.getElementById('loading-overlay').style.display = 'none';
-            }
+                image.onload = function() {
+                    // Create texture from the image
+                    decalTexture = new THREE.Texture(image);
+                    decalTexture.needsUpdate = true;
+                    
+                    // Show decal controls
+                    document.getElementById('decal-controls').classList.add('active');
+                    document.getElementById('info-panel').innerHTML += '<br>Design loaded';
+                    document.getElementById('statusMessage').textContent = 'Design loaded';
+                };
+                image.src = e.target.result;
+            };
+            reader.readAsDataURL(file);
         }
 
         // Handle click event for decal placement
@@ -1540,60 +1404,27 @@
             const intersects = raycaster.intersectObject(hoodieModel, true);
             if (intersects.length > 0) {
                 const hit = intersects[0];
-                // Store base position, normal, and target mesh for later updates
-                decalBasePosition = hit.point.clone();
-                decalBaseNormal = hit.face.normal.clone();
-                decalTargetMesh = hit.object;
-                placeDecalAt(decalBasePosition, decalBaseNormal, decalTargetMesh);
-                document.getElementById('statusMessage').textContent = 'Design placed.';
+                placeDecalAt(hit.point, hit.face.normal, hit.object);
             }
         }
 
         // Place decal at the clicked position
         function placeDecalAt(position, normal, targetMesh) {
             if (!decalTexture) return;
-
+            
             // Remove existing decal if any
             if (decalMesh) {
-                decalParent.remove(decalMesh);
-                decalMesh.geometry.dispose();
-                decalMesh.material.dispose();
+                scene.remove(decalMesh);
             }
 
-            // Calculate the offset based on currentDesign.transform.positionX/Y
-            const offsetAmountX = currentDesign.transform.positionX;
-            const offsetAmountY = currentDesign.transform.positionY;
-
-            // Create vectors for the offset directions
-            const upVector = new THREE.Vector3(0, 1, 0); // Global up
-            const rightVector = new THREE.Vector3().crossVectors(normal, upVector).normalize();
-            const forwardVector = new THREE.Vector3().crossVectors(rightVector, normal).normalize();
-
-            // Adjust the position based on the offsets
-            const adjustedPosition = position.clone();
-            adjustedPosition.addScaledVector(rightVector, offsetAmountX); // Move left/right
-            adjustedPosition.addScaledVector(forwardVector, offsetAmountY); // Move up/down
-
-            // Ensure the decal is slightly above the surface to prevent z-fighting
-            const pushBack = 0.001; // Small offset to prevent z-fighting
-            adjustedPosition.addScaledVector(normal, pushBack);
-
-            // Calculate orientation including user's rotation input
-            const initialOrientation = new THREE.Euler().setFromVector3(normal);
-            const rotationQuat = new THREE.Quaternion().setFromAxisAngle(
-                new THREE.Vector3(0, 0, 1), // Rotate around the Z axis of the decal's plane
-                THREE.MathUtils.degToRad(currentDesign.transform.rotation)
-            );
-            const combinedOrientation = new THREE.Quaternion().setFromEuler(initialOrientation).multiply(rotationQuat);
-            const finalOrientation = new THREE.Euler().setFromQuaternion(combinedOrientation);
-
+            const orientation = new THREE.Euler().setFromVector3(normal.clone());
             const size = new THREE.Vector3(
                 currentDesign.transform.scale,
                 currentDesign.transform.scale,
-                currentDesign.transform.scale // Z component for DecalGeometry's projection depth
+                currentDesign.transform.scale
             );
 
-            const decalGeo = new DecalGeometry(targetMesh, adjustedPosition, finalOrientation, size);
+            const decalGeo = new DecalGeometry(targetMesh, position, orientation, size);
 
             const decalMat = new THREE.MeshBasicMaterial({
                 map: decalTexture,
@@ -1605,38 +1436,61 @@
             });
 
             decalMesh = new THREE.Mesh(decalGeo, decalMat);
+            scene.add(decalMesh);
             
-            // Add decal to parent group instead of scene directly
-            decalParent.add(decalMesh);
-
+            // Apply rotation
+            updateDecal();
+            
             document.getElementById('info-panel').innerHTML += '<br>Design placed';
             document.getElementById('statusMessage').textContent = 'Design placed';
         }
 
         // Update decal with current transformations
         function updateDecal() {
-            if (!decalMesh || !decalBasePosition || !decalBaseNormal || !decalTargetMesh) return;
+            if (!decalMesh) return;
+            
+            // Apply rotation
+            decalMesh.rotation.z = THREE.MathUtils.degToRad(currentDesign.transform.rotation);
+            
+            // Update scale (need to recreate geometry)
+            const targetMesh = findTargetMesh();
+            if (targetMesh) {
+                const position = decalMesh.position.clone();
+                const normal = new THREE.Vector3().copy(position).normalize();
+                const orientation = new THREE.Euler().setFromVector3(normal);
+                const size = new THREE.Vector3(
+                    currentDesign.transform.scale,
+                    currentDesign.transform.scale,
+                    currentDesign.transform.scale
+                );
+                
+                const newGeo = new DecalGeometry(targetMesh, position, orientation, size);
+                decalMesh.geometry.dispose();
+                decalMesh.geometry = newGeo;
+            }
+        }
 
-            // Recreate the decal geometry with updated scale and rotation
-            placeDecalAt(decalBasePosition, decalBaseNormal, decalTargetMesh);
+        // Find the target mesh for decal placement
+        function findTargetMesh() {
+            if (!hoodieModel) return null;
+            
+            let target = null;
+            hoodieModel.traverse(child => {
+                if (child.isMesh && !target) {
+                    target = child;
+                }
+            });
+            
+            return target;
         }
 
         // Remove decal
         function removeDecal() {
             if (decalMesh) {
-                decalParent.remove(decalMesh);
-                decalMesh.geometry.dispose();
-                decalMesh.material.dispose();
+                scene.remove(decalMesh);
                 decalMesh = null;
-                decalTexture = null; // Clear decal texture as well
-                decalBasePosition = null;
-                decalBaseNormal = null;
-                decalTargetMesh = null;
-                document.getElementById('designPreview').innerHTML = '';
-                document.getElementById('designPreview').classList.add('empty');
-                document.getElementById('decal-controls').classList.remove('active'); // Hide controls
                 document.getElementById('info-panel').innerHTML += '<br>Design removed';
-                document.getElementById('statusMessage').textContent = 'Design removed. Upload new design!';
+                document.getElementById('statusMessage').textContent = 'Design removed';
             }
         }
 
@@ -1647,19 +1501,16 @@
                 const dracoLoader = new DRACOLoader();
                 dracoLoader.setDecoderPath('https://www.gstatic.com/draco/v1/decoders/');
                 loader.setDRACOLoader(dracoLoader);
-
+                
                 // Load your hoodie model
                 const modelUrl = 'Hoodie_Walking_Animated.glb'; // Make sure this path is correct
-
+                
                 const gltf = await loader.loadAsync(modelUrl);
-
+                
                 console.log('Model loaded successfully:', gltf);
                 hoodieModel = gltf.scene;
                 scene.add(hoodieModel);
-
-                // Apply a base scaling to the model if it's too small
-                hoodieModel.scale.set(1.5, 1.5, 1.5); // Example: Scale up by 1.5 times
-
+                
                 // Replace all materials with our base material
                 const baseMaterial = createBaseMaterial();
                 hoodieModel.traverse((child) => {
@@ -1667,79 +1518,70 @@
                         // Store reference to the material we'll be modifying
                         hoodieMaterial = baseMaterial;
                         child.material = baseMaterial;
-                        // You might need to check if normal maps etc. should be applied based on material type
-                        if (textures[`${currentMaterial.materialType}NormalMap`]) {
-                            child.material.normalMap = textures[`${currentMaterial.materialType}NormalMap`];
-                            child.material.normalScale.set(1, 1); // Adjust if needed
-                        }
-                        child.castShadow = true;
-                        child.receiveShadow = true;
                         console.log("Replaced material for:", child.name);
                     }
                 });
-
+                
                 // Check for animations
                 if (gltf.animations && gltf.animations.length > 0) {
                     mixer = new THREE.AnimationMixer(hoodieModel);
                     currentAction = mixer.clipAction(gltf.animations[0]);
                     currentAction.play();
                     console.log(`Playing animation: ${gltf.animations[0].name}`);
-
+                    
                     // Enable animation controls
                     document.getElementById('play-animation').disabled = false;
                     document.getElementById('pause-animation').disabled = false;
-
+                    
                     document.getElementById('info-panel').innerHTML += '<br>Animation ready';
                     document.getElementById('statusMessage').textContent = 'Animation ready';
                 }
-
+                
                 // Update model info
                 updateModelInfo(gltf);
-
-                // Center model and adjust camera
+                
+                // Center model
                 const box = new THREE.Box3().setFromObject(hoodieModel);
                 const center = box.getCenter(new THREE.Vector3());
-                hoodieModel.position.sub(center); // Center the model itself
-
+                hoodieModel.position.sub(center);
+                
                 // Adjust camera distance based on model size
                 const size = box.getSize(new THREE.Vector3()).length();
-                camera.position.z = size * 1.2; // Move closer for a better view of the hoodie
-                camera.lookAt(hoodieModel.position); // Ensure camera looks at the centered model
-                controls.target.copy(hoodieModel.position); // Set orbit controls target to the model's center
+                camera.position.z = size * 1.5;
                 controls.update();
-
+                
                 // Enable apply button
                 document.getElementById('apply-colors').disabled = false;
-
+                
             } catch (error) {
                 console.error('Error loading model:', error);
-
+                
                 // Update info panel
-                document.getElementById('info-panel').innerHTML =
+                document.getElementById('info-panel').innerHTML = 
                     `Failed to load model: ${error.message}`;
-                document.getElementById('statusMessage').textContent =
+                document.getElementById('statusMessage').textContent = 
                     `Failed to load model: ${error.message}`;
-
+                
                 // Create a fallback cube
                 const geometry = new THREE.BoxGeometry(1, 1.5, 0.8);
                 const material = createBaseMaterial();
                 hoodieModel = new THREE.Mesh(geometry, material);
                 scene.add(hoodieModel);
-
+                
                 camera.position.z = 3;
                 controls.update();
             }
         }
-
+        
         // Update lighting based on selected effect
         function updateLighting() {
             const ambientLight = scene.children.find(child => child instanceof THREE.AmbientLight);
             const directionalLight = scene.children.find(child => child instanceof THREE.DirectionalLight && child.position.x > 0);
             const directionalLight2 = scene.children.find(child => child instanceof THREE.DirectionalLight && child.position.x < 0);
-
+            
             if (!ambientLight || !directionalLight || !directionalLight2) return;
-
-            switch (lightingEffect) {
+            
+            switch(lightingEffect) {
                 case 'studio':
                     ambientLight.intensity = 0.5;
                     directionalLight.intensity = 2;
@@ -1770,10 +1612,10 @@
                     break;
             }
         }
-
+        
         // Update background based on selected effect
         function updateBackground() {
-            switch (backgroundEffect) {
+            switch(backgroundEffect) {
                 case 'plain':
                     scene.background = new THREE.Color(0xf0f0f0);
                     break;
@@ -1794,26 +1636,25 @@
                     break;
                 case 'transparent':
                     scene.background = null;
-                    renderer.setClearAlpha(0); // Make the canvas transparent
                     break;
             }
         }
-
+        
         // Take screenshot
         function takeScreenshot() {
             const quality = document.getElementById('exportQuality').value;
             const size = document.getElementById('exportSize').value;
-
+            
             // Set renderer to higher resolution if needed
             const originalSize = renderer.getSize(new THREE.Vector2());
             let scale = 1;
-
+            
             if (size === '2x') scale = 2;
             if (size === '4x') scale = 4;
-
+            
             renderer.setSize(originalSize.x * scale, originalSize.y * scale, false);
             renderer.render(scene, camera);
-
+            
             let mimeType, qualityValue;
             if (quality === 'high') {
                 mimeType = 'image/png';
@@ -1825,88 +1666,66 @@
                 mimeType = 'image/jpeg';
                 qualityValue = 0.7;
             }
-
+            
             const image = renderer.domElement.toDataURL(mimeType, qualityValue);
-
+            
             // Reset renderer to original size
             renderer.setSize(originalSize.x, originalSize.y, false);
-
+            
             const link = document.createElement('a');
             link.href = image;
             link.download = `hoodie-design-${new Date().toISOString().slice(0, 10)}.${mimeType.split('/')[1]}`;
             link.click();
-
+            
             document.getElementById('info-panel').innerHTML += '<br>Screenshot saved';
             document.getElementById('statusMessage').textContent = 'Screenshot saved';
         }
-
+        
         // Save design settings
         function saveDesign() {
             const designData = {
-                material: {
-                    color: currentMaterial.color.getHexString(), // Save color as hex string
-                    roughness: currentMaterial.roughness,
-                    metalness: currentMaterial.metalness,
-                    materialType: currentMaterial.materialType
-                },
-                design: {
-                    texture: currentDesign.texture, // Store the data URL of the image
-                    transform: currentDesign.transform,
-                    decalPosition: decalBasePosition ? decalBasePosition.toArray() : null,
-                    decalNormal: decalBaseNormal ? decalBaseNormal.toArray() : null,
-                    decalTargetMeshName: decalTargetMesh ? decalTargetMesh.name : null
-                },
+                material: currentMaterial,
+                design: currentDesign,
                 lighting: lightingEffect,
                 background: backgroundEffect,
                 animation: animationEffect,
                 version: '1.0'
             };
-
+            
             const blob = new Blob([JSON.stringify(designData)], { type: 'application/json' });
             const url = URL.createObjectURL(blob);
-
+            
             const link = document.createElement('a');
             link.href = url;
             link.download = `hoodie-design-${new Date().toISOString().slice(0, 10)}.json`;
             link.click();
-
+            
             document.getElementById('info-panel').innerHTML += '<br>Design settings saved';
             document.getElementById('statusMessage').textContent = 'Design saved';
         }
-
+        
         // Load design settings
-        async function loadDesign(file) {
+        function loadDesign(file) {
             try {
                 const reader = new FileReader();
-
+                
                 return new Promise((resolve, reject) => {
                     reader.onload = async (e) => {
                         try {
                             const designData = JSON.parse(e.target.result);
-
+                            
                             // Validate version
                             if (!designData.version || designData.version !== '1.0') {
                                 throw new Error('Invalid design file version');
                             }
-
+                            
                             // Apply settings
-                            currentMaterial.color.set(`#${designData.material.color}`);
-                            currentMaterial.roughness = designData.material.roughness;
-                            currentMaterial.metalness = designData.material.metalness;
-                            currentMaterial.materialType = designData.material.materialType;
-
-                            currentDesign.transform = {
-                                scale: designData.design.transform.scale,
-                                rotation: designData.design.transform.rotation,
-                                positionX: designData.design.transform.positionX || 0,
-                                positionY: designData.design.transform.positionY || 0
-                            };
-                            currentDesign.texture = designData.design.texture;
-
+                            currentMaterial = designData.material;
+                            currentDesign = designData.design;
                             lightingEffect = designData.lighting;
                             backgroundEffect = designData.background;
                             animationEffect = designData.animation;
-
+                            
                             // Update UI
                             document.getElementById('hoodieColor').value = `#${currentMaterial.color.getHexString()}`;
                             document.getElementById('materialType').value = currentMaterial.materialType;
@@ -1915,7 +1734,7 @@
                             document.getElementById('animationEffect').value = animationEffect;
                             document.getElementById('lightingEffect').value = lightingEffect;
                             document.getElementById('backgroundEffect').value = backgroundEffect;
-
+                            
                             // Update color presets selection
                             document.querySelectorAll('.color-preset').forEach(preset => {
                                 preset.classList.remove('selected');
@@ -1923,58 +1742,15 @@
                                     preset.classList.add('selected');
                                 }
                             });
-
+                            
                             // Update material
                             updateHoodieMaterial();
-
+                            
                             // Update environment and lighting
                             await loadEnvironment(lightingEffect);
                             updateLighting();
                             updateBackground();
-
-                            // Load decal texture and re-place if it exists
-                            if (currentDesign.texture) {
-                                const img = new Image();
-                                img.src = currentDesign.texture;
-                                await new Promise(resolve => img.onload = resolve);
-                                decalTexture = new THREE.Texture(img);
-                                
-                                // Configure texture filtering for best quality
-                                decalTexture.minFilter = THREE.LinearMipmapLinearFilter;
-                                decalTexture.magFilter = THREE.LinearFilter;
-                                decalTexture.anisotropy = renderer.capabilities.getMaxAnisotropy();
-                                decalTexture.generateMipmaps = true;
-                                decalTexture.needsUpdate = true;
-
-                                decalBasePosition = new THREE.Vector3().fromArray(designData.design.decalPosition);
-                                decalBaseNormal = new THREE.Vector3().fromArray(designData.design.decalNormal);
-
-                                // Find the target mesh by name
-                                decalTargetMesh = hoodieModel.getObjectByName(designData.design.decalTargetMeshName);
-                                if (decalTargetMesh) {
-                                    placeDecalAt(decalBasePosition, decalBaseNormal, decalTargetMesh);
-                                    document.getElementById('decal-controls').classList.add('active'); // Show controls
-                                    document.getElementById('designPreview').innerHTML = '';
-                                    const previewImg = document.createElement('img');
-                                    previewImg.src = currentDesign.texture;
-                                    document.getElementById('designPreview').appendChild(previewImg);
-                                    document.getElementById('designPreview').classList.remove('empty');
-                                    document.getElementById('decal-scale').value = currentDesign.transform.scale;
-                                    document.getElementById('decal-rotation').value = currentDesign.transform.rotation;
-                                    document.getElementById('decal-position-x').value = currentDesign.transform.positionX;
-                                    document.getElementById('decal-position-y').value = currentDesign.transform.positionY;
-                                    document.getElementById('decal-scale-input').value = currentDesign.transform.scale.toFixed(1);
-                                    document.getElementById('decal-rotation-input').value = currentDesign.transform.rotation.toFixed(0);
-                                    document.getElementById('decal-position-x-input').value = currentDesign.transform.positionX.toFixed(2);
-                                    document.getElementById('decal-position-y-input').value = currentDesign.transform.positionY.toFixed(2);
-                                } else {
-                                    console.warn('Target mesh for decal not found:', designData.design.decalTargetMeshName);
-                                    removeDecal(); // Clear decal state if target mesh is missing
-                                }
-                            } else {
-                                removeDecal(); // No decal to load, ensure it's removed
-                            }
-
+                            
                             document.getElementById('info-panel').innerHTML = 'Design loaded successfully';
                             document.getElementById('statusMessage').textContent = 'Design loaded';
                             resolve();
@@ -1985,11 +1761,11 @@
                             reject(error);
                         }
                     };
-
+                    
                     reader.onerror = () => {
                         reject(new Error('Error reading file'));
                     };
-
+                    
                     reader.readAsText(file);
                 });
             } catch (error) {
@@ -1999,86 +1775,62 @@
                 throw error;
             }
         }
-
+        
         // Apply wind effect to the hoodie
         function applyWindEffect(delta) {
             if (!hoodieModel || animationEffect !== 'wind') return;
-
+            
             windEffect.time += delta;
-
-            // This is a simplified wind effect and might distort the model significantly.
-            // For realistic cloth simulation, you'd typically use a physics engine or
-            // modify vertex shaders with more complex algorithms.
+            
             hoodieModel.traverse(child => {
-                if (child.isMesh && child.geometry.isBufferGeometry) {
+                if (child.isMesh) {
                     const positionAttribute = child.geometry.attributes.position;
-                    const originalPositions = child.geometry.userData.originalPositions;
-
-                    if (!originalPositions) {
-                        // Store original positions the first time
-                        child.geometry.userData.originalPositions = Array.from(positionAttribute.array);
-                    }
-
                     const positions = positionAttribute.array;
-
+                    
                     for (let i = 0; i < positions.length; i += 3) {
-                        const x = originalPositions[i];
-                        const y = originalPositions[i + 1];
-                        const z = originalPositions[i + 2];
-
-                        const windMagnitude = windEffect.strength * Math.sin(windEffect.time * windEffect.frequency + y * 5 + x * 2) * (1 + Math.sin(windEffect.time * 0.5 + z * 3)) * 0.5;
-
-                        // Apply displacement along a general wind direction (e.g., X and Z)
-                        positions[i] = x + windMagnitude * 0.5; // X displacement
-                        positions[i + 2] = z + windMagnitude * 0.2; // Z displacement
+                        const y = positions[i + 1];
+                        const windStrength = windEffect.strength * Math.sin(windEffect.time * 2 + y * 5) * (1 + Math.sin(windEffect.time * 0.5 + positions[i] * 3)) * 0.5;
+                        
+                        positions[i] += windStrength;
+                        positions[i + 2] += windStrength * 0.3;
                     }
-
+                    
                     positionAttribute.needsUpdate = true;
                     child.geometry.computeVertexNormals();
                 }
             });
         }
-
+        
         // Apply bounce effect
         function applyBounceEffect(delta) {
             if (!hoodieModel || animationEffect !== 'bounce') return;
-
+            
             const time = Date.now() * 0.001;
-            hoodieModel.position.y = Math.sin(time * 2) * 0.05; // Bounce up and down
+            hoodieModel.position.y = Math.sin(time * 2) * 0.05;
         }
-
+        
         // Apply spin effect
         function applySpinEffect(delta) {
             if (!hoodieModel || animationEffect !== 'spin') return;
-
-            hoodieModel.rotation.y += delta * 0.5; // Rotate around Y axis
+            
+            hoodieModel.rotation.y += delta * 0.5;
         }
 
         // Animation loop
         function animate() {
             requestAnimationFrame(animate);
-
+            
             const delta = clock.getDelta();
             if (mixer && !isAnimationPaused) {
                 mixer.update(delta);
             }
-
-            // Only apply if 'none' is not selected for animationEffect
-            if (animationEffect !== 'none') {
-                applyWindEffect(delta);
-                applyBounceEffect(delta);
-                applySpinEffect(delta);
-            }
-
-            // Update decal parent position to match hoodie position
-            if (hoodieModel && decalParent) {
-                decalParent.position.copy(hoodieModel.position);
-                decalParent.rotation.copy(hoodieModel.rotation);
-                decalParent.scale.copy(hoodieModel.scale);
-            }
-
+            
+            applyWindEffect(delta);
+            applyBounceEffect(delta);
+            applySpinEffect(delta);
+            
             controls.update();
-
+            
             if (composer) {
                 composer.render();
             } else {
@@ -2094,19 +1846,19 @@
             resizeTimeout = setTimeout(() => {
                 const isMobile = window.innerWidth <= 768;
                 const sidebarWidth = isMobile ? 0 : 350;
-
+                
                 let width = window.innerWidth - sidebarWidth;
                 let height = isMobile ? window.innerHeight * 0.5 : window.innerHeight;
-
+                
                 // Ensure minimum dimensions
                 width = Math.max(1, width);
                 height = Math.max(1, height);
-
+                
                 // Update Three.js renderer and camera
                 camera.aspect = width / height;
                 camera.updateProjectionMatrix();
                 renderer.setSize(width, height);
-
+                
                 // Update post-processing if enabled
                 if (composer) {
                     composer.setSize(width, height);
