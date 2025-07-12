@@ -57,6 +57,22 @@ jobs:
             *.yml
             node_modules/
             package*.json
+            .vscode/
+            *.log
+            *.tmp
+            *.bak
+            *.sample
+            *.md
+            Dockerfile
+            docker-compose.yml
+            .editorconfig
+            .eslintrc
+            .prettierrc
+            .npmrc
+            .yarnrc
+            .cache/
+            .DS_Store
+            Thumbs.db
 
       # 5. Deploy to GitHub Pages
       - name: Deploy to GitHub Pages
