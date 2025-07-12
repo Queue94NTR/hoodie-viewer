@@ -761,7 +761,11 @@
             transform: {
                 scale: 1,
                 rotation: 0
-            }
+            },
+            originalHitPoint: null,
+            originalHitNormal: null,
+            targetObject: null,
+            decalAnchor: null
         };
         
         // Current material properties
@@ -1380,7 +1384,7 @@
                     decalTexture.needsUpdate = true;
                     
                     // Show decal controls
-                    document.getElementById('decal-controls').classList.add('active');
+                    document.getElementById('decal-controls').classlassList.add('active');
                     document.getElementById('info-panel').innerHTML += '<br>Design loaded';
                     document.getElementById('statusMessage').textContent = 'Design loaded';
                 };
@@ -1404,27 +1408,42 @@
             const intersects = raycaster.intersectObject(hoodieModel, true);
             if (intersects.length > 0) {
                 const hit = intersects[0];
+                currentDesign.originalHitPoint = hit.point.clone();
+                currentDesign.originalHitNormal = hit.face.normal.clone();
+                currentDesign.targetObject = hit.object;
                 placeDecalAt(hit.point, hit.face.normal, hit.object);
             }
         }
 
         // Place decal at the clicked position
         function placeDecalAt(position, normal, targetMesh) {
-            if (!decalTexture) return;
+            if (!decalTexture || !hoodieModel) return;
             
             // Remove existing decal if any
             if (decalMesh) {
-                scene.remove(decalMesh);
+                if (decalMesh.parent) {
+                    decalMesh.parent.remove(decalMesh);
+                }
+                decalMesh.geometry.dispose();
+                decalMesh.material.dispose();
+                decalMesh = null;
             }
 
+            // Convert world position and normal to the local space of the hoodieModel
+            const hoodieWorldMatrixInverse = new THREE.Matrix4().copy(hoodieModel.matrixWorld).invert();
+            const localPosition = position.clone().applyMatrix4(hoodieWorldMatrixInverse);
+            const localNormal = normal.clone().transformDirection(hoodieWorldMatrixInverse).normalize();
+
+            // The orientation for DecalGeometry needs to be in world space,
+            // so it projects correctly onto the mesh.
             const orientation = new THREE.Euler().setFromVector3(normal.clone());
+            orientation.z += THREE.MathUtils.degToRad(currentDesign.transform.rotation);
+
             const size = new THREE.Vector3(
                 currentDesign.transform.scale,
                 currentDesign.transform.scale,
                 currentDesign.transform.scale
             );
-
-            const decalGeo = new DecalGeometry(targetMesh, position, orientation, size);
 
             const decalMat = new THREE.MeshBasicMaterial({
                 map: decalTexture,
@@ -1435,60 +1454,67 @@
                 polygonOffsetFactor: -4
             });
 
+            const decalGeo = new DecalGeometry(targetMesh, position, orientation, size);
             decalMesh = new THREE.Mesh(decalGeo, decalMat);
-            scene.add(decalMesh);
+
+            // Create an anchor object that will be parented to the hoodie model
+            const decalAnchor = new THREE.Object3D();
+            decalAnchor.position.copy(localPosition);
             
-            // Apply rotation
-            updateDecal();
+            // Calculate rotation to face the normal
+            decalAnchor.lookAt(localPosition.clone().add(localNormal));
+            decalAnchor.rotation.z += THREE.MathUtils.degToRad(currentDesign.transform.rotation);
             
+            // Add the decal mesh to the anchor
+            decalAnchor.add(decalMesh);
+            
+            // Add the anchor to the hoodie model
+            hoodieModel.add(decalAnchor);
+            
+            // Store the anchor for updates
+            currentDesign.decalAnchor = decalAnchor;
+
+            document.getElementById('decal-controls').classList.add('active');
             document.getElementById('info-panel').innerHTML += '<br>Design placed';
             document.getElementById('statusMessage').textContent = 'Design placed';
         }
 
         // Update decal with current transformations
         function updateDecal() {
-            if (!decalMesh) return;
-            
-            // Apply rotation
-            decalMesh.rotation.z = THREE.MathUtils.degToRad(currentDesign.transform.rotation);
-            
-            // Update scale (need to recreate geometry)
-            const targetMesh = findTargetMesh();
-            if (targetMesh) {
-                const position = decalMesh.position.clone();
-                const normal = new THREE.Vector3().copy(position).normalize();
-                const orientation = new THREE.Euler().setFromVector3(normal);
-                const size = new THREE.Vector3(
-                    currentDesign.transform.scale,
-                    currentDesign.transform.scale,
-                    currentDesign.transform.scale
-                );
-                
-                const newGeo = new DecalGeometry(targetMesh, position, orientation, size);
-                decalMesh.geometry.dispose();
-                decalMesh.geometry = newGeo;
-            }
-        }
+            if (!decalTexture || !currentDesign.decalAnchor || !hoodieModel) return;
 
-        // Find the target mesh for decal placement
-        function findTargetMesh() {
-            if (!hoodieModel) return null;
+            const decalAnchor = currentDesign.decalAnchor;
             
-            let target = null;
-            hoodieModel.traverse(child => {
-                if (child.isMesh && !target) {
-                    target = child;
-                }
-            });
+            // Update scale and rotation of the anchor
+            decalAnchor.scale.set(
+                currentDesign.transform.scale,
+                currentDesign.transform.scale,
+                currentDesign.transform.scale
+            );
             
-            return target;
+            // Reset rotation and reapply
+            const localNormal = currentDesign.originalHitNormal.clone()
+                .transformDirection(new THREE.Matrix4().copy(hoodieModel.matrixWorld).invert())
+                .normalize();
+            
+            const localPosition = currentDesign.originalHitPoint.clone()
+                .applyMatrix4(new THREE.Matrix4().copy(hoodieModel.matrixWorld).invert());
+            
+            decalAnchor.position.copy(localPosition);
+            decalAnchor.lookAt(localPosition.clone().add(localNormal));
+            decalAnchor.rotation.z = THREE.MathUtils.degToRad(currentDesign.transform.rotation);
         }
 
         // Remove decal
         function removeDecal() {
             if (decalMesh) {
-                scene.remove(decalMesh);
+                if (decalMesh.parent) {
+                    decalMesh.parent.remove(decalMesh);
+                }
+                decalMesh.geometry.dispose();
+                decalMesh.material.dispose();
                 decalMesh = null;
+                currentDesign.decalAnchor = null;
                 document.getElementById('info-panel').innerHTML += '<br>Design removed';
                 document.getElementById('statusMessage').textContent = 'Design removed';
             }
