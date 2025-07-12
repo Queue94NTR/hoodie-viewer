@@ -1696,8 +1696,8 @@
                 dracoLoader.setDecoderPath('https://www.gstatic.com/draco/v1/decoders/');
                 loader.setDRACOLoader(dracoLoader);
 
-                // Load your hoodie model
-                const modelUrl = 'https://cdn.jsdelivr.net/gh/mrdoob/three.js@dev/examples/models/gltf/LittlestTokyo.glb'; // Example model
+                // Load your hoodie model - THE CRITICAL CHANGE IS HERE
+                const modelUrl = 'Hoodie_Walking_Animated.glb';
 
                 const gltf = await loader.loadAsync(modelUrl);
 
