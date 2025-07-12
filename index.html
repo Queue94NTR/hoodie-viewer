@@ -465,6 +465,30 @@
             display: block;
         }
         
+        .position-controls {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+        }
+        
+        .position-control {
+            background: #f8f9fa;
+            padding: 10px;
+            border-radius: 5px;
+        }
+        
+        .position-control label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: 500;
+            color: #495057;
+            font-size: 0.9em;
+        }
+        
+        .position-control input {
+            width: 100%;
+        }
+        
         @media (max-width: 768px) {
             body {
                 flex-direction: column;
@@ -524,6 +548,10 @@
             .transform-row input[type="number"] {
                 width: 50px;
             }
+            
+            .position-controls {
+                grid-template-columns: 1fr;
+            }
         }
     </style>
 </head>
@@ -574,6 +602,28 @@
                             <span>Angle:</span>
                             <input type="range" id="decal-rotation" min="-180" max="180" step="1" value="0">
                             <input type="number" id="decal-rotation-input" min="-180" max="180" step="1" value="0">
+                        </div>
+                    </div>
+                    
+                    <div class="transform-control">
+                        <label>Position Adjustment</label>
+                        <div class="position-controls">
+                            <div class="position-control">
+                                <label for="decal-position-x">Horizontal (X)</label>
+                                <input type="range" id="decal-position-x" min="-1" max="1" step="0.01" value="0">
+                                <div class="transform-row">
+                                    <span>Value:</span>
+                                    <input type="number" id="decal-position-x-input" min="-1" max="1" step="0.01" value="0">
+                                </div>
+                            </div>
+                            <div class="position-control">
+                                <label for="decal-position-y">Vertical (Y)</label>
+                                <input type="range" id="decal-position-y" min="-1" max="1" step="0.01" value="0">
+                                <div class="transform-row">
+                                    <span>Value:</span>
+                                    <input type="number" id="decal-position-y-input" min="-1" max="1" step="0.01" value="0">
+                                </div>
+                            </div>
                         </div>
                     </div>
                     
@@ -716,7 +766,7 @@
         
         <div class="status-bar">
             <span id="statusMessage">Initializing...</span>
-            <span id="versionInfo">v1.0.0</span>
+            <span id="versionInfo">v1.1.0</span>
         </div>
     </div>
 
@@ -764,7 +814,9 @@
             texture: null, // This will store the data URL or base64
             transform: {
                 scale: 1,
-                rotation: 0
+                rotation: 0,
+                positionX: 0,
+                positionY: 0
             }
         };
         
@@ -1045,18 +1097,26 @@
             // Transform controls
             setupTransformControl('decal-scale', 'decal-scale-input', 'scale', (v) => v.toFixed(1));
             setupTransformControl('decal-rotation', 'decal-rotation-input', 'rotation', (v) => v.toFixed(0));
+            setupTransformControl('decal-position-x', 'decal-position-x-input', 'positionX', (v) => v.toFixed(2));
+            setupTransformControl('decal-position-y', 'decal-position-y-input', 'positionY', (v) => v.toFixed(2));
             
             // Reset transformations
             document.getElementById('resetTransforms').addEventListener('click', () => {
                 currentDesign.transform = {
                     scale: 1,
-                    rotation: 0
+                    rotation: 0,
+                    positionX: 0,
+                    positionY: 0
                 };
                 
                 document.getElementById('decal-scale').value = 1;
                 document.getElementById('decal-rotation').value = 0;
+                document.getElementById('decal-position-x').value = 0;
+                document.getElementById('decal-position-y').value = 0;
                 document.getElementById('decal-scale-input').value = 1;
                 document.getElementById('decal-rotation-input').value = 0;
+                document.getElementById('decal-position-x-input').value = 0;
+                document.getElementById('decal-position-y-input').value = 0;
                 
                 if (decalMesh) {
                     updateDecal();
@@ -1121,6 +1181,8 @@
                     value = Math.max(0.1, Math.min(3, value));
                 } else if (sliderId === 'decal-rotation') {
                     value = Math.max(-180, Math.min(180, value));
+                } else if (sliderId.includes('position')) {
+                    value = Math.max(-1, Math.min(1, value));
                 }
                 
                 currentDesign.transform[property] = value;
@@ -1510,12 +1572,21 @@
                 decalBasePosition = hit.point.clone();
                 decalBaseNormal = hit.face.normal.clone();
                 decalTargetMesh = hit.object;
+                
+                // Reset position adjustments when placing a new decal
+                currentDesign.transform.positionX = 0;
+                currentDesign.transform.positionY = 0;
+                document.getElementById('decal-position-x').value = 0;
+                document.getElementById('decal-position-y').value = 0;
+                document.getElementById('decal-position-x-input').value = 0;
+                document.getElementById('decal-position-y-input').value = 0;
+                
                 placeDecalAt(decalBasePosition, decalBaseNormal, decalTargetMesh);
                 document.getElementById('statusMessage').textContent = 'Design placed.';
             }
         }
 
-        // Place decal at the clicked position
+        // Place decal at the clicked position with position adjustments
         function placeDecalAt(position, normal, targetMesh) {
             if (!decalTexture) return;
 
@@ -1535,13 +1606,16 @@
             const combinedOrientation = new THREE.Quaternion().setFromEuler(initialOrientation).multiply(rotationQuat);
             const finalOrientation = new THREE.Euler().setFromQuaternion(combinedOrientation);
 
+            // Calculate adjusted position with X/Y offsets
+            const adjustedPosition = calculateAdjustedPosition(position, normal);
+            
             const size = new THREE.Vector3(
                 currentDesign.transform.scale,
                 currentDesign.transform.scale,
                 currentDesign.transform.scale // Z component for DecalGeometry's projection depth
             );
 
-            const decalGeo = new DecalGeometry(targetMesh, position, finalOrientation, size);
+            const decalGeo = new DecalGeometry(targetMesh, adjustedPosition, finalOrientation, size);
 
             const decalMat = new THREE.MeshBasicMaterial({
                 map: decalTexture,
@@ -1557,6 +1631,34 @@
 
             document.getElementById('info-panel').innerHTML += '<br>Design placed';
             document.getElementById('statusMessage').textContent = 'Design placed';
+        }
+
+        // Calculate adjusted position with X/Y offsets
+        function calculateAdjustedPosition(basePosition, normal) {
+            // Create a tangent vector for horizontal movement
+            const tangent = new THREE.Vector3();
+            const temp = new THREE.Vector3(0, 1, 0); // World up vector
+            
+            // If normal is vertical, use different tangent
+            if (Math.abs(normal.y) > 0.95) {
+                tangent.set(1, 0, 0);
+            } else {
+                tangent.crossVectors(normal, temp).normalize();
+            }
+            
+            // Create a bitangent for vertical movement
+            const bitangent = new THREE.Vector3();
+            bitangent.crossVectors(normal, tangent).normalize();
+            
+            // Apply the offsets in the tangent and bitangent directions
+            const offsetX = tangent.multiplyScalar(currentDesign.transform.positionX * 0.5);
+            const offsetY = bitangent.multiplyScalar(currentDesign.transform.positionY * 0.5);
+            
+            // Combine the offsets
+            const offset = new THREE.Vector3().addVectors(offsetX, offsetY);
+            
+            // Return the adjusted position
+            return basePosition.clone().add(offset);
         }
 
         // Update decal with current transformations
@@ -1595,7 +1697,7 @@
                 loader.setDRACOLoader(dracoLoader);
 
                 // Load your hoodie model
-                const modelUrl = 'Hoodie_Walking_Animated.glb'; // Make sure this path is correct
+                const modelUrl = 'https://cdn.jsdelivr.net/gh/mrdoob/three.js@dev/examples/models/gltf/LittlestTokyo.glb'; // Example model
 
                 const gltf = await loader.loadAsync(modelUrl);
 
@@ -1604,7 +1706,7 @@
                 scene.add(hoodieModel);
 
                 // Apply a base scaling to the model if it's too small
-                hoodieModel.scale.set(1.5, 1.5, 1.5); // Example: Scale up by 1.5 times
+                hoodieModel.scale.set(0.01, 0.01, 0.01); // Scale down
 
                 // Replace all materials with our base material
                 const baseMaterial = createBaseMaterial();
@@ -1805,7 +1907,7 @@
                 lighting: lightingEffect,
                 background: backgroundEffect,
                 animation: animationEffect,
-                version: '1.0'
+                version: '1.1'
             };
 
             const blob = new Blob([JSON.stringify(designData)], { type: 'application/json' });
@@ -1831,7 +1933,7 @@
                             const designData = JSON.parse(e.target.result);
 
                             // Validate version
-                            if (!designData.version || designData.version !== '1.0') {
+                            if (!designData.version || designData.version < '1.0') {
                                 throw new Error('Invalid design file version');
                             }
 
@@ -1856,6 +1958,12 @@
                             document.getElementById('animationEffect').value = animationEffect;
                             document.getElementById('lightingEffect').value = lightingEffect;
                             document.getElementById('backgroundEffect').value = backgroundEffect;
+                            
+                            // Update position controls
+                            document.getElementById('decal-position-x').value = currentDesign.transform.positionX;
+                            document.getElementById('decal-position-y').value = currentDesign.transform.positionY;
+                            document.getElementById('decal-position-x-input').value = currentDesign.transform.positionX.toFixed(2);
+                            document.getElementById('decal-position-y-input').value = currentDesign.transform.positionY.toFixed(2);
 
                             // Update color presets selection
                             document.querySelectorAll('.color-preset').forEach(preset => {
