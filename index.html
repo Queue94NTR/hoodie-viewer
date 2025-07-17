@@ -577,24 +577,6 @@
                         </div>
                     </div>
                     
-                    <div class="transform-control">
-                        <label>Position X (Left/Right)</label>
-                        <div class="transform-row">
-                            <span>X:</span>
-                            <input type="range" id="decal-position-x" min="-1" max="1" step="0.01" value="0">
-                            <input type="number" id="decal-position-x-input" min="-1" max="1" step="0.01" value="0">
-                        </div>
-                    </div>
-                    
-                    <div class="transform-control">
-                        <label>Position Y (Up/Down)</label>
-                        <div class="transform-row">
-                            <span>Y:</span>
-                            <input type="range" id="decal-position-y" min="-1" max="1" step="0.01" value="0">
-                            <input type="number" id="decal-position-y-input" min="-1" max="1" step="0.01" value="0">
-                        </div>
-                    </div>
-                    
                     <button id="resetTransforms">
                         <span>🔄</span> Reset Transformations
                     </button>
@@ -776,16 +758,13 @@
         let decalBasePosition = null;
         let decalBaseNormal = null;
         let decalTargetMesh = null; // Store the mesh the decal was applied to
-        let decalParent = new THREE.Group(); // Parent group for decal to follow animations
         
         // Current design properties
         let currentDesign = {
             texture: null, // This will store the data URL or base64
             transform: {
                 scale: 1,
-                rotation: 0,
-                positionX: 0, // New: X position offset
-                positionY: 0  // New: Y position offset
+                rotation: 0
             }
         };
         
@@ -901,9 +880,6 @@
             
             // Initialize post-processing
             initPostProcessing();
-            
-            // Add decal parent group to scene
-            scene.add(decalParent);
         }
         
         // Initialize post-processing
@@ -1069,26 +1045,18 @@
             // Transform controls
             setupTransformControl('decal-scale', 'decal-scale-input', 'scale', (v) => v.toFixed(1));
             setupTransformControl('decal-rotation', 'decal-rotation-input', 'rotation', (v) => v.toFixed(0));
-            setupTransformControl('decal-position-x', 'decal-position-x-input', 'positionX', (v) => v.toFixed(2));
-            setupTransformControl('decal-position-y', 'decal-position-y-input', 'positionY', (v) => v.toFixed(2));
             
             // Reset transformations
             document.getElementById('resetTransforms').addEventListener('click', () => {
                 currentDesign.transform = {
                     scale: 1,
-                    rotation: 0,
-                    positionX: 0,
-                    positionY: 0
+                    rotation: 0
                 };
                 
                 document.getElementById('decal-scale').value = 1;
                 document.getElementById('decal-rotation').value = 0;
-                document.getElementById('decal-position-x').value = 0;
-                document.getElementById('decal-position-y').value = 0;
                 document.getElementById('decal-scale-input').value = 1;
                 document.getElementById('decal-rotation-input').value = 0;
-                document.getElementById('decal-position-x-input').value = 0;
-                document.getElementById('decal-position-y-input').value = 0;
                 
                 if (decalMesh) {
                     updateDecal();
@@ -1153,8 +1121,6 @@
                     value = Math.max(0.1, Math.min(3, value));
                 } else if (sliderId === 'decal-rotation') {
                     value = Math.max(-180, Math.min(180, value));
-                } else if (sliderId === 'decal-position-x' || sliderId === 'decal-position-y') {
-                    value = Math.max(-1, Math.min(1, value));
                 }
                 
                 currentDesign.transform[property] = value;
@@ -1555,28 +1521,10 @@
 
             // Remove existing decal if any
             if (decalMesh) {
-                decalParent.remove(decalMesh);
+                scene.remove(decalMesh);
                 decalMesh.geometry.dispose();
                 decalMesh.material.dispose();
             }
-
-            // Calculate the offset based on currentDesign.transform.positionX/Y
-            const offsetAmountX = currentDesign.transform.positionX;
-            const offsetAmountY = currentDesign.transform.positionY;
-
-            // Create vectors for the offset directions
-            const upVector = new THREE.Vector3(0, 1, 0); // Global up
-            const rightVector = new THREE.Vector3().crossVectors(normal, upVector).normalize();
-            const forwardVector = new THREE.Vector3().crossVectors(rightVector, normal).normalize();
-
-            // Adjust the position based on the offsets
-            const adjustedPosition = position.clone();
-            adjustedPosition.addScaledVector(rightVector, offsetAmountX); // Move left/right
-            adjustedPosition.addScaledVector(forwardVector, offsetAmountY); // Move up/down
-
-            // Ensure the decal is slightly above the surface to prevent z-fighting
-            const pushBack = 0.001; // Small offset to prevent z-fighting
-            adjustedPosition.addScaledVector(normal, pushBack);
 
             // Calculate orientation including user's rotation input
             const initialOrientation = new THREE.Euler().setFromVector3(normal);
@@ -1593,7 +1541,7 @@
                 currentDesign.transform.scale // Z component for DecalGeometry's projection depth
             );
 
-            const decalGeo = new DecalGeometry(targetMesh, adjustedPosition, finalOrientation, size);
+            const decalGeo = new DecalGeometry(targetMesh, position, finalOrientation, size);
 
             const decalMat = new THREE.MeshBasicMaterial({
                 map: decalTexture,
@@ -1605,9 +1553,7 @@
             });
 
             decalMesh = new THREE.Mesh(decalGeo, decalMat);
-            
-            // Add decal to parent group instead of scene directly
-            decalParent.add(decalMesh);
+            scene.add(decalMesh);
 
             document.getElementById('info-panel').innerHTML += '<br>Design placed';
             document.getElementById('statusMessage').textContent = 'Design placed';
@@ -1624,7 +1570,7 @@
         // Remove decal
         function removeDecal() {
             if (decalMesh) {
-                decalParent.remove(decalMesh);
+                scene.remove(decalMesh);
                 decalMesh.geometry.dispose();
                 decalMesh.material.dispose();
                 decalMesh = null;
@@ -1895,12 +1841,7 @@
                             currentMaterial.metalness = designData.material.metalness;
                             currentMaterial.materialType = designData.material.materialType;
 
-                            currentDesign.transform = {
-                                scale: designData.design.transform.scale,
-                                rotation: designData.design.transform.rotation,
-                                positionX: designData.design.transform.positionX || 0,
-                                positionY: designData.design.transform.positionY || 0
-                            };
+                            currentDesign.transform = designData.design.transform;
                             currentDesign.texture = designData.design.texture;
 
                             lightingEffect = designData.lighting;
@@ -1961,12 +1902,8 @@
                                     document.getElementById('designPreview').classList.remove('empty');
                                     document.getElementById('decal-scale').value = currentDesign.transform.scale;
                                     document.getElementById('decal-rotation').value = currentDesign.transform.rotation;
-                                    document.getElementById('decal-position-x').value = currentDesign.transform.positionX;
-                                    document.getElementById('decal-position-y').value = currentDesign.transform.positionY;
                                     document.getElementById('decal-scale-input').value = currentDesign.transform.scale.toFixed(1);
                                     document.getElementById('decal-rotation-input').value = currentDesign.transform.rotation.toFixed(0);
-                                    document.getElementById('decal-position-x-input').value = currentDesign.transform.positionX.toFixed(2);
-                                    document.getElementById('decal-position-y-input').value = currentDesign.transform.positionY.toFixed(2);
                                 } else {
                                     console.warn('Target mesh for decal not found:', designData.design.decalTargetMeshName);
                                     removeDecal(); // Clear decal state if target mesh is missing
@@ -2068,13 +2005,6 @@
                 applyWindEffect(delta);
                 applyBounceEffect(delta);
                 applySpinEffect(delta);
-            }
-
-            // Update decal parent position to match hoodie position
-            if (hoodieModel && decalParent) {
-                decalParent.position.copy(hoodieModel.position);
-                decalParent.rotation.copy(hoodieModel.rotation);
-                decalParent.scale.copy(hoodieModel.scale);
             }
 
             controls.update();
