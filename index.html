@@ -465,93 +465,6 @@
             display: block;
         }
         
-        .position-controls {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 10px;
-        }
-        
-        .position-control {
-            background: #f8f9fa;
-            padding: 10px;
-            border-radius: 5px;
-        }
-        
-        .position-control label {
-            display: block;
-            margin-bottom: 5px;
-            font-weight: 500;
-            color: #495057;
-            font-size: 0.9em;
-        }
-        
-        .position-control input {
-            width: 100%;
-        }
-        
-        /* Zoom controls */
-        #zoom-controls {
-            position: absolute;
-            top: 15px;
-            right: 15px;
-            z-index: 100;
-            display: flex;
-            flex-direction: column;
-            gap: 10px;
-            background: rgba(0,0,0,0.7);
-            border-radius: 20px;
-            overflow: hidden;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.2);
-        }
-        
-        #zoom-controls button {
-            width: 40px;
-            height: 40px;
-            padding: 0;
-            border: none;
-            border-radius: 0;
-            background: none;
-            color: white;
-            font-size: 1.5em;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            cursor: pointer;
-            transition: background 0.2s;
-        }
-        
-        #zoom-controls button:hover {
-            background: rgba(255,255,255,0.2);
-        }
-        
-        #zoom-controls button:first-child {
-            border-bottom: 1px solid rgba(255,255,255,0.2);
-        }
-        
-        #zoom-reset {
-            position: absolute;
-            top: 15px;
-            right: 70px;
-            z-index: 100;
-            width: 40px;
-            height: 40px;
-            padding: 0;
-            border: none;
-            border-radius: 20px;
-            background: rgba(0,0,0,0.7);
-            color: white;
-            font-size: 1.5em;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            cursor: pointer;
-            transition: background 0.2s;
-        }
-        
-        #zoom-reset:hover {
-            background: rgba(255,255,255,0.2);
-        }
-        
         @media (max-width: 768px) {
             body {
                 flex-direction: column;
@@ -593,16 +506,6 @@
                 font-size: 0.8em;
                 padding: 8px 12px;
             }
-            
-            #zoom-controls {
-                top: 60px;
-                right: 15px;
-            }
-            
-            #zoom-reset {
-                top: 60px;
-                right: 70px;
-            }
         }
         
         @media (max-width: 480px) {
@@ -621,10 +524,6 @@
             .transform-row input[type="number"] {
                 width: 50px;
             }
-            
-            .position-controls {
-                grid-template-columns: 1fr;
-            }
         }
     </style>
 </head>
@@ -636,13 +535,6 @@
     
     <div id="info-panel-toggle">ℹ️ Info</div>
     <div id="info-panel">Loading model info...</div>
-    
-    <!-- Zoom Controls -->
-    <div id="zoom-controls">
-        <button id="zoom-in">+</button>
-        <button id="zoom-out">-</button>
-    </div>
-    <button id="zoom-reset">⟳</button>
     
     <div id="viewer-container">
         <div id="viewer"></div>
@@ -686,24 +578,20 @@
                     </div>
                     
                     <div class="transform-control">
-                        <label>Position Adjustment</label>
-                        <div class="position-controls">
-                            <div class="position-control">
-                                <label for="decal-position-x">Horizontal (X)</label>
-                                <input type="range" id="decal-position-x" min="-1" max="1" step="0.01" value="0">
-                                <div class="transform-row">
-                                    <span>Value:</span>
-                                    <input type="number" id="decal-position-x-input" min="-1" max="1" step="0.01" value="0">
-                                </div>
-                            </div>
-                            <div class="position-control">
-                                <label for="decal-position-y">Vertical (Y)</label>
-                                <input type="range" id="decal-position-y" min="-1" max="1" step="0.01" value="0">
-                                <div class="transform-row">
-                                    <span>Value:</span>
-                                    <input type="number" id="decal-position-y-input" min="-1" max="1" step="0.01" value="0">
-                                </div>
-                            </div>
+                        <label>Position X (Left/Right)</label>
+                        <div class="transform-row">
+                            <span>X:</span>
+                            <input type="range" id="decal-position-x" min="-1" max="1" step="0.01" value="0">
+                            <input type="number" id="decal-position-x-input" min="-1" max="1" step="0.01" value="0">
+                        </div>
+                    </div>
+                    
+                    <div class="transform-control">
+                        <label>Position Y (Up/Down)</label>
+                        <div class="transform-row">
+                            <span>Y:</span>
+                            <input type="range" id="decal-position-y" min="-1" max="1" step="0.01" value="0">
+                            <input type="number" id="decal-position-y-input" min="-1" max="1" step="0.01" value="0">
                         </div>
                     </div>
                     
@@ -846,7 +734,7 @@
         
         <div class="status-bar">
             <span id="statusMessage">Initializing...</span>
-            <span id="versionInfo">v1.1.0</span>
+            <span id="versionInfo">v1.0.0</span>
         </div>
     </div>
 
@@ -888,6 +776,7 @@
         let decalBasePosition = null;
         let decalBaseNormal = null;
         let decalTargetMesh = null; // Store the mesh the decal was applied to
+        let decalParent = new THREE.Group(); // Parent group for decal to follow animations
         
         // Current design properties
         let currentDesign = {
@@ -895,8 +784,8 @@
             transform: {
                 scale: 1,
                 rotation: 0,
-                positionX: 0,
-                positionY: 0
+                positionX: 0, // New: X position offset
+                positionY: 0  // New: Y position offset
             }
         };
         
@@ -1012,6 +901,9 @@
             
             // Initialize post-processing
             initPostProcessing();
+            
+            // Add decal parent group to scene
+            scene.add(decalParent);
         }
         
         // Initialize post-processing
@@ -1236,43 +1128,6 @@
             
             // Click event for decal placement
             window.addEventListener('click', onClick);
-            
-            // Zoom controls
-            document.getElementById('zoom-in').addEventListener('click', () => {
-                controls.dollyIn(0.2);
-                controls.update();
-                document.getElementById('info-panel').innerHTML += '<br>Zoomed in';
-                document.getElementById('statusMessage').textContent = 'Zoomed in';
-            });
-            
-            document.getElementById('zoom-out').addEventListener('click', () => {
-                controls.dollyOut(0.2);
-                controls.update();
-                document.getElementById('info-panel').innerHTML += '<br>Zoomed out';
-                document.getElementById('statusMessage').textContent = 'Zoomed out';
-            });
-            
-            document.getElementById('zoom-reset').addEventListener('click', () => {
-                // Reset camera to initial position
-                camera.position.set(0, 0, 5);
-                camera.lookAt(0, 0, 0);
-                controls.reset();
-                
-                // Center model if it exists
-                if (hoodieModel) {
-                    const box = new THREE.Box3().setFromObject(hoodieModel);
-                    const center = box.getCenter(new THREE.Vector3());
-                    hoodieModel.position.sub(center);
-                    const size = box.getSize(new THREE.Vector3()).length();
-                    camera.position.z = size * 1.2;
-                    camera.lookAt(hoodieModel.position);
-                    controls.target.copy(hoodieModel.position);
-                }
-                
-                controls.update();
-                document.getElementById('info-panel').innerHTML += '<br>View reset';
-                document.getElementById('statusMessage').textContent = 'View reset';
-            });
         }
         
         // Setup transform control
@@ -1298,7 +1153,7 @@
                     value = Math.max(0.1, Math.min(3, value));
                 } else if (sliderId === 'decal-rotation') {
                     value = Math.max(-180, Math.min(180, value));
-                } else if (sliderId.includes('position')) {
+                } else if (sliderId === 'decal-position-x' || sliderId === 'decal-position-y') {
                     value = Math.max(-1, Math.min(1, value));
                 }
                 
@@ -1636,7 +1491,7 @@
             try {
                 // Use MAX_TEXTURE_DIMENSION instead of fixed 512x512
                 const imageDataUrl = await resizeImage(file, MAX_TEXTURE_DIMENSION);
-                currentDesign.texture = imageDataUrl; // Store the data URL of the image
+                currentDesign.texture = imageDataUrl; // Store the data URL for saving
                 
                 const preview = document.getElementById('designPreview');
                 preview.innerHTML = '';
@@ -1689,30 +1544,39 @@
                 decalBasePosition = hit.point.clone();
                 decalBaseNormal = hit.face.normal.clone();
                 decalTargetMesh = hit.object;
-                
-                // Reset position adjustments when placing a new decal
-                currentDesign.transform.positionX = 0;
-                currentDesign.transform.positionY = 0;
-                document.getElementById('decal-position-x').value = 0;
-                document.getElementById('decal-position-y').value = 0;
-                document.getElementById('decal-position-x-input').value = 0;
-                document.getElementById('decal-position-y-input').value = 0;
-                
                 placeDecalAt(decalBasePosition, decalBaseNormal, decalTargetMesh);
                 document.getElementById('statusMessage').textContent = 'Design placed.';
             }
         }
 
-        // Place decal at the clicked position with position adjustments
+        // Place decal at the clicked position
         function placeDecalAt(position, normal, targetMesh) {
             if (!decalTexture) return;
 
             // Remove existing decal if any
             if (decalMesh) {
-                scene.remove(decalMesh);
+                decalParent.remove(decalMesh);
                 decalMesh.geometry.dispose();
                 decalMesh.material.dispose();
             }
+
+            // Calculate the offset based on currentDesign.transform.positionX/Y
+            const offsetAmountX = currentDesign.transform.positionX;
+            const offsetAmountY = currentDesign.transform.positionY;
+
+            // Create vectors for the offset directions
+            const upVector = new THREE.Vector3(0, 1, 0); // Global up
+            const rightVector = new THREE.Vector3().crossVectors(normal, upVector).normalize();
+            const forwardVector = new THREE.Vector3().crossVectors(rightVector, normal).normalize();
+
+            // Adjust the position based on the offsets
+            const adjustedPosition = position.clone();
+            adjustedPosition.addScaledVector(rightVector, offsetAmountX); // Move left/right
+            adjustedPosition.addScaledVector(forwardVector, offsetAmountY); // Move up/down
+
+            // Ensure the decal is slightly above the surface to prevent z-fighting
+            const pushBack = 0.001; // Small offset to prevent z-fighting
+            adjustedPosition.addScaledVector(normal, pushBack);
 
             // Calculate orientation including user's rotation input
             const initialOrientation = new THREE.Euler().setFromVector3(normal);
@@ -1723,9 +1587,6 @@
             const combinedOrientation = new THREE.Quaternion().setFromEuler(initialOrientation).multiply(rotationQuat);
             const finalOrientation = new THREE.Euler().setFromQuaternion(combinedOrientation);
 
-            // Calculate adjusted position with X/Y offsets
-            const adjustedPosition = calculateAdjustedPosition(position, normal);
-            
             const size = new THREE.Vector3(
                 currentDesign.transform.scale,
                 currentDesign.transform.scale,
@@ -1744,38 +1605,12 @@
             });
 
             decalMesh = new THREE.Mesh(decalGeo, decalMat);
-            scene.add(decalMesh);
+            
+            // Add decal to parent group instead of scene directly
+            decalParent.add(decalMesh);
 
             document.getElementById('info-panel').innerHTML += '<br>Design placed';
             document.getElementById('statusMessage').textContent = 'Design placed';
-        }
-
-        // Calculate adjusted position with X/Y offsets
-        function calculateAdjustedPosition(basePosition, normal) {
-            // Create a tangent vector for horizontal movement
-            const tangent = new THREE.Vector3();
-            const temp = new THREE.Vector3(0, 1, 0); // World up vector
-            
-            // If normal is vertical, use different tangent
-            if (Math.abs(normal.y) > 0.95) {
-                tangent.set(1, 0, 0);
-            } else {
-                tangent.crossVectors(normal, temp).normalize();
-            }
-            
-            // Create a bitangent for vertical movement
-            const bitangent = new THREE.Vector3();
-            bitangent.crossVectors(normal, tangent).normalize();
-            
-            // Apply the offsets in the tangent and bitangent directions
-            const offsetX = tangent.multiplyScalar(currentDesign.transform.positionX * 0.5);
-            const offsetY = bitangent.multiplyScalar(currentDesign.transform.positionY * 0.5);
-            
-            // Combine the offsets
-            const offset = new THREE.Vector3().addVectors(offsetX, offsetY);
-            
-            // Return the adjusted position
-            return basePosition.clone().add(offset);
         }
 
         // Update decal with current transformations
@@ -1789,7 +1624,7 @@
         // Remove decal
         function removeDecal() {
             if (decalMesh) {
-                scene.remove(decalMesh);
+                decalParent.remove(decalMesh);
                 decalMesh.geometry.dispose();
                 decalMesh.material.dispose();
                 decalMesh = null;
@@ -1813,8 +1648,8 @@
                 dracoLoader.setDecoderPath('https://www.gstatic.com/draco/v1/decoders/');
                 loader.setDRACOLoader(dracoLoader);
 
-                // Load your hoodie model - THE CRITICAL CHANGE IS HERE
-                const modelUrl = 'https://cdn.jsdelivr.net/gh/mrdoob/three.js@dev/examples/models/gltf/DamagedHelmet/glTF/DamagedHelmet.gltf';
+                // Load your hoodie model
+                const modelUrl = 'Hoodie_Walking_Animated.glb'; // Make sure this path is correct
 
                 const gltf = await loader.loadAsync(modelUrl);
 
@@ -1823,7 +1658,7 @@
                 scene.add(hoodieModel);
 
                 // Apply a base scaling to the model if it's too small
-                hoodieModel.scale.set(0.01, 0.01, 0.01); // Scale down
+                hoodieModel.scale.set(1.5, 1.5, 1.5); // Example: Scale up by 1.5 times
 
                 // Replace all materials with our base material
                 const baseMaterial = createBaseMaterial();
@@ -2024,7 +1859,7 @@
                 lighting: lightingEffect,
                 background: backgroundEffect,
                 animation: animationEffect,
-                version: '1.1'
+                version: '1.0'
             };
 
             const blob = new Blob([JSON.stringify(designData)], { type: 'application/json' });
@@ -2050,7 +1885,7 @@
                             const designData = JSON.parse(e.target.result);
 
                             // Validate version
-                            if (!designData.version || designData.version < '1.0') {
+                            if (!designData.version || designData.version !== '1.0') {
                                 throw new Error('Invalid design file version');
                             }
 
@@ -2060,7 +1895,12 @@
                             currentMaterial.metalness = designData.material.metalness;
                             currentMaterial.materialType = designData.material.materialType;
 
-                            currentDesign.transform = designData.design.transform;
+                            currentDesign.transform = {
+                                scale: designData.design.transform.scale,
+                                rotation: designData.design.transform.rotation,
+                                positionX: designData.design.transform.positionX || 0,
+                                positionY: designData.design.transform.positionY || 0
+                            };
                             currentDesign.texture = designData.design.texture;
 
                             lightingEffect = designData.lighting;
@@ -2075,12 +1915,6 @@
                             document.getElementById('animationEffect').value = animationEffect;
                             document.getElementById('lightingEffect').value = lightingEffect;
                             document.getElementById('backgroundEffect').value = backgroundEffect;
-                            
-                            // Update position controls
-                            document.getElementById('decal-position-x').value = currentDesign.transform.positionX;
-                            document.getElementById('decal-position-y').value = currentDesign.transform.positionY;
-                            document.getElementById('decal-position-x-input').value = currentDesign.transform.positionX.toFixed(2);
-                            document.getElementById('decal-position-y-input').value = currentDesign.transform.positionY.toFixed(2);
 
                             // Update color presets selection
                             document.querySelectorAll('.color-preset').forEach(preset => {
@@ -2127,8 +1961,12 @@
                                     document.getElementById('designPreview').classList.remove('empty');
                                     document.getElementById('decal-scale').value = currentDesign.transform.scale;
                                     document.getElementById('decal-rotation').value = currentDesign.transform.rotation;
+                                    document.getElementById('decal-position-x').value = currentDesign.transform.positionX;
+                                    document.getElementById('decal-position-y').value = currentDesign.transform.positionY;
                                     document.getElementById('decal-scale-input').value = currentDesign.transform.scale.toFixed(1);
                                     document.getElementById('decal-rotation-input').value = currentDesign.transform.rotation.toFixed(0);
+                                    document.getElementById('decal-position-x-input').value = currentDesign.transform.positionX.toFixed(2);
+                                    document.getElementById('decal-position-y-input').value = currentDesign.transform.positionY.toFixed(2);
                                 } else {
                                     console.warn('Target mesh for decal not found:', designData.design.decalTargetMeshName);
                                     removeDecal(); // Clear decal state if target mesh is missing
@@ -2232,6 +2070,13 @@
                 applySpinEffect(delta);
             }
 
+            // Update decal parent position to match hoodie position
+            if (hoodieModel && decalParent) {
+                decalParent.position.copy(hoodieModel.position);
+                decalParent.rotation.copy(hoodieModel.rotation);
+                decalParent.scale.copy(hoodieModel.scale);
+            }
+
             controls.update();
 
             if (composer) {
@@ -2249,19 +2094,19 @@
             resizeTimeout = setTimeout(() => {
                 const isMobile = window.innerWidth <= 768;
                 const sidebarWidth = isMobile ? 0 : 350;
-                
+
                 let width = window.innerWidth - sidebarWidth;
                 let height = isMobile ? window.innerHeight * 0.5 : window.innerHeight;
-                
+
                 // Ensure minimum dimensions
                 width = Math.max(1, width);
                 height = Math.max(1, height);
-                
+
                 // Update Three.js renderer and camera
                 camera.aspect = width / height;
                 camera.updateProjectionMatrix();
                 renderer.setSize(width, height);
-                
+
                 // Update post-processing if enabled
                 if (composer) {
                     composer.setSize(width, height);
