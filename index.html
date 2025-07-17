@@ -1185,16 +1185,17 @@
             document.getElementById('info-panel').innerHTML = 'Loading textures...';
             document.getElementById('statusMessage').textContent = 'Loading textures...';
             
+            // Updated texture URLs with reliable sources
             const textureUrls = {
-                cottonNormalMap: 'https://cdn.jsdelivr.net/gh/mrdoob/three.js@dev/examples/textures/terrain/grasslight-big.jpg',
-                denimNormalMap: 'https://cdn.jsdelivr.net/gh/mrdoob/three.js@dev/examples/textures/normalmaps/leather/roughness.jpg',
-                velvetNormalMap: 'https://cdn.jsdelivr.net/gh/mrdoob/three.js@dev/examples/textures/normalmaps/leather/normal.jpg',
-                leatherNormalMap: 'https://cdn.jsdelivr.net/gh/mrdoob/three.js@dev/examples/textures/normalmaps/leather/normal.jpg',
-                puffDisplacementMap: 'https://cdn.jsdelivr.net/gh/mrdoob/three.js@dev/examples/textures/terrain/grasslight-big.jpg',
-                studioEnvMap: 'https://cdn.jsdelivr.net/gh/mrdoob/three.js@dev/examples/textures/equirectangular/venice_sunset_1k.hdr',
-                outdoorEnvMap: 'https://cdn.jsdelivr.net/gh/mrdoob/three.js@dev/examples/textures/equirectangular/pisa_1k.hdr',
-                neonEnvMap: 'https://cdn.jsdelivr.net/gh/mrdoob/three.js@dev/examples/textures/equirectangular/royal_esplanade_1k.hdr',
-                sunsetEnvMap: 'https://cdn.jsdelivr.net/gh/mrdoob/three.js@dev/examples/textures/equirectangular/bridge2_1k.hdr'
+                cottonNormalMap: 'https://threejs.org/examples/textures/terrain/grasslight-big.jpg',
+                denimNormalMap: 'https://threejs.org/examples/textures/normalmaps/leather/roughness.jpg',
+                velvetNormalMap: 'https://threejs.org/examples/textures/normalmaps/leather/normal.jpg',
+                leatherNormalMap: 'https://threejs.org/examples/textures/normalmaps/leather/normal.jpg',
+                puffDisplacementMap: 'https://threejs.org/examples/textures/terrain/grasslight-big.jpg',
+                studioEnvMap: 'https://threejs.org/examples/textures/equirectangular/royal_esplanade_1k.hdr',
+                outdoorEnvMap: 'https://threejs.org/examples/textures/equirectangular/pisa_1k.hdr',
+                neonEnvMap: 'https://threejs.org/examples/textures/equirectangular/royal_esplanade_1k.hdr',
+                sunsetEnvMap: 'https://threejs.org/examples/textures/equirectangular/bridge2_1k.hdr'
             };
             
             const texturePromises = Object.entries(textureUrls).map(([key, url]) => 
@@ -1280,7 +1281,7 @@
                 }
 
                 const texture = await new RGBELoader()
-                    .setDataType(THREE.FloatType) // HDR files are usually float type
+                    .setDataType(THREE.FloatType)
                     .loadAsync(envMapUrl);
                 const envMap = pmremGenerator.fromEquirectangular(texture).texture;
                 texture.dispose();
@@ -1295,7 +1296,7 @@
                 // Fallback to cube environment
                 try {
                     const envMap = await new THREE.CubeTextureLoader()
-                        .setPath('https://cdn.jsdelivr.net/gh/mrdoob/three.js@dev/examples/textures/cube/pisa/')
+                        .setPath('https://threejs.org/examples/textures/cube/pisa/')
                         .loadAsync(['px.png', 'nx.png', 'py.png', 'ny.png', 'pz.png', 'nz.png']);
                     scene.environment = envMap;
                     return envMap;
