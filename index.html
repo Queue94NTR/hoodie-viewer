@@ -417,6 +417,12 @@
             font-size: 0.9em;
         }
         
+        .design-preview.loading::after {
+            content: "Loading...";
+            color: var(--primary-color);
+            font-size: 0.9em;
+        }
+        
         .status-bar {
             margin-top: auto;
             padding-top: 15px;
@@ -574,6 +580,15 @@
                             <span>Angle:</span>
                             <input type="range" id="decal-rotation" min="-180" max="180" step="1" value="0">
                             <input type="number" id="decal-rotation-input" min="-180" max="180" step="1" value="0">
+                        </div>
+                    </div>
+                    
+                    <div class="transform-control">
+                        <label>Opacity</label>
+                        <div class="transform-row">
+                            <span>%:</span>
+                            <input type="range" id="decal-opacity" min="0" max="100" step="1" value="100">
+                            <input type="number" id="decal-opacity-input" min="0" max="100" step="1" value="100">
                         </div>
                     </div>
                     
@@ -746,6 +761,9 @@
         let currentAction = null;
         let decalMesh = null;
         let decalTexture = null;
+        let decalBasePosition = null;
+        let decalBaseNormal = null;
+        let decalTargetMesh = null;
         let isAnimationPaused = false;
         let composer, fxaaPass;
         let textures = {};
@@ -754,13 +772,17 @@
         const raycaster = new THREE.Raycaster();
         const mouse = new THREE.Vector2();
         
+        // Constants
+        const MAX_TEXTURE_DIMENSION = 2048; // Maximum size for uploaded images
+        
         // Current design properties
         let currentDesign = {
             texture: null,
             placement: 'front',
             transform: {
                 scale: 1,
-                rotation: 0
+                rotation: 0,
+                opacity: 100
             }
         };
         
@@ -1038,18 +1060,22 @@
             // Transform controls
             setupTransformControl('decal-scale', 'decal-scale-input', 'scale');
             setupTransformControl('decal-rotation', 'decal-rotation-input', 'rotation');
+            setupTransformControl('decal-opacity', 'decal-opacity-input', 'opacity', (v) => v);
             
             // Reset transformations
             document.getElementById('resetTransforms').addEventListener('click', () => {
                 currentDesign.transform = {
                     scale: 1,
-                    rotation: 0
+                    rotation: 0,
+                    opacity: 100
                 };
                 
                 document.getElementById('decal-scale').value = 1;
                 document.getElementById('decal-rotation').value = 0;
+                document.getElementById('decal-opacity').value = 100;
                 document.getElementById('decal-scale-input').value = 1;
                 document.getElementById('decal-rotation-input').value = 0;
+                document.getElementById('decal-opacity-input').value = 100;
                 
                 if (decalMesh) {
                     updateDecal();
@@ -1104,6 +1130,8 @@
                     value = Math.max(0.1, Math.min(3, value));
                 } else if (sliderId === 'decal-rotation') {
                     value = Math.max(-180, Math.min(180, value));
+                } else if (sliderId === 'decal-opacity') {
+                    value = Math.max(0, Math.min(100, value));
                 }
                 
                 currentDesign.transform[property] = value;
@@ -1358,35 +1386,94 @@
             });
         }
 
+        // Resize image while maintaining aspect ratio
+        function resizeImage(image, maxWidth, maxHeight) {
+            const canvas = document.createElement('canvas');
+            let width = image.width;
+            let height = image.height;
+
+            // Calculate new dimensions while maintaining aspect ratio
+            if (width > height) {
+                if (width > maxWidth) {
+                    height *= maxWidth / width;
+                    width = maxWidth;
+                }
+            } else {
+                if (height > maxHeight) {
+                    width *= maxHeight / height;
+                    height = maxHeight;
+                }
+            }
+
+            // Set canvas dimensions
+            canvas.width = width;
+            canvas.height = height;
+
+            // Draw image on canvas
+            const ctx = canvas.getContext('2d');
+            ctx.drawImage(image, 0, 0, width, height);
+
+            return canvas;
+        }
+
         // Handle design upload
-        function handleDesignUpload(event) {
+        async function handleDesignUpload(event) {
             const file = event.target.files[0];
             if (!file) return;
 
             const preview = document.getElementById('designPreview');
             preview.innerHTML = '';
             preview.classList.remove('empty');
+            preview.classList.add('loading');
             
-            const img = document.createElement('img');
-            img.src = URL.createObjectURL(file);
-            preview.appendChild(img);
+            document.getElementById('statusMessage').textContent = 'Processing image...';
+            document.getElementById('loading-overlay').style.display = 'flex';
 
-            const reader = new FileReader();
-            reader.onload = function(e) {
-                const image = new Image();
-                image.onload = function() {
-                    // Create texture from the image
-                    decalTexture = new THREE.Texture(image);
-                    decalTexture.needsUpdate = true;
-                    
-                    // Show decal controls
-                    document.getElementById('decal-controls').classList.add('active');
-                    document.getElementById('info-panel').innerHTML += '<br>Design loaded';
-                    document.getElementById('statusMessage').textContent = 'Design loaded';
-                };
-                image.src = e.target.result;
-            };
-            reader.readAsDataURL(file);
+            try {
+                // Create image from file
+                const image = await new Promise((resolve, reject) => {
+                    const img = new Image();
+                    img.onload = () => resolve(img);
+                    img.onerror = (e) => reject(new Error('Failed to load image'));
+                    img.src = URL.createObjectURL(file);
+                });
+
+                // Resize image if needed
+                const resizedCanvas = resizeImage(image, MAX_TEXTURE_DIMENSION, MAX_TEXTURE_DIMENSION);
+                const imageDataUrl = resizedCanvas.toDataURL('image/png');
+
+                // Update preview
+                const img = document.createElement('img');
+                img.src = imageDataUrl;
+                preview.innerHTML = '';
+                preview.appendChild(img);
+                preview.classList.remove('loading');
+
+                // Create texture from the image
+                decalTexture = new THREE.Texture(resizedCanvas);
+                decalTexture.minFilter = THREE.LinearMipmapLinearFilter;
+                decalTexture.magFilter = THREE.LinearFilter;
+                decalTexture.anisotropy = renderer.capabilities.getMaxAnisotropy();
+                decalTexture.generateMipmaps = true;
+                decalTexture.needsUpdate = true;
+
+                // Store the image data URL for saving/loading
+                currentDesign.texture = imageDataUrl;
+
+                // Show decal controls
+                document.getElementById('decal-controls').classList.add('active');
+                document.getElementById('info-panel').innerHTML += '<br>Design loaded';
+                document.getElementById('statusMessage').textContent = 'Design loaded';
+            } catch (error) {
+                console.error('Error processing image:', error);
+                preview.innerHTML = '';
+                preview.classList.add('empty');
+                preview.classList.remove('loading');
+                document.getElementById('info-panel').innerHTML += '<br>Error loading design';
+                document.getElementById('statusMessage').textContent = 'Error loading design';
+            } finally {
+                document.getElementById('loading-overlay').style.display = 'none';
+            }
         }
 
         // Handle click event for decal placement
@@ -1404,6 +1491,9 @@
             const intersects = raycaster.intersectObject(hoodieModel, true);
             if (intersects.length > 0) {
                 const hit = intersects[0];
+                decalBasePosition = hit.point.clone();
+                decalBaseNormal = hit.face.normal.clone();
+                decalTargetMesh = hit.object;
                 placeDecalAt(hit.point, hit.face.normal, hit.object);
             }
         }
@@ -1415,8 +1505,11 @@
             // Remove existing decal if any
             if (decalMesh) {
                 scene.remove(decalMesh);
+                decalMesh.geometry.dispose();
+                decalMesh.material.dispose();
             }
 
+            // Calculate orientation (include user rotation)
             const orientation = new THREE.Euler().setFromVector3(normal.clone());
             const size = new THREE.Vector3(
                 currentDesign.transform.scale,
@@ -1424,17 +1517,21 @@
                 currentDesign.transform.scale
             );
 
+            // Create decal geometry
             const decalGeo = new DecalGeometry(targetMesh, position, orientation, size);
 
+            // Create decal material
             const decalMat = new THREE.MeshBasicMaterial({
                 map: decalTexture,
                 transparent: true,
+                opacity: currentDesign.transform.opacity / 100,
                 depthTest: true,
                 depthWrite: false,
                 polygonOffset: true,
                 polygonOffsetFactor: -4
             });
 
+            // Create and add decal mesh to scene
             decalMesh = new THREE.Mesh(decalGeo, decalMat);
             scene.add(decalMesh);
             
@@ -1447,48 +1544,58 @@
 
         // Update decal with current transformations
         function updateDecal() {
-            if (!decalMesh) return;
+            if (!decalMesh || !decalBasePosition || !decalBaseNormal || !decalTargetMesh) return;
             
             // Apply rotation
             decalMesh.rotation.z = THREE.MathUtils.degToRad(currentDesign.transform.rotation);
             
-            // Update scale (need to recreate geometry)
-            const targetMesh = findTargetMesh();
-            if (targetMesh) {
-                const position = decalMesh.position.clone();
-                const normal = new THREE.Vector3().copy(position).normalize();
-                const orientation = new THREE.Euler().setFromVector3(normal);
-                const size = new THREE.Vector3(
-                    currentDesign.transform.scale,
-                    currentDesign.transform.scale,
-                    currentDesign.transform.scale
-                );
-                
-                const newGeo = new DecalGeometry(targetMesh, position, orientation, size);
-                decalMesh.geometry.dispose();
-                decalMesh.geometry = newGeo;
+            // Update opacity
+            if (decalMesh.material) {
+                decalMesh.material.opacity = currentDesign.transform.opacity / 100;
+                decalMesh.material.needsUpdate = true;
             }
-        }
-
-        // Find the target mesh for decal placement
-        function findTargetMesh() {
-            if (!hoodieModel) return null;
             
-            let target = null;
-            hoodieModel.traverse(child => {
-                if (child.isMesh && !target) {
-                    target = child;
-                }
-            });
+            // Update scale (need to recreate geometry)
+            const position = decalBasePosition.clone();
+            const normal = decalBaseNormal.clone();
+            const orientation = new THREE.Euler().setFromVector3(normal);
+            const size = new THREE.Vector3(
+                currentDesign.transform.scale,
+                currentDesign.transform.scale,
+                currentDesign.transform.scale
+            );
             
-            return target;
+            // Create new geometry with updated scale
+            const newGeo = new DecalGeometry(decalTargetMesh, position, orientation, size);
+            
+            // Replace geometry (dispose old one)
+            decalMesh.geometry.dispose();
+            decalMesh.geometry = newGeo;
+            
+            // Reapply rotation to new geometry
+            decalMesh.rotation.z = THREE.MathUtils.degToRad(currentDesign.transform.rotation);
         }
 
         // Remove decal
         function removeDecal() {
             if (decalMesh) {
                 scene.remove(decalMesh);
+                decalMesh.geometry.dispose();
+                decalMesh.material.dispose();
                 decalMesh = null;
+                decalTexture = null;
+                decalBasePosition = null;
+                decalBaseNormal = null;
+                decalTargetMesh = null;
+                
+                // Reset preview
+                const preview = document.getElementById('designPreview');
+                preview.innerHTML = '';
+                preview.classList.add('empty');
+                
+                // Hide decal controls
+                document.getElementById('decal-controls').classList.remove('active');
+                
                 document.getElementById('info-panel').innerHTML += '<br>Design removed';
                 document.getElementById('statusMessage').textContent = 'Design removed';
             }
@@ -1750,6 +1857,26 @@
                             await loadEnvironment(lightingEffect);
                             updateLighting();
                             updateBackground();
+                            
+                            // Load design image if it exists
+                            if (currentDesign.texture) {
+                                const preview = document.getElementById('designPreview');
+                                preview.innerHTML = '';
+                                preview.classList.remove('empty');
+                                
+                                const img = document.createElement('img');
+                                img.src = currentDesign.texture;
+                                preview.appendChild(img);
+                                
+                                // Create texture from the image
+                                const image = new Image();
+                                image.onload = () => {
+                                    decalTexture = new THREE.Texture(image);
+                                    decalTexture.needsUpdate = true;
+                                    document.getElementById('decal-controls').classList.add('active');
+                                };
+                                image.src = currentDesign.texture;
+                            }
                             
                             document.getElementById('info-panel').innerHTML = 'Design loaded successfully';
                             document.getElementById('statusMessage').textContent = 'Design loaded';
