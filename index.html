@@ -471,6 +471,37 @@
             display: block;
         }
         
+        /* Zoom controls */
+        .zoom-controls {
+            position: absolute;
+            bottom: 20px;
+            right: 20px;
+            z-index: 100;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+        
+        .zoom-btn {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: rgba(0,0,0,0.7);
+            color: white;
+            border: none;
+            font-size: 1.2em;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s;
+        }
+        
+        .zoom-btn:hover {
+            background: rgba(0,0,0,0.9);
+            transform: scale(1.1);
+        }
+        
         @media (max-width: 768px) {
             body {
                 flex-direction: column;
@@ -512,6 +543,17 @@
                 font-size: 0.8em;
                 padding: 8px 12px;
             }
+            
+            .zoom-controls {
+                bottom: 10px;
+                right: 10px;
+            }
+            
+            .zoom-btn {
+                width: 35px;
+                height: 35px;
+                font-size: 1em;
+            }
         }
         
         @media (max-width: 480px) {
@@ -544,6 +586,11 @@
     
     <div id="viewer-container">
         <div id="viewer"></div>
+        <!-- Zoom controls -->
+        <div class="zoom-controls">
+            <button class="zoom-btn" id="zoomInBtn">+</button>
+            <button class="zoom-btn" id="zoomOutBtn">−</button>
+        </div>
     </div>
     
     <div id="sidebar">
@@ -771,6 +818,9 @@
         
         // Constants
         const MAX_TEXTURE_DIMENSION = 2048; // Maximum size for uploaded images
+        const ZOOM_FACTOR = 0.2; // How much to zoom in/out per click
+        const MIN_ZOOM_DISTANCE = 1; // Closest the camera can get
+        const MAX_ZOOM_DISTANCE = 10; // Farthest the camera can get
         
         // Current design properties
         let currentDesign = {
@@ -933,8 +983,8 @@
             controls.dampingFactor = 0.05;
             controls.screenSpacePanning = false;
             controls.maxPolarAngle = Math.PI;
-            controls.minDistance = 1;
-            controls.maxDistance = 10;
+            controls.minDistance = MIN_ZOOM_DISTANCE;
+            controls.maxDistance = MAX_ZOOM_DISTANCE;
         }
 
         // Setup UI event listeners
@@ -1106,6 +1156,44 @@
             
             // Click event for decal placement
             window.addEventListener('click', onClick);
+            
+            // Zoom controls
+            document.getElementById('zoomInBtn').addEventListener('click', zoomIn);
+            document.getElementById('zoomOutBtn').addEventListener('click', zoomOut);
+        }
+        
+        // Zoom in function
+        function zoomIn() {
+            if (controls) {
+                // Calculate new distance
+                const currentDistance = controls.getDistance();
+                const newDistance = Math.max(MIN_ZOOM_DISTANCE, currentDistance - ZOOM_FACTOR);
+                
+                // Move camera closer
+                controls.target.set(0, 0, 0);
+                camera.position.z = newDistance;
+                controls.update();
+                
+                document.getElementById('info-panel').innerHTML += '<br>Zoomed in';
+                document.getElementById('statusMessage').textContent = 'Zoomed in';
+            }
+        }
+        
+        // Zoom out function
+        function zoomOut() {
+            if (controls) {
+                // Calculate new distance
+                const currentDistance = controls.getDistance();
+                const newDistance = Math.min(MAX_ZOOM_DISTANCE, currentDistance + ZOOM_FACTOR);
+                
+                // Move camera farther
+                controls.target.set(0, 0, 0);
+                camera.position.z = newDistance;
+                controls.update();
+                
+                document.getElementById('info-panel').innerHTML += '<br>Zoomed out';
+                document.getElementById('statusMessage').textContent = 'Zoomed out';
+            }
         }
         
         // Setup transform control
