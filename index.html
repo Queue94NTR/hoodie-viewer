@@ -242,24 +242,6 @@
             background: #d6336c;
         }
         
-        .animation-controls {
-            display: flex;
-            gap: 10px;
-        }
-        
-        .animation-controls button {
-            flex: 1;
-        }
-        
-        #pause-animation {
-            background: var(--warning-color);
-            color: var(--dark-color);
-        }
-        
-        #pause-animation:hover {
-            background: #ffaa00;
-        }
-        
         .effect-control {
             margin-bottom: 15px;
         }
@@ -692,27 +674,6 @@
         
         <div class="tab-content" id="effects-tab">
             <div class="control-group">
-                <h3>Animation Controls</h3>
-                <div class="animation-controls">
-                    <button id="play-animation">
-                        <span>▶</span> Play
-                    </button>
-                    <button id="pause-animation">
-                        <span>⏸</span> Pause
-                    </button>
-                </div>
-                <div class="effect-control">
-                    <label for="animationEffect">Animation Effect</label>
-                    <select id="animationEffect">
-                        <option value="none">None</option>
-                        <option value="wind">Wind</option>
-                        <option value="bounce">Bounce</option>
-                        <option value="spin">Spin</option>
-                    </select>
-                </div>
-            </div>
-            
-            <div class="control-group">
                 <h3>Special Effects</h3>
                 <div class="effect-control">
                     <label for="lightingEffect">Lighting</label>
@@ -803,12 +764,10 @@
         import { DecalGeometry } from 'three/addons/geometries/DecalGeometry.js';
         
         // Main variables
-        let scene, camera, renderer, controls, mixer, clock, hoodieModel;
+        let scene, camera, renderer, controls, hoodieModel;
         let hoodieMaterial = null;
-        let currentAction = null;
         let decalMesh = null;
         let decalTexture = null;
-        let isAnimationPaused = false;
         let composer, fxaaPass;
         let textures = {};
         
@@ -843,14 +802,6 @@
             roughness: 0.7,
             metalness: 0.0,
             materialType: 'cotton'
-        };
-        
-        // Animation effects
-        let animationEffect = 'none';
-        let windEffect = {
-            strength: 0,
-            frequency: 0.5,
-            time: 0
         };
         
         // Lighting effects
@@ -942,8 +893,6 @@
             directionalLight2.position.set(-1, -1, -1);
             scene.add(directionalLight2);
             
-            clock = new THREE.Clock();
-            
             // Initialize post-processing
             initPostProcessing();
         }
@@ -1006,30 +955,6 @@
                 }
             });
             
-            // Animation controls
-            document.getElementById('play-animation').addEventListener('click', () => {
-                if (currentAction) {
-                    isAnimationPaused = false;
-                    currentAction.paused = false;
-                    currentAction.play();
-                    document.getElementById('info-panel').innerHTML += '<br>Animation playing';
-                    document.getElementById('statusMessage').textContent = 'Animation playing';
-                }
-            });
-            
-            document.getElementById('pause-animation').addEventListener('click', () => {
-                if (currentAction) {
-                    isAnimationPaused = !isAnimationPaused;
-                    currentAction.paused = isAnimationPaused;
-                    document.getElementById('info-panel').innerHTML += isAnimationPaused 
-                        ? '<br>Animation paused' 
-                        : '<br>Animation playing';
-                    document.getElementById('statusMessage').textContent = isAnimationPaused 
-                        ? 'Animation paused' 
-                        : 'Animation playing';
-                }
-            });
-            
             // Color controls
             document.getElementById('apply-colors').addEventListener('click', applyColor);
             
@@ -1067,14 +992,6 @@
                 currentMaterial.roughness = parseFloat(e.target.value);
                 document.getElementById('roughnessValue').textContent = currentMaterial.roughness.toFixed(2);
                 updateHoodieMaterial();
-            });
-            
-            // Animation effect
-            document.getElementById('animationEffect').addEventListener('change', (e) => {
-                animationEffect = e.target.value;
-                windEffect.strength = animationEffect === 'wind' ? 0.1 : 0;
-                document.getElementById('info-panel').innerHTML += `<br>Effect: ${animationEffect}`;
-                document.getElementById('statusMessage').textContent = `Effect: ${animationEffect}`;
             });
             
             // Lighting effect
@@ -1424,14 +1341,6 @@
             });
             info += `Meshes: ${meshCount}<br>`;
             
-            // Animation info
-            if (gltf.animations && gltf.animations.length > 0) {
-                info += `Animations: ${gltf.animations.length}<br>`;
-                info += `Playing animation: ${gltf.animations[0].name || 'Unnamed'}`;
-            } else {
-                info += 'No animations found';
-            }
-            
             document.getElementById('info-panel').innerHTML = info;
         }
 
@@ -1707,21 +1616,6 @@
                     }
                 });
                 
-                // Check for animations
-                if (gltf.animations && gltf.animations.length > 0) {
-                    mixer = new THREE.AnimationMixer(hoodieModel);
-                    currentAction = mixer.clipAction(gltf.animations[0]);
-                    currentAction.play();
-                    console.log(`Playing animation: ${gltf.animations[0].name}`);
-                    
-                    // Enable animation controls
-                    document.getElementById('play-animation').disabled = false;
-                    document.getElementById('pause-animation').disabled = false;
-                    
-                    document.getElementById('info-panel').innerHTML += '<br>Animation ready';
-                    document.getElementById('statusMessage').textContent = 'Animation ready';
-                }
-                
                 // Update model info
                 updateModelInfo(gltf);
                 
@@ -1873,7 +1767,6 @@
                 design: currentDesign, // This now includes decalPos, decalNormal, decalTarget.
                 lighting: lightingEffect,
                 background: backgroundEffect,
-                animation: animationEffect,
                 version: '1.0'
             };
             
@@ -1909,7 +1802,6 @@
                             currentDesign = designData.design;
                             lightingEffect = designData.lighting;
                             backgroundEffect = designData.background;
-                            animationEffect = designData.animation;
                             
                             // Reconstruct THREE.Color for currentMaterial if loaded from hex string
                             if (typeof currentMaterial.color === 'string') {
@@ -1935,7 +1827,6 @@
                             document.getElementById('materialType').value = currentMaterial.materialType;
                             document.getElementById('roughness').value = currentMaterial.roughness;
                             document.getElementById('roughnessValue').textContent = currentMaterial.roughness.toFixed(2);
-                            document.getElementById('animationEffect').value = animationEffect;
                             document.getElementById('lightingEffect').value = lightingEffect;
                             document.getElementById('backgroundEffect').value = backgroundEffect;
                             
@@ -2017,59 +1908,10 @@
                 throw error;
             }
         }
-        
-        // Apply wind effect to the hoodie
-        function applyWindEffect(delta) {
-            if (!hoodieModel || animationEffect !== 'wind') return;
-            
-            windEffect.time += delta;
-            
-            hoodieModel.traverse(child => {
-                if (child.isMesh) {
-                    const positionAttribute = child.geometry.attributes.position;
-                    const positions = positionAttribute.array;
-                    
-                    for (let i = 0; i < positions.length; i += 3) {
-                        const y = positions[i + 1];
-                        const windStrength = windEffect.strength * Math.sin(windEffect.time * 2 + y * 5) * (1 + Math.sin(windEffect.time * 0.5 + positions[i] * 3)) * 0.5;
-                        
-                        positions[i] += windStrength;
-                        positions[i + 2] += windStrength * 0.3;
-                    }
-                    
-                    positionAttribute.needsUpdate = true;
-                    child.geometry.computeVertexNormals();
-                }
-            });
-        }
-        
-        // Apply bounce effect
-        function applyBounceEffect(delta) {
-            if (!hoodieModel || animationEffect !== 'bounce') return;
-            
-            const time = Date.now() * 0.001;
-            hoodieModel.position.y = Math.sin(time * 2) * 0.05;
-        }
-        
-        // Apply spin effect
-        function applySpinEffect(delta) {
-            if (!hoodieModel || animationEffect !== 'spin') return;
-            
-            hoodieModel.rotation.y += delta * 0.5;
-        }
 
         // Animation loop
         function animate() {
             requestAnimationFrame(animate);
-            
-            const delta = clock.getDelta();
-            if (mixer && !isAnimationPaused) {
-                mixer.update(delta);
-            }
-            
-            applyWindEffect(delta);
-            applyBounceEffect(delta);
-            applySpinEffect(delta);
             
             controls.update();
             
