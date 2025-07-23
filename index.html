@@ -761,9 +761,6 @@
         let currentAction = null;
         let decalMesh = null;
         let decalTexture = null;
-        let decalBasePosition = null;
-        let decalBaseNormal = null;
-        let decalTargetMesh = null;
         let isAnimationPaused = false;
         let composer, fxaaPass;
         let textures = {};
@@ -783,7 +780,11 @@
                 scale: 1,
                 rotation: 0,
                 opacity: 100
-            }
+            },
+            // Store position and normal for re-creating decal after transformations
+            decalPos: null,
+            decalNormal: null,
+            decalTarget: null
         };
         
         // Current material properties
@@ -1491,17 +1492,20 @@
             const intersects = raycaster.intersectObject(hoodieModel, true);
             if (intersects.length > 0) {
                 const hit = intersects[0];
-                decalBasePosition = hit.point.clone();
-                decalBaseNormal = hit.face.normal.clone();
-                decalTargetMesh = hit.object;
-                placeDecalAt(hit.point, hit.face.normal, hit.object);
+
+                // Store these for re-creating decal during updates
+                currentDesign.decalPos = hit.point.clone();
+                currentDesign.decalNormal = hit.face.normal.clone();
+                currentDesign.decalTarget = hit.object;
+
+                placeDecalAt(currentDesign.decalPos, currentDesign.decalNormal, currentDesign.decalTarget);
             }
         }
 
         // Place decal at the clicked position
         function placeDecalAt(position, normal, targetMesh) {
             if (!decalTexture) return;
-            
+
             // Remove existing decal if any
             if (decalMesh) {
                 scene.remove(decalMesh);
@@ -1509,16 +1513,25 @@
                 decalMesh.material.dispose();
             }
 
-            // Calculate orientation (include user rotation)
-            const orientation = new THREE.Euler().setFromVector3(normal.clone());
-            const size = new THREE.Vector3(
-                currentDesign.transform.scale,
-                currentDesign.transform.scale,
-                currentDesign.transform.scale
-            );
+            // Calculate decal orientation and size
+            // Use a lookAt matrix to orient the decal towards the camera, then apply user rotation
+            const decalRotation = new THREE.Euler();
+            decalRotation.z = THREE.MathUtils.degToRad(currentDesign.transform.rotation); // Apply user rotation around normal
+            const orientation = new THREE.Matrix4().extractRotation(targetMesh.matrixWorld); // Get target mesh's orientation
+            orientation.lookAt(new THREE.Vector3(), normal, new THREE.Vector3(0, 1, 0)); // Align with normal
+            orientation.multiply(new THREE.Matrix4().makeRotationFromEuler(decalRotation)); // Apply user rotation
+
+            // Size of the decal projection box
+            // The decal's size should correspond to its texture's aspect ratio
+            const aspectRatio = decalTexture.image.width / decalTexture.image.height;
+            const decalWidth = currentDesign.transform.scale * 0.5; // Adjust this scale factor as needed
+            const decalHeight = decalWidth / aspectRatio;
+            const decalDepth = 0.1; // Small depth to avoid Z-fighting
+
+            const size = new THREE.Vector3(decalWidth, decalHeight, decalDepth);
 
             // Create decal geometry
-            const decalGeo = new DecalGeometry(targetMesh, position, orientation, size);
+            const decalGeo = new DecalGeometry(targetMesh, position, new THREE.Euler().setFromRotationMatrix(orientation), size);
 
             // Create decal material
             const decalMat = new THREE.MeshBasicMaterial({
@@ -1534,46 +1547,22 @@
             // Create and add decal mesh to scene
             decalMesh = new THREE.Mesh(decalGeo, decalMat);
             scene.add(decalMesh);
-            
-            // Apply rotation
-            updateDecal();
-            
+
             document.getElementById('info-panel').innerHTML += '<br>Design placed';
             document.getElementById('statusMessage').textContent = 'Design placed';
         }
 
         // Update decal with current transformations
         function updateDecal() {
-            if (!decalMesh || !decalBasePosition || !decalBaseNormal || !decalTargetMesh) return;
-            
-            // Apply rotation
-            decalMesh.rotation.z = THREE.MathUtils.degToRad(currentDesign.transform.rotation);
-            
-            // Update opacity
-            if (decalMesh.material) {
-                decalMesh.material.opacity = currentDesign.transform.opacity / 100;
-                decalMesh.material.needsUpdate = true;
-            }
-            
-            // Update scale (need to recreate geometry)
-            const position = decalBasePosition.clone();
-            const normal = decalBaseNormal.clone();
-            const orientation = new THREE.Euler().setFromVector3(normal);
-            const size = new THREE.Vector3(
-                currentDesign.transform.scale,
-                currentDesign.transform.scale,
-                currentDesign.transform.scale
-            );
-            
-            // Create new geometry with updated scale
-            const newGeo = new DecalGeometry(decalTargetMesh, position, orientation, size);
-            
-            // Replace geometry (dispose old one)
+            if (!decalMesh || !currentDesign.decalPos || !currentDesign.decalNormal || !currentDesign.decalTarget || !decalTexture) return;
+
+            // Remove old decal mesh
+            scene.remove(decalMesh);
             decalMesh.geometry.dispose();
-            decalMesh.geometry = newGeo;
-            
-            // Reapply rotation to new geometry
-            decalMesh.rotation.z = THREE.MathUtils.degToRad(currentDesign.transform.rotation);
+            decalMesh.material.dispose();
+
+            // Recreate the decal with updated transformations
+            placeDecalAt(currentDesign.decalPos, currentDesign.decalNormal, currentDesign.decalTarget);
         }
 
         // Remove decal
@@ -1584,18 +1573,19 @@
                 decalMesh.material.dispose();
                 decalMesh = null;
                 decalTexture = null;
-                decalBasePosition = null;
-                decalBaseNormal = null;
-                decalTargetMesh = null;
-                
+                currentDesign.decalPos = null;
+                currentDesign.decalNormal = null;
+                currentDesign.decalTarget = null;
+                currentDesign.texture = null; // Clear stored texture data
+
                 // Reset preview
                 const preview = document.getElementById('designPreview');
                 preview.innerHTML = '';
                 preview.classList.add('empty');
-                
+
                 // Hide decal controls
                 document.getElementById('decal-controls').classList.remove('active');
-                
+
                 document.getElementById('info-panel').innerHTML += '<br>Design removed';
                 document.getElementById('statusMessage').textContent = 'Design removed';
             }
@@ -1792,7 +1782,7 @@
         function saveDesign() {
             const designData = {
                 material: currentMaterial,
-                design: currentDesign,
+                design: currentDesign, // This now includes decalPos, decalNormal, decalTarget.
                 lighting: lightingEffect,
                 background: backgroundEffect,
                 animation: animationEffect,
@@ -1833,6 +1823,25 @@
                             backgroundEffect = designData.background;
                             animationEffect = designData.animation;
                             
+                            // Reconstruct THREE.Color for currentMaterial if loaded from hex string
+                            if (typeof currentMaterial.color === 'string') {
+                                currentMaterial.color = new THREE.Color(currentMaterial.color);
+                            } else if (currentMaterial.color && typeof currentMaterial.color.r !== 'undefined') {
+                                // If it's an object {r,g,b} but not a THREE.Color instance
+                                currentMaterial.color = new THREE.Color(currentMaterial.color.r, currentMaterial.color.g, currentMaterial.color.b);
+                            }
+                            
+                            // Reconstruct THREE.Vector3 for decalPos and decalNormal
+                            if (currentDesign.decalPos) {
+                                currentDesign.decalPos = new THREE.Vector3().copy(currentDesign.decalPos);
+                            }
+                            if (currentDesign.decalNormal) {
+                                currentDesign.decalNormal = new THREE.Vector3().copy(currentDesign.decalNormal);
+                            }
+                            // For decalTarget, you'll need to re-find it by name or hierarchy if it's not a simple single object
+                            // For now, assume it's the main hoodieModel if decalPos/Normal are present.
+                            currentDesign.decalTarget = hoodieModel;
+                            
                             // Update UI
                             document.getElementById('hoodieColor').value = `#${currentMaterial.color.getHexString()}`;
                             document.getElementById('materialType').value = currentMaterial.materialType;
@@ -1841,6 +1850,14 @@
                             document.getElementById('animationEffect').value = animationEffect;
                             document.getElementById('lightingEffect').value = lightingEffect;
                             document.getElementById('backgroundEffect').value = backgroundEffect;
+                            
+                            // Update decal transform inputs
+                            document.getElementById('decal-scale').value = currentDesign.transform.scale;
+                            document.getElementById('decal-rotation').value = currentDesign.transform.rotation;
+                            document.getElementById('decal-opacity').value = currentDesign.transform.opacity;
+                            document.getElementById('decal-scale-input').value = currentDesign.transform.scale;
+                            document.getElementById('decal-rotation-input').value = currentDesign.transform.rotation;
+                            document.getElementById('decal-opacity-input').value = currentDesign.transform.opacity;
                             
                             // Update color presets selection
                             document.querySelectorAll('.color-preset').forEach(preset => {
@@ -1872,8 +1889,18 @@
                                 const image = new Image();
                                 image.onload = () => {
                                     decalTexture = new THREE.Texture(image);
+                                    decalTexture.minFilter = THREE.LinearMipmapLinearFilter;
+                                    decalTexture.magFilter = THREE.LinearFilter;
+                                    decalTexture.anisotropy = renderer.capabilities.getMaxAnisotropy();
+                                    decalTexture.generateMipmaps = true;
                                     decalTexture.needsUpdate = true;
+                                    
                                     document.getElementById('decal-controls').classList.add('active');
+                                    
+                                    // Re-place the decal with loaded properties
+                                    if (currentDesign.decalPos && currentDesign.decalNormal && currentDesign.decalTarget) {
+                                        placeDecalAt(currentDesign.decalPos, currentDesign.decalNormal, currentDesign.decalTarget);
+                                    }
                                 };
                                 image.src = currentDesign.texture;
                             }
